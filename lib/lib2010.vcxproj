@@ -822,7 +822,7 @@ editbin  /SUBSYSTEM:CONSOLE $(OutDir)binarize.exe
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
-      <AdditionalIncludeDirectories>$(SolutionDir)extern\Botan\build\include;$(SolutionDir);$(SolutionDir)PhysicalLibs\RigidBody\ODE;$(SolutionDir)extern;$(SolutionDir)extern\dxsdk\include;%(AdditionalIncludeDirectories);$(SolutionDir)extern\SimulWeather;$(SolutionDir)extern\bullet2.76\src;$(SolutionDir)Enfusion\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)extern\Botan\build\include;$(SolutionDir);$(SolutionDir)PhysicalLibs\RigidBody\ODE;$(SolutionDir)extern;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;$(SolutionDir)extern\dxsdk\include;%(AdditionalIncludeDirectories);$(SolutionDir)extern\SimulWeather;$(SolutionDir)extern\bullet2.76\src;$(SolutionDir)Enfusion\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_ENABLE_PHYSICS=1;_RELEASE=1;NDEBUG;WIN32;_WINDOWS;_SUPER_RELEASE=1;_ENABLE_PBO_PROTECTION=1;DAYZ_PRIVATE_SERVER=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>false</ExceptionHandling>
@@ -6866,22 +6866,22 @@ IF NOT EXIST $(TargetDir)$(TargetName).prf (copy $(SolutionDir)..\Arrowhead\Prot
     <ClCompile Include="zombie.cpp" />
     <ClCompile Include="crtCompatX64.cpp" Condition="'$(Platform)'=='x64'" />
     <ClCompile Include="d3d11\Dx11Device.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11ShaderCompiler.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11ShaderCache.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11RenderTarget.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11Mesh.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11Texture.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11VolumeTexture.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
     <ClCompile Include="SimulWeather\SimulCommonDX11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
@@ -6889,26 +6889,26 @@ IF NOT EXIST $(TargetDir)$(TargetName).prf (copy $(SolutionDir)..\Arrowhead\Prot
     <ClCompile Include="SimulWeather\SimulCloudRendererDX11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
     <ClCompile Include="SimulWeather\SimulWeatherDX11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
     <ClCompile Include="d3d11\Dx11Renderer.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11TLRenderer.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11ShapeMesh.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11ConstantBuffer.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11StateTranslator.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11AlphaTest.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11EngineCore.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
       <PreprocessorDefinitions>_ARMA3_FSAA_MODES=1;_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="d3d11\Dx11TextBank.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">&quot;C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\shared&quot;;&quot;C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\um&quot;;&quot;C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\ucrt&quot;;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -6945,6 +6945,10 @@ IF NOT EXIST $(TargetDir)$(TargetName).prf (copy $(SolutionDir)..\Arrowhead\Prot
     <ClCompile Include="d3d11\txtD3D11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
       <PreprocessorDefinitions>_ARMA3_FSAA_MODES=1;_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="d3d11\Dx11TextureIO.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <PreprocessorDefinitions>_ARMA3_FSAA_MODES=1;_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\um;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\ucrt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClInclude Include="d3d11\d3d11Defs.hpp" />
     <ClInclude Include="d3d11\d3d11Utils.hpp" />
     <ClInclude Include="d3dCommon\d3dCommon.hpp" />
@@ -6975,6 +6979,8 @@ IF NOT EXIST $(TargetDir)$(TargetName).prf (copy $(SolutionDir)..\Arrowhead\Prot
     <ClInclude Include="d3d11\Dx11AlphaTest.hpp" />
     <ClInclude Include="d3d11\Dx11EngineCore.hpp" />
     <ClInclude Include="d3d11\Dx11TextBank.hpp" />
+    <ClInclude Include="d3d11\Dx11MathCompat.hpp" />
+    <ClInclude Include="d3d11\Dx11TextureIO.hpp" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Enfusion\src\script\enf_scriptvm_x64.asm" Condition="'$(Platform)'=='x64'" />

@@ -94,7 +94,14 @@ Basic win32 framework, application init and message handling.
 #include <Steamworks/steam_api.h>
 
 #include "system/enf_timer.h"
-#include "d3d9/engdd9.hpp"
+#if !defined(_WIN64)
+  #include "d3d9/engdd9.hpp"
+#else
+  #include "textbank.hpp"
+  #include <Es/ReportStack/reportStack.hpp>
+  #include <El/FreeOnDemand/memFreeReq.hpp>
+  #include "../Enfusion/include/common/enf_pointerhash.h"
+#endif
 
 #if _ENABLE_STEAM
 //# pragma comment(lib, "steam_api")
@@ -12292,7 +12299,11 @@ it sometimes caused false warnings and premature server termination.
 								
 				enf::CStr profileName = "";
 
+#if defined(_WIN64)
+				if (!enf::GetEngine()->Create((HWND)GEngine->GetWindowHandle(), cfgFile.cstr(), profileName.cstr()))
+#else
 				if (!enf::GetEngine()->Create(GEngineDD->GetHWND(), cfgFile.cstr(), profileName.cstr()))
+#endif
 					return -1;
 			#endif
 			

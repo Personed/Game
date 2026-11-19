@@ -8,7 +8,7 @@
 #if _ENABLE_COMPILED_SHADER_CACHE && !defined _SERVER && _ENABLE_DX11
 
 #include <d3d11.h>
-#include <D3DX11.h>
+#include <d3dcompiler.h>
 #include "../d3dCommon/d3dCommon.hpp"
 #include "Es/Strings/rString.hpp"
 
@@ -31,7 +31,7 @@ HRESULT WINAPI D3DX11CompileShader_Cached(
   LPCSTR pProfile,
   UINT Flags1,
   UINT Flags2,
-  ID3DX11ThreadPump *pPump,
+  ID3D10Blob *pPumpUnused,
   HRESULT *pHResult,
   D3DXCompileShader_Result &res
   );

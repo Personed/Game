@@ -45,7 +45,12 @@ Scene implementation
 
 #include "baseWorld/enf_shapes.h"
 #include "Common/enf_quicksort.h"
+#if !defined(_WIN64)
 #include "d3d9/engdd9.hpp"
+#else
+#include <El/FreeOnDemand/memFreeReq.hpp>
+#include "../Enfusion/include/common/enf_pointerhash.h"
+#endif
 
 static int CompareAddress(const void *left, const void *right)
 {

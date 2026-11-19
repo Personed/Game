@@ -32,6 +32,10 @@ protected:
     const LazyLoadFile &hlsl, const char *psName, ComRef<ID3D11PixelShader> &ps,
     bool fullPrec=false
   ) const;
+  bool CompilePixelShader(
+    const LazyLoadFile &hlsl, const char *psName, ComRef<ID3D11PixelShader> &ps,
+    bool fullPrec, const D3DXMacroList *extraDefines
+  ) const;
   /// helper function for vertex shader compilation
   /// creates vertex shader and its layout
   bool CompileVertexShader(
@@ -2334,6 +2338,87 @@ public:
 
   void Do(ID3D11ShaderResourceView* source, CONST RECT * sourceRect, const RenderTarget& destination, CONST RECT * destRect);
   void DoDirect(ID3D11ShaderResourceView* source, CONST RECT * sourceRect, const RenderTarget& destination, CONST RECT * destRect);
+};
+
+//-----------------------------------------------------------------------------
+//! FXAA post process
+class EngineDD11::PPFXAA : public PostProcess
+{
+  typedef PostProcess base;
+
+  RenderTarget _backRT;
+  RenderTarget _backRT1;
+
+  VertexStaticData11::BufferFuture _vb;
+  VertexShaderInfo _vsFxaa;
+  AutoArray<ComRef<ID3D11PixelShader> > _psFXAAs;
+  ComRef<ID3D11PixelShader> _psFxaa;
+  ComRef<ID3D11PixelShader> _psSharpen;
+
+  bool _enabled;
+  int _quality;
+
+public:
+  PPFXAA(): _enabled(false), _quality(0) {}
+
+  virtual bool Init(const LazyLoadFile &hlsl, const LazyLoadFile &vs);
+  virtual bool UnInit();
+  virtual void Prepare();
+  virtual void Do(bool isLast);
+
+  bool IsEnabled() const { return _enabled; }
+  virtual void Enable(bool enable) { _enabled = enable; }
+
+  void SetQuality(int quality);
+  int GetQuality() const { return _quality; }
+
+  const RenderTarget &GetSharedRT0() const { return _backRT; }
+  const RenderTarget &GetSharedRT1() const { return _backRT1; }
+};
+
+//-----------------------------------------------------------------------------
+class EngineDD11::PPSMAA : public PostProcess
+{
+  typedef PostProcess base;
+
+public:
+  enum Presets { Low = 0, Medium, High, Ultra, PresetCount };
+
+private:
+  RenderTarget _backRT;
+  RenderTarget _edgeRT;
+  RenderTarget _blendRT;
+  DepthStencil _depthBuffer;
+
+  VertexStaticData11::BufferFuture _vb;
+
+  ComRef<ID3D11ShaderResourceView> _areaTex;
+  ComRef<ID3D11ShaderResourceView> _searchTex;
+
+  VertexShaderInfo _edgeDetectionVS;
+  AutoArray<ComRef<ID3D11PixelShader> > _edgeDetectionPS;
+
+  VertexShaderInfo _blendingWeightVS;
+  AutoArray<ComRef<ID3D11PixelShader> > _blendingWeightPS;
+
+  VertexShaderInfo _neighborhoodBlendingVS;
+  ComRef<ID3D11PixelShader> _neighborhoodBlendingPS;
+
+  bool _enabled;
+  Presets _currentPreset;
+
+public:
+  PPSMAA(): _enabled(false), _currentPreset(Medium) {}
+  ~PPSMAA() { UnInit(); }
+
+  bool IsEnabled() const { return _enabled; }
+  virtual void Enable(bool enable) { _enabled = enable; }
+  virtual bool Init(const LazyLoadFile &hlsl, const LazyLoadFile &vs, const RenderTarget &sharedRT0, const RenderTarget &sharedRT1);
+  virtual bool UnInit();
+  virtual void Prepare();
+  virtual void Do(bool isLast);
+  void SetQuality(int quality);
+  Presets GetPreset() const { return _currentPreset; }
 };
 
 //////////////////////////////////////////////////////////////////////////

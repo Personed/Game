@@ -21,6 +21,7 @@ public:
   HRESULT Resize(UINT width, UINT height);
   HRESULT Bind(ID3D11DeviceContext *context);
   HRESULT BindShaderResource(ID3D11DeviceContext *context, UINT pixelShaderSlot);
+  HRESULT BindShaderResourceSRGB(ID3D11DeviceContext *context, UINT pixelShaderSlot);
   HRESULT Unbind(ID3D11DeviceContext *context);
   // Only the color target clears by default; request depth/stencil clears explicitly.
   HRESULT Clear(ID3D11DeviceContext *context, const float color[4],
@@ -31,6 +32,7 @@ public:
   ID3D11Texture2D *ColorTexture() const { return _colorTexture; }
   ID3D11RenderTargetView *RenderTargetView() const { return _renderTargetView; }
   ID3D11ShaderResourceView *ShaderResourceView() const { return _shaderResourceView; }
+  ID3D11ShaderResourceView *ShaderResourceViewSRGB() const { return _shaderResourceViewSRGB; }
   ID3D11Texture2D *DepthTexture() const { return _depthTexture; }
   ID3D11DepthStencilView *DepthStencilView() const { return _depthStencilView; }
   UINT Width() const { return _width; }
@@ -46,6 +48,7 @@ private:
   ID3D11Texture2D *_colorTexture;
   ID3D11RenderTargetView *_renderTargetView;
   ID3D11ShaderResourceView *_shaderResourceView;
+  ID3D11ShaderResourceView *_shaderResourceViewSRGB;
   ID3D11Texture2D *_depthTexture;
   ID3D11DepthStencilView *_depthStencilView;
   UINT _width;

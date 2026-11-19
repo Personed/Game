@@ -68,7 +68,8 @@ public:
   {
     SFAlways,
     SFLess,
-    SFCount
+    SFCount,
+    SFEqual = SFCount
   };
 
   struct StateDesc
@@ -141,6 +142,18 @@ private:
     [SWMCount]
     [SPOCount] //StencilPassOp FRONT
     [SFCount] //StencilFunc FRONT
+    [SPOCount] //StencilPassOp BACK
+    [SFCount]; //StencilFunc BACK
+
+  // EQUAL is only stored for the full stencil read mask; with a zero mask it
+  // is equivalent to ALWAYS and uses the regular table.
+  ComRef<ID3D11DepthStencilState> _statesFrontEqual
+    [DECount]
+    [DWMCount]
+    [DFCount]
+    [SRMCount]
+    [SWMCount]
+    [SPOCount] //StencilPassOp FRONT
     [SPOCount] //StencilPassOp BACK
     [SFCount]; //StencilFunc BACK
 

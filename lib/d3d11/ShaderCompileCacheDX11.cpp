@@ -57,12 +57,11 @@ public:
   bool ReadFromCache(ID3D10Blob** buffer);
   bool WriteToCache(ID3D10Blob* buffer);
   bool IsCacheActive() {return _cached;}
-  void DropCache()
+  void DisableCacheForCurrentRun()
   {
     _incache.close();
-    _outcache.open(GetCacheFilename());
-    _outcache.close();
-    LogF("Inconsistent cache detected - cache has been invalidated.");
+    // shortcut: preserve the stale cache so later Retail runs can retry shader compilation; regenerate it through the shader-cache pipeline when available.
+    LogF("Inconsistent cache detected - disabled for this run; disk cache preserved.");
   }
   bool TestNextSection(const Array<RString> &sectionNames);
   bool CompareWithCache(LazyLoadFile &testBlock);
@@ -382,7 +381,7 @@ HRESULT WINAPI D3DX11CompileShader_Cached(
   LPCSTR pProfile,
   UINT Flags1,
   UINT Flags2,
-  ID3DX11ThreadPump *pPump,
+  ID3D10Blob *pPumpUnused,
   HRESULT *pHResult,
   D3DXCompileShader_Result &result
   )
@@ -409,7 +408,7 @@ HRESULT WINAPI D3DX11CompileShader_Cached(
     else
     {
       LogF("D3DX11CompileShader: Cannot read %s from the cache. Cache dropped.",pFunctionName);
-      SCurrentShaderFileDesc->DropCache();
+      SCurrentShaderFileDesc->DisableCacheForCurrentRun();
       SCurrentShaderFileDesc=0;
     }
   }
@@ -428,7 +427,8 @@ HRESULT WINAPI D3DX11CompileShader_Cached(
   int srcDataLen;
   const char *pSrcData = src.Load(srcDataLen);
 
-  HRESULT res=D3DX11CompileFromMemory(
+  (void)pPumpUnused; // ID3DX11ThreadPump no longer used; callers always pass NULL
+  HRESULT res=D3DCompile(
     pSrcData,
     srcDataLen,
     pFileName,
@@ -438,10 +438,8 @@ HRESULT WINAPI D3DX11CompileShader_Cached(
     pProfile,
     Flags1,
     Flags2,
-    pPump,
     result.shader.Init(),
-    result.errorMsgs.Init(),
-    pHResult
+    result.errorMsgs.Init()
     );
 
   if (res!=0)
@@ -465,7 +463,7 @@ HRESULT WINAPI D3DX11CompileShader_Cached(
       LogF("D3DX11CompileShader %s retrying with /Od",pFunctionName);
     }
     Flags1 = retryFlags;
-    res=D3DX11CompileFromMemory(
+    res=D3DCompile(
       pSrcData,
       srcDataLen,
       pFileName,
@@ -475,10 +473,8 @@ HRESULT WINAPI D3DX11CompileShader_Cached(
       pProfile,
       Flags1,
       Flags2,
-      pPump,
       result.shader.Init(),
-      result.errorMsgs.Init(),
-      pHResult
+      result.errorMsgs.Init()
       );
   }
   if (res==0)

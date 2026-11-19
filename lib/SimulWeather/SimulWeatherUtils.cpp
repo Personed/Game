@@ -9,7 +9,12 @@
 #if _ARMA3_SIMUL_WEATHER
 
 #include "SimulWeatherUtils.hpp"
+// QOStrStreamData lives in the renderer-neutral header; engine.hpp stays DX9-free on x64.
+#if defined(_WIN64)
+#include "../d3dCommon/d3dCommon.hpp"
+#else
 #include "../lib/d3d9/engdd9.hpp"
+#endif
 #include "SimulSkyRendererBase.hpp"
 #include "SimulCloudRendererBase.hpp"
 

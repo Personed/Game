@@ -110,7 +110,7 @@ void UnbindShaderResourceEverywhere(ID3D11DeviceContext *context,
 
 Dx11RenderTarget::Dx11RenderTarget()
   : _device(NULL), _colorTexture(NULL), _renderTargetView(NULL),
-    _shaderResourceView(NULL), _depthTexture(NULL), _depthStencilView(NULL),
+    _shaderResourceView(NULL), _shaderResourceViewSRGB(NULL), _depthTexture(NULL), _depthStencilView(NULL),
     _width(0), _height(0), _colorFormat(DXGI_FORMAT_UNKNOWN),
     _depthFormat(DXGI_FORMAT_UNKNOWN)
 {
@@ -149,12 +149,32 @@ HRESULT Dx11RenderTarget::CreateResources(ID3D11Device *device, UINT width,
       return DXGI_ERROR_UNSUPPORTED;
   }
 
+  DXGI_FORMAT textureFormat = colorFormat;
+  DXGI_FORMAT rtvFormat = colorFormat;
+  DXGI_FORMAT srvFormat = colorFormat;
+  DXGI_FORMAT srgbSrvFormat = DXGI_FORMAT_UNKNOWN;
+
+  if (colorFormat == DXGI_FORMAT_R8G8B8A8_UNORM)
+  {
+    textureFormat = DXGI_FORMAT_R8G8B8A8_TYPELESS;
+    rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+    srvFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+    srgbSrvFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+  }
+  else if (colorFormat == DXGI_FORMAT_B8G8R8A8_UNORM)
+  {
+    textureFormat = DXGI_FORMAT_B8G8R8A8_TYPELESS;
+    rtvFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+    srvFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+    srgbSrvFormat = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+  }
+
   D3D11_TEXTURE2D_DESC colorDesc = {};
   colorDesc.Width = width;
   colorDesc.Height = height;
   colorDesc.MipLevels = 1;
   colorDesc.ArraySize = 1;
-  colorDesc.Format = colorFormat;
+  colorDesc.Format = textureFormat;
   colorDesc.SampleDesc.Count = 1;
   colorDesc.Usage = D3D11_USAGE_DEFAULT;
   colorDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -162,14 +182,34 @@ HRESULT Dx11RenderTarget::CreateResources(ID3D11Device *device, UINT width,
   ID3D11Texture2D *colorTexture = NULL;
   ID3D11RenderTargetView *renderTargetView = NULL;
   ID3D11ShaderResourceView *shaderResourceView = NULL;
+  ID3D11ShaderResourceView *shaderResourceViewSRGB = NULL;
   ID3D11Texture2D *depthTexture = NULL;
   ID3D11DepthStencilView *depthStencilView = NULL;
 
   hr = device->CreateTexture2D(&colorDesc, NULL, &colorTexture);
   if (SUCCEEDED(hr))
-    hr = device->CreateRenderTargetView(colorTexture, NULL, &renderTargetView);
+  {
+    D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+    rtvDesc.Format = rtvFormat;
+    rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+    hr = device->CreateRenderTargetView(colorTexture, &rtvDesc, &renderTargetView);
+  }
   if (SUCCEEDED(hr))
-    hr = device->CreateShaderResourceView(colorTexture, NULL, &shaderResourceView);
+  {
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = srvFormat;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+    hr = device->CreateShaderResourceView(colorTexture, &srvDesc, &shaderResourceView);
+  }
+  if (SUCCEEDED(hr) && srgbSrvFormat != DXGI_FORMAT_UNKNOWN)
+  {
+    D3D11_SHADER_RESOURCE_VIEW_DESC srgbDesc = {};
+    srgbDesc.Format = srgbSrvFormat;
+    srgbDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srgbDesc.Texture2D.MipLevels = 1;
+    hr = device->CreateShaderResourceView(colorTexture, &srgbDesc, &shaderResourceViewSRGB);
+  }
 
   if (SUCCEEDED(hr) && depthFormat != DXGI_FORMAT_UNKNOWN)
   {
@@ -189,6 +229,7 @@ HRESULT Dx11RenderTarget::CreateResources(ID3D11Device *device, UINT width,
 
   if (FAILED(hr))
   {
+    if (shaderResourceViewSRGB) shaderResourceViewSRGB->Release();
     if (depthStencilView) depthStencilView->Release();
     if (depthTexture) depthTexture->Release();
     if (shaderResourceView) shaderResourceView->Release();
@@ -203,6 +244,7 @@ HRESULT Dx11RenderTarget::CreateResources(ID3D11Device *device, UINT width,
   _colorTexture = colorTexture;
   _renderTargetView = renderTargetView;
   _shaderResourceView = shaderResourceView;
+  _shaderResourceViewSRGB = shaderResourceViewSRGB;
   _depthTexture = depthTexture;
   _depthStencilView = depthStencilView;
   _width = width;
@@ -250,11 +292,27 @@ HRESULT Dx11RenderTarget::BindShaderResource(ID3D11DeviceContext *context,
   return S_OK;
 }
 
+HRESULT Dx11RenderTarget::BindShaderResourceSRGB(ID3D11DeviceContext *context,
+  UINT pixelShaderSlot)
+{
+  if (!context || !_shaderResourceViewSRGB ||
+      pixelShaderSlot >= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT)
+    return E_INVALIDARG;
+  ID3D11Resource *colorResource = NULL;
+  _shaderResourceViewSRGB->GetResource(&colorResource);
+  if (!colorResource) return E_FAIL;
+  RemoveOutputBinding(context, colorResource, NULL);
+  colorResource->Release();
+  context->PSSetShaderResources(pixelShaderSlot, 1, &_shaderResourceViewSRGB);
+  return S_OK;
+}
+
 HRESULT Dx11RenderTarget::Unbind(ID3D11DeviceContext *context)
 {
   if (!context) return E_INVALIDARG;
   RemoveOutputBinding(context, _colorTexture, _depthTexture);
   UnbindShaderResourceEverywhere(context, _shaderResourceView, _colorTexture);
+  UnbindShaderResourceEverywhere(context, _shaderResourceViewSRGB, _colorTexture);
   return S_OK;
 }
 
@@ -281,6 +339,7 @@ void Dx11RenderTarget::Reset()
 {
   if (_depthStencilView) { _depthStencilView->Release(); _depthStencilView = NULL; }
   if (_depthTexture) { _depthTexture->Release(); _depthTexture = NULL; }
+  if (_shaderResourceViewSRGB) { _shaderResourceViewSRGB->Release(); _shaderResourceViewSRGB = NULL; }
   if (_shaderResourceView) { _shaderResourceView->Release(); _shaderResourceView = NULL; }
   if (_renderTargetView) { _renderTargetView->Release(); _renderTargetView = NULL; }
   if (_colorTexture) { _colorTexture->Release(); _colorTexture = NULL; }

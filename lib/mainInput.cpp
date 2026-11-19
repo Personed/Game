@@ -4436,6 +4436,15 @@ void Config::CPUCountChanged()
   // even with single core we want emulated threading, so that we can use predication
   _renderThread = GetCPUCount()>1 ? ThreadingReal : ThreadingEmulated;
   #endif
+  #if defined(_WIN64)
+  // The DX11 client crashes inside the AMD driver's packet dispatch (C0000005 at
+  // atidxx64) whenever the render thread runs the frame; the emulated path is
+  // stable in E2E 2/2. -dx11mt opts the render thread back in for profiling.
+  if (strstr(GetCommandLineA(), "-dx11mt"))
+    _renderThread = GetCPUCount()>1 ? ThreadingReal : ThreadingEmulated;
+  else
+    _renderThread = ThreadingEmulated;
+  #endif
 }
 
 void Config::Autodetect()

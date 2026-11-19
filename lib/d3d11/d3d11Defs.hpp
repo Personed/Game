@@ -8,7 +8,7 @@
 #include <d3d11.h>
 
 #include <Es/Memory/normalNew.hpp>
-#include <d3dx11.h>
+#include "Dx11MathCompat.hpp"
 #include <Es/Memory/debugNew.hpp>
 
 #if _ENABLE_PERFLOG && _PROFILE

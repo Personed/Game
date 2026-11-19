@@ -1,4 +1,4 @@
-#include "../wpch.hpp"
+﻿#include "../wpch.hpp"
 
 #if _ENABLE_DX11
 #if !_DISABLE_GUI
@@ -40,7 +40,15 @@ static bool DX11UseWarpRasterizer()
   return strstr(GetCommandLineA(), "-dx11warp") != NULL;
 }
 
+// Opt-out of driver-side threading optimizations; the AMD DX11 driver crashes in
+// its own command-buffer worker when the game drives the context from two threads.
+static bool DX11UseNoThreadOpt()
+{
+  return Engine::D3DCreateNoThreadOpt || strstr(GetCommandLineA(), "-dx11nothreadopt") != NULL;
+}
+
 #include "../textbank.hpp"
+#include "Dx11TextureIO.hpp"
 
 #if _ENABLE_COMPILED_SHADER_CACHE
 #include "ShaderCompileCacheDX11.h"
@@ -53,14 +61,10 @@ static bool DX11UseWarpRasterizer()
 #pragma comment(lib,"d3d11.lib")
 #pragma comment(lib,"d3d10.lib")
 #pragma comment(lib,"DXGI.lib")
+#pragma comment(lib,"d3dcompiler.lib")
 
-#if _DEBUG
-#pragma comment(lib,"d3dx11d.lib")
-#pragma comment(lib,"d3dx10d.lib")
-#else
-#pragma comment(lib,"d3dx11.lib")
-#pragma comment(lib,"d3dx10.lib")
-#endif
+// d3dx11/d3dx10 libs removed - replaced by d3dcompiler.lib, WIC, and inline math
+// Legacy #pragma comment(lib,"d3dx11.lib") and d3dx10.lib are no longer needed.
 
 #define V_OFFSET_CUSTOM 1
 #define SHADOW_LEVELS 1
@@ -5511,8 +5515,7 @@ Void D3DDeviceServant::PresentBackbuffer(const PresentBackbufferAllArgs &args)
   // see http://msdn.microsoft.com/en-us/library/ee417025%28v=vs.85%29.aspx (Multithreading and DXGI)
   // We now call Present in EndHighLevelRecordingPart1 and only set flag here
   
-  GEngineDD11->DoPresentBackbuffer();
-  //GEngineDD11->_hlPresentRequired = true;
+  GEngineDD11->_hlPresentRequired = true;
   return Void();
 }
 
@@ -6052,7 +6055,7 @@ bool EngineDD11::InitD3D()
   UINT flags = 0;
   if (Engine::D3DCreateSingleThreaded)
     flags |= D3D11_CREATE_DEVICE_SINGLETHREADED; 
-  if (Engine::D3DCreateNoThreadOpt)
+  if (DX11UseNoThreadOpt())
     flags |= D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS; 
   if (_d3dDebugMode)
     flags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -6788,6 +6791,7 @@ bool EngineDD11::Init(HINSTANCE hInst, HINSTANCE hPrev, int sw, bool windowed, i
   _maxFSAA = 15;
   _maxAF = 4;
   _postFxQuality = 0;
+  _ppaaQuality = 0;
   _postFXLevelMask = CalculatePostEffectsMask(0);
   _hdrPrecWanted = HDR8;
   _gamma = 1.0f;
@@ -7783,6 +7787,9 @@ HRESULT EngineDD11::HLSLInclude::Open(
   // otherwise the resulting patch is invalid
 
   strcat(fullName,fileName);
+  // The engine's file stream expects Windows separators for nested includes.
+  for (int i=0; fullName[i]; ++i)
+    if (fullName[i]=='/') fullName[i]='\\';
 #ifdef _XBOX
   strncpy(fullPath,fullName,fullPathSize);
   fullPath[fullPathSize-1] = 0;
@@ -8860,6 +8867,8 @@ void EngineDD11::DestroyPostProcessStuff()
   _pp._dynamicBlur.Free();
   _pp._clrInvers.Free();
   _pp._stretchRect.Free();
+  _pp._fxaa.Free();
+  _pp._smaa.Free();
 #if ENABLE_NVG_NOISE
   _pp._nvgNoise.Free();
 #endif
@@ -9071,6 +9080,22 @@ bool EngineDD11::NewPostProcessStuff(bool firstInit)
     return false;
   }
 
+  Assert(firstInit == _pp._fxaa.IsNull());
+  Ref<PPFXAA> ppFxaa = (firstInit) ? new PPFXAA : _pp._fxaa;
+  if (!ppFxaa->Init(psSource, vsSource))
+  {
+    LogF("Error: Post process effect 'PPFXAA' creation failed.");
+    return false;
+  }
+
+  Assert(firstInit == _pp._smaa.IsNull());
+  Ref<PPSMAA> ppSmaa = (firstInit) ? new PPSMAA : _pp._smaa;
+  if (!ppSmaa->Init(psSource, vsSource, ppFxaa->GetSharedRT0(), ppFxaa->GetSharedRT1()))
+  {
+    LogF("Error: Post process effect 'PPSMAA' creation failed.");
+    return false;
+  }
+
 #if ENABLE_NVG_NOISE
   Ref<PPFilmGrain> ppNVGNoiseFilm = new PPFilmGrain;
   if (ppFilmGrain)
@@ -9113,6 +9138,7 @@ bool EngineDD11::NewPostProcessStuff(bool firstInit)
   ppDynamicBlur->SetLevel(EngineDD11::PPLVeryLow);
   ppColorsInvers->SetLevel(EngineDD11::PPLLow);
   ppStretchRect->SetLevel(PPLVeryLow);
+  ppFxaa->SetLevel(EngineDD11::PPLVeryLow);
 #if ENABLE_NVG_NOISE
   ppNVGNoiseFilm->SetLevel(EngineDD11::PPLLow);
 #endif
@@ -9161,6 +9187,9 @@ bool EngineDD11::NewPostProcessStuff(bool firstInit)
   _pp._clrInvers = ppColorsInvers;
   _pp._colors = ppColors;
   _pp._stretchRect = ppStretchRect;
+  _pp._fxaa = ppFxaa;
+  _pp._smaa = ppSmaa;
+  SetPPAAQuality(_ppaaQuality);
 
 #if ENABLE_NVG_NOISE
   _pp._nvgNoise = ppNVGNoiseFilm;
@@ -11411,8 +11440,11 @@ void EngineDD11::InitDeviceState(int cb)
   cbState._applyAplhaFog = false;
   cbState._expFogCoef = -0.00062383;
 
+  D3DSetRenderState(cb, D3DRS_ZENABLE_OLD,TRUE,false);
   D3DSetRenderState(cb, D3DRS_ZFUNC_OLD,D3DCMP_LESSEQUAL_OLD,false);
   D3DSetRenderState(cb, D3DRS_ZWRITEENABLE_OLD,TRUE,false);
+  D3DSetRenderState(cb, D3DRS_FILLMODE_OLD,D3DFILL_SOLID_OLD,false);
+  D3DSetRenderState(cb, D3DRS_POINTSIZE_OLD,0,false);
 
 #if !defined(_XBOX) && !defined(_X360SHADERGEN)
   D3DSetRenderState(cb, D3DRS_SHADEMODE_OLD,D3DSHADE_GOURAUD_OLD,false);
@@ -11441,6 +11473,9 @@ void EngineDD11::InitDeviceState(int cb)
   D3DSetRenderState(cb, D3DRS_BLENDOP_OLD,D3DBLENDOP_ADD_OLD,false);
 
   D3DSetRenderState(cb, D3DRS_SEPARATEALPHABLENDENABLE_OLD,FALSE,false);
+  D3DSetRenderState(cb, D3DRS_SRCBLENDALPHA_OLD,D3DBLEND_ONE_OLD,false);
+  D3DSetRenderState(cb, D3DRS_DESTBLENDALPHA_OLD,D3DBLEND_ZERO_OLD,false);
+  D3DSetRenderState(cb, D3DRS_BLENDOPALPHA_OLD,D3DBLENDOP_ADD_OLD,false);
 
   SetPixelShaderConstantF(cb,PSC_FogColor,_fogColor.GetArray(),1,false);
 
@@ -11460,6 +11495,7 @@ void EngineDD11::InitDeviceState(int cb)
     D3DSetSamplerState(cb, i, D3DSAMP_ADDRESSU_OLD,       D3DTADDRESS_WRAP_OLD, false);
     D3DSetSamplerState(cb, i, D3DSAMP_ADDRESSV_OLD,       D3DTADDRESS_WRAP_OLD, false);
     D3DSetSamplerState(cb, i, D3DSAMP_ADDRESSW_OLD,       D3DTADDRESS_WRAP_OLD, false);
+    D3DSetSamplerState(cb, i, D3DSAMP_BORDERCOLOR_OLD,    0,                false);
     D3DSetSamplerState(cb, i, D3DSAMP_SRGBTEXTURE_OLD,    TRUE,             false);
   }
 
@@ -15250,10 +15286,13 @@ void EngineDD11::SetupDepthStencilStates()
 #else //#if DX11_USE_HASHED_STATE_OBJECTS
   ID3D11DepthStencilState *state = (ID3D11DepthStencilState *)_depthStencilStateList.GetState(
     _currentRenderState._renderState);
-  if (state && state != _currentRenderState._depthStencilStateLast)
+  DWORD stencilRef = GetRSValue(D3DRS_STENCILREF_OLD);
+  if (state && (state != _currentRenderState._depthStencilStateLast ||
+      stencilRef != _currentRenderState._stencilRefLast))
   {
-    _d3dDeviceRec->OMSetDepthStencilState((ID3D11DepthStencilState *)state, GetRSValue(D3DRS_STENCILREF_OLD) );
+    _d3dDeviceRec->OMSetDepthStencilState(state, stencilRef);
     _currentRenderState._depthStencilStateLast = state;
+    _currentRenderState._stencilRefLast = stencilRef;
   }
 #endif //#if DX11_USE_HASHED_STATE_OBJECTS else
 }
@@ -17783,24 +17822,16 @@ void EngineDD11::LoadTIConversionTexture(RString name)
     return;
   }
 
-  // LUKE HACK
-  // DX11 TODO - TGA not supported, add texture to core/data directory!
-  _tiConversionName = name.Substring(0, name.GetLength()-4) + ".png";
-
-
   // Open stream and load data
   QOStrStreamData textureSource(_tiConversionName);
 
-  // load texture
-  D3DX11_IMAGE_LOAD_INFO loadInfo;
-  loadInfo.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-  loadInfo.Usage = D3D11_USAGE_STAGING;
-  loadInfo.CpuAccessFlags = D3D11_CPU_ACCESS_READ;   
-  loadInfo.MipLevels = 1;
-  loadInfo.BindFlags = 0;
-
-  HRESULT hr = D3DX11CreateTextureFromMemory(_d3dDeviceRec->GetDeviceRef(), 
-    textureSource.str(), textureSource.pcount(),  &loadInfo, NULL, _tiConversionSystem.Init(), NULL);
+  // load texture - using WIC instead of legacy D3DX11
+  UINT tiLoadedWidth = 0, tiLoadedHeight = 0;
+  HRESULT hr = LoadTextureFromMemoryWIC(_d3dDeviceRec->GetDeviceRef(),
+    textureSource.str(), textureSource.pcount(),
+    DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_USAGE_STAGING,
+    D3D11_CPU_ACCESS_READ, 1, 0,
+    _tiConversionSystem.Init(), &tiLoadedWidth, &tiLoadedHeight);
 
   if (FAILED(hr))
   {
@@ -17809,9 +17840,9 @@ void EngineDD11::LoadTIConversionTexture(RString name)
   }
 
   // Check the dimension to match the expected one
-  if ((loadInfo.Width != TIConversionDimensionW) || (loadInfo.Height != TIConversionDimensionH))
+  if ((tiLoadedWidth != TIConversionDimensionW) || (tiLoadedHeight != TIConversionDimensionH))
   {
-    RptF("Warning: TIConversion texture dimension (%dx%d) is not expected, it should be (%dx%d)", loadInfo.Width, loadInfo.Height, TIConversionDimensionW, TIConversionDimensionH);
+    RptF("Warning: TIConversion texture dimension (%dx%d) is not expected, it should be (%dx%d)", tiLoadedWidth, tiLoadedHeight, TIConversionDimensionW, TIConversionDimensionH);
   }
 
   // Determine the black-hot rows (so that TI brightness adjusting can work correctly)
@@ -19298,6 +19329,29 @@ void EngineDD11::SetSSAOQuality(int quality)
   {
     _pp._ssao->Enable((_pp._ssao->GetLevel() & _postFXLevelMask) != 0);
     _pp._ssao->SetQuality(quality);
+  }
+}
+
+void EngineDD11::SetPPAAQuality(int quality)
+{
+  if (!_pp._smaa || !_pp._fxaa) return;
+  _ppaaQuality = quality;
+  if (quality <= 0)
+  {
+    _pp._fxaa->Enable(false);
+    _pp._smaa->Enable(false);
+  }
+  else if (quality <= 3)
+  {
+    _pp._smaa->Enable(false);
+    _pp._fxaa->Enable(true);
+    _pp._fxaa->SetQuality(quality - 1);
+  }
+  else
+  {
+    _pp._fxaa->Enable(false);
+    _pp._smaa->Enable(true);
+    _pp._smaa->SetQuality(quality - 4);
   }
 }
 
@@ -23494,27 +23548,30 @@ void EngineDD11::SetPixelShaderConstantTreePRT(int cb, ColorVal matEmmisive, Col
 
 void EngineDD11::DrawMeshTLSectionsInstanced(int cb, const Shape &sMesh, const EngineShapeProperties &prop, int spec, int bias, int instancesOffset, int instancesCount)
 {
+  const int nSections = sMesh.NSections();
+  if (nSections <= 0) return;
+
+  // Hoist material creation — HWhite is constant for all instanced sections
+  TLMaterial mat;
+  CreateMaterial(mat, HWhite);
+
   // Go through the sections
-  for (int i = 0; i < sMesh.NSections(); i++)
+  for (int i = 0; i < nSections; i++)
   {
     const ShapeSection &sec = sMesh.GetSection(i);
 
+    const int secSpec = sec.Special();
+
     // Proxy or hidden - don't draw
-    if (sec.Special()&(IsHidden|IsHiddenProxy)) continue;
+    if (secSpec & (IsHidden|IsHiddenProxy)) continue;
 
     // Calculate the bias for section
-    int secBias = ((sec.Special()&ZBiasMask)/ZBiasStep) * 5;
+    int secBias = ((secSpec & ZBiasMask)/ZBiasStep) * 5;
     int maxBias = intMax(bias, secBias);
 
-    // Print material
-
-    // distribute by predefined materials
-    TLMaterial mat;
-    CreateMaterial(mat, HWhite);
-
     // Prepare and draw section
-    sec.PrepareTL(cb,mat, spec, prop);
-    DrawSectionTL(cb,sMesh, i, i+1, maxBias, instancesOffset, instancesCount);
+    sec.PrepareTL(cb, mat, spec, prop);
+    DrawSectionTL(cb, sMesh, i, i+1, maxBias, instancesOffset, instancesCount);
   }
 }
 
@@ -26729,9 +26786,10 @@ void EngineDD11::DoPostprocess(float deltaT, const PostFxSettings &pfx)
     }
   }
 
+  bool ppaaEnabled = (_ppaaQuality > 0) && !_thermalVisionThis && ((_pp._smaa.NotNull() && _pp._smaa->IsEnabled()) || (_pp._fxaa.NotNull() && _pp._fxaa->IsEnabled()));
   // when rescaling is needed, we force a separate final pass
   // thermal imaging contains its own resampling
-  bool forceFinal = (_wRT!=_w || _hRT!=_h) && !_thermalVisionThis;
+  bool forceFinal = ((_wRT!=_w || _hRT!=_h) || ppaaEnabled) && !_thermalVisionThis;
 
   if (_thermalVisionThis)
   {
@@ -26933,7 +26991,7 @@ void EngineDD11::DoPostprocess(float deltaT, const PostFxSettings &pfx)
   // calling final here should not be necessary, as it should be called later anyone
   // however it seems to be clearer to call it here, so that we can be sure we leave this function in a state where:
   // back-buffer is set as the current render target
-  if (forceFinal)
+  if (forceFinal && !ppaaEnabled)
   {
     // check if bicubic can help (enlarging?)
     if ((_wRT<_w || _hRT<_h) && FinalRescalerMode==RescaleBicubic)
@@ -26945,6 +27003,14 @@ void EngineDD11::DoPostprocess(float deltaT, const PostFxSettings &pfx)
       // WIP: RESCALE - PPFinal can handle up to 2x2 - implement 4x4 downsampling as well
       _pp._final->Do(true,false);
     }
+  }
+
+  if (ppaaEnabled)
+  {
+    if (_pp._smaa && _pp._smaa->IsEnabled())
+      _pp._smaa->Do(true);
+    else if (_pp._fxaa && _pp._fxaa->IsEnabled())
+      _pp._fxaa->Do(true);
   }
 
   DoAssert(!_linearSpace);
@@ -26986,10 +27052,15 @@ void EngineDD11::DoCalculateFlareIntensity(int x, int y, int sizeX, int sizeY)
 
   // Set decimation texture on stage 13
   SetTexture(cb, 13, _pp._glow->GetDecimationRT()._srView);
+  const bool decimatedSRGB = _downsampleFormat == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB || (_downsampleFormat == DXGI_FORMAT_R8G8B8A8_UNORM && _caps._rtIsSRGB);
+  D3DSetSamplerState(cb, 13, D3DSAMP_SRGBTEXTURE_OLD, decimatedSRGB);
+  D3DSetSamplerState(cb, 13, D3DSAMP_MINFILTER_OLD, D3DTEXF_POINT_OLD);
+  D3DSetSamplerState(cb, 13, D3DSAMP_MAGFILTER_OLD, D3DTEXF_POINT_OLD);
 
-  // DX11 TODO PP
-  //const bool decimatedSRGB = _downsampleFormat==D3DFMT_A8B8G8R8;
-  //D3DSetSamplerState(cb, 13, D3DSAMP_SRGBTEXTURE_OLD, decimatedSRGB);
+  // Sampler state for stage 12 (flare intensity)
+  D3DSetSamplerState(cb, 12, D3DSAMP_SRGBTEXTURE_OLD, FALSE);
+  D3DSetSamplerState(cb, 12, D3DSAMP_MINFILTER_OLD, D3DTEXF_POINT_OLD);
+  D3DSetSamplerState(cb, 12, D3DSAMP_MAGFILTER_OLD, D3DTEXF_POINT_OLD);
 
   // Set PS Constant 6
   Color eyeSens = _pp._glow->EyeSens(_pp._glow->Cones());
@@ -28291,14 +28362,14 @@ void EngineDD11::SaveR2TToFile(const RenderTarget& surfToSave)
   {
     BString<64> str;
     str.PrintF("%s%x.dds", "RenderTarget", (int)surfToSave._resource.GetRef());
-    D3DX11SaveTextureToFile(GetD3DDeviceRec().GetDeviceContextRef(), surfToSave._resource, D3DX11_IFF_DDS, str.cstr());
+    SaveTextureToDDS(GetD3DDeviceRec().GetDeviceContextRef(), surfToSave._resource, str.cstr());
   }
 
   if (_r2tRT._renderTargetS._resource.NotNull())
   {
     BString<64> str;
     str.PrintF("%s%x.dds", "RenderTargetSurf", (int)_r2tRT._renderTargetS._resource.GetRef());
-    D3DX11SaveTextureToFile(GetD3DDeviceRec().GetDeviceContextRef(), _r2tRT._renderTargetS._resource, D3DX11_IFF_DDS, str.cstr());
+    SaveTextureToDDS(GetD3DDeviceRec().GetDeviceContextRef(), _r2tRT._renderTargetS._resource, str.cstr());
   }
 #endif
 }

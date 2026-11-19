@@ -179,9 +179,33 @@ bool EngineDD11::PostProcess::CompilePixelShader(
   bool fullPrec
 ) const
 {
+  return CompilePixelShader(hlsl, psName, ps, fullPrec, NULL);
+}
+
+bool EngineDD11::PostProcess::CompilePixelShader(
+  const LazyLoadFile &hlsl, const char *psName, ComRef<ID3D11PixelShader> &ps,
+  bool fullPrec, const D3DXMacroList *extraDefines
+) const
+{
   // define macros for the shaders
   D3DXMacroList defines;
-  _engine->CreateBasicDefines(defines);
+  _engine->CreateBasicDefines(defines, extraDefines == NULL);
+
+  if (extraDefines)
+  {
+    for (int i = 0; i < extraDefines->Size(); ++i)
+    {
+      const D3D10_SHADER_MACRO &m = (*extraDefines)[i];
+      if (m.Name != NULL)
+      {
+        D3D10_SHADER_MACRO &outM = defines.Append();
+        outM.Name = m.Name;
+        outM.Definition = m.Definition;
+      }
+    }
+    const D3D10_SHADER_MACRO empty = { NULL, NULL };
+    defines.Append(empty);
+  }
 
   D3DXCompileShader_Result result;  
 
@@ -411,7 +435,7 @@ void EngineDD11::PPFinal::Do(bool isLast,  bool forceNoSRGBOnRead)
     // Use the texture
     SetTextureTemp tRenderTarget(0, rt);
 
-    bool rescale = _engine->_wRT!=_engine->_h || _engine->_hRT!=_engine->_h;
+    bool rescale = _engine->_wRT!=_engine->_w || _engine->_hRT!=_engine->_h;
     
     // note: stage0 is set to point sampling by default (see FilterPoint in EngineDD11::PostProcess::Prepare)
     D3DTEXTUREFILTERTYPE_OLD filter = rescale ? D3DTEXF_LINEAR_OLD : D3DTEXF_POINT_OLD;
@@ -9319,6 +9343,614 @@ void EngineDD11::PPStretchRect::Do(ID3D11ShaderResourceView* source, CONST RECT 
   if (!inScene) _engine->D3DEndScene();
   Finish();
 }
+
+//-----------------------------------------------------------------------------
+// FXAA presets & macro definitions
+static const char * const FXAA_QUALITY__PRESET[] =
+{
+  "10",   // FXAA QUALITY - LOWEST
+  "12",   // FXAA QUALITY - MEDIUM DITHER PRESETS
+  "25",   // FXAA QUALITY - LOW DITHER PRESETS
+  "39"    // FXAA QUALITY - EXTREME QUALITY
+};
+
+#define STR_FXAA_QUALITY__PRESET "FXAA_QUALITY__PRESET"
+#define STR_FXAA_SHADER_SOURCE "FXAA_SHADER_SOURCE"
+#define STR_FXAA_SHADER_DEBUG "FXAA_SHADER_DEBUG"
+
+bool EngineDD11::PPFXAA::Init(const LazyLoadFile &hlsl, const LazyLoadFile &vs)
+{
+  if (!base::Init(hlsl, vs)) return false;
+
+  D3DXMacroList defines;
+  // select sources
+  D3D10_SHADER_MACRO &sourceMacro = defines.Append();
+  sourceMacro.Name = STR_FXAA_SHADER_SOURCE;
+  sourceMacro.Definition = "2";     // FXAA 3.11
+  // define shader complexity
+  D3D10_SHADER_MACRO &macro = defines.Append();
+#if _ENABLE_CHEATS
+  D3D10_SHADER_MACRO &macroDebug = defines.Append();
+  macroDebug.Name = STR_FXAA_SHADER_DEBUG;
+  macroDebug.Definition = "1";
+#endif
+
+  _psFXAAs.Realloc(lenof(FXAA_QUALITY__PRESET));
+  _psFXAAs.Resize(lenof(FXAA_QUALITY__PRESET));
+
+  for (int i = 0; i < lenof(FXAA_QUALITY__PRESET); i++)
+  {
+    macro.Name = STR_FXAA_QUALITY__PRESET;
+    macro.Definition = FXAA_QUALITY__PRESET[i];
+
+    if (!CompilePixelShader(hlsl, "PsPpFxaa3_11", _psFXAAs[i], false, &defines))
+      return false;
+  }
+
+  if (!CompilePixelShader(hlsl, "PsSharpenFilter", _psSharpen))
+    return false;
+
+  const D3D11_INPUT_ELEMENT_DESC vertexDecl[] =
+  {
+    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+  };
+
+  if (!CompileVertexShader(vs, "VsPpFxaa3_11", _vsFxaa, vertexDecl, sizeof(vertexDecl)/sizeof(vertexDecl[0])))
+    return false;
+
+  // shared rt with smaa - used for rt resampling
+  if (FAILED(_engine->CreateRenderTarget(_engine->_w, _engine->_h, _engine->_rtFormat, 1, 0, D3D11_USAGE_DEFAULT, true, _backRT)))
+    return false;
+
+  // shared rt with smaa
+  if (FAILED(_engine->CreateRenderTarget(_engine->_w, _engine->_h, _engine->_rtFormat, 1, 0, D3D11_USAGE_DEFAULT, true, _backRT1)))
+    return false;
+
+  VertexP3T2 v[4];
+  v[0].pos = Vector3P(-1.0f, -1.0f, 0.0f); v[0].tc.u = 0.0f; v[0].tc.v = 1.0f;
+  v[1].pos = Vector3P(-1.0f,  1.0f, 0.0f); v[1].tc.u = 0.0f; v[1].tc.v = 0.0f;
+  v[2].pos = Vector3P( 1.0f, -1.0f, 0.0f); v[2].tc.u = 1.0f; v[2].tc.v = 1.0f;
+  v[3].pos = Vector3P( 1.0f,  1.0f, 0.0f); v[3].tc.u = 1.0f; v[3].tc.v = 0.0f;
+
+  ComRef<ID3D11Buffer> vb;
+  D3D11_BUFFER_DESC bd;
+  bd.Usage = D3D11_USAGE_DEFAULT;
+  bd.ByteWidth = sizeof(VertexP3T2) * 4;
+  bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+  bd.CPUAccessFlags = 0;
+  bd.MiscFlags = 0;
+
+  D3D11_SUBRESOURCE_DATA srData;
+  srData.pSysMem = v;
+  srData.SysMemPitch = 0;
+  srData.SysMemSlicePitch = 0;
+
+  HRESULT hr = _engine->GetD3DDeviceNonRec()->CreateBuffer(&bd, &srData, vb.Init());
+  if (FAILED(hr))
+  {
+    LogF("Error: Vertex buffer creation failed.");
+    return false;
+  }
+
+  _vb = VertexStaticData11::BufferFuture(vb);
+
+  return true;
+}
+
+bool EngineDD11::PPFXAA::UnInit()
+{
+  _vb = VertexStaticData11::BufferFuture();
+  _vsFxaa.Free();
+  _psFxaa.Free();
+  _psSharpen.Free();
+  
+  _backRT.Free();
+  _backRT1.Free();
+
+  for (int i = 0; i < _psFXAAs.Size(); i++)
+    _psFXAAs[i].Free();
+
+  _psFXAAs.Clear();
+
+  return true;
+}
+
+void EngineDD11::PPFXAA::Prepare()
+{  
+  base::Prepare();
+
+  const int cb = -1;
+  _engine->SetStreamSource(cb, _vb, sizeof(VertexP3T2), 4);
+  _engine->SetVertexShader(cb, _vsFxaa);
+  _engine->SetPixelShader(cb, _psFxaa, false);
+}
+
+void EngineDD11::PPFXAA::Do(bool isLast)
+{
+  PROFILE_SCOPE_GRF_EX(pFxaa, *, SCOPE_COLOR_GREEN);
+  
+  if (!IsEnabled() || _psFxaa.IsNull())
+    return;
+  
+  const int cb = -1;
+  
+  const int width = _engine->_w;
+  const int height = _engine->_h;
+
+  TextureHandle11 *rt = _engine->GetCurrRenderTargetAsTexture();
+
+  bool rescale = _engine->_wRT != width || _engine->_hRT != height;
+
+  if (_engine->_currRenderTarget._resource == _engine->_backBuffer._resource || rescale)
+  {
+    if (_engine->_pp._stretchRect)
+    {
+      _engine->_pp._stretchRect->Do(rt, NULL, _backRT, NULL);
+      rt = _backRT._srView;
+    }
+  }
+
+  bool inScene = _engine->_d3dFrameOpen;
+  if (!inScene) _engine->D3DBeginScene();
+
+  Prepare();
+  
+  const float invW = 1.0f / (float)width;
+  const float invH = 1.0f / (float)height;
+
+  const float srcOffsetU = 0.0f;
+  const float srcOffsetV = 0.0f;
+
+  SetShaderConstantTemp vs0(VSC_VsFxaa, D3DXVECTOR4(srcOffsetU, srcOffsetV, 0.0f, 0.0f));
+  SetShaderConstantTemp ps1(PSC_FxaaPars, D3DXVECTOR4(invW, invH, (float)width, (float)height));
+
+  SetRenderStateTemp rs0(D3DRS_COLORWRITEENABLE_OLD, D3DCOLORWRITEENABLE_RED_OLD | D3DCOLORWRITEENABLE_GREEN_OLD | D3DCOLORWRITEENABLE_BLUE_OLD | D3DCOLORWRITEENABLE_ALPHA_OLD);
+  SetRenderStateTemp rs6(D3DRS_CULLMODE_OLD, D3DCULL_NONE_OLD);
+  SetRenderStateTemp rs8(D3DRS_ZWRITEENABLE_OLD, FALSE);
+  SetRenderStateTemp rs9(D3DRS_ZENABLE_OLD, FALSE);
+  SetRenderStateTemp rs10(D3DRS_SRGBWRITEENABLE_OLD, FALSE);
+
+  static float QualitySubpix = 0.75f;
+  static float QualityEdgeThreshold = 0.166f;
+  static float QualityEdgeThresholdMin = 0.0625f;
+  static float FXAADebug = 0.0f;
+  static float SharpOffset = 0.6f;	
+  static float SharpenEdge = 0.15f;
+
+  D3DXVECTOR4 vec4(QualitySubpix, QualityEdgeThreshold, QualityEdgeThresholdMin, FXAADebug);
+  SetShaderConstantTemp ps2(PSC_FxaaQuality, vec4);
+    
+  _engine->PushRenderTargetDepthStencil();
+  _engine->SetRenderTargetAndDepthStencil(_backRT1, DepthStencil::DepthStencilNULL, 0, 1);
+  _engine->SetViewport(width, height, 0.0f, 1.0f);
+
+  {
+    SetTextureTemp tTex0(0, rt);
+    SetSamplerStateTemp ss0SRGBTEXTURE(0, D3DSAMP_SRGBTEXTURE_OLD, _engine->_caps._rtIsSRGB);
+
+    SetSamplerStateTemp ss0MINFILTER(0, D3DSAMP_MINFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss0MAGFILTER(0, D3DSAMP_MAGFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss0ADDRESSU(0, D3DSAMP_ADDRESSU_OLD, D3DTADDRESS_CLAMP_OLD);
+    SetSamplerStateTemp ss0ADDRESSV(0, D3DSAMP_ADDRESSV_OLD, D3DTADDRESS_CLAMP_OLD);
+
+    _engine->DrawPrimitive(cb, D3DPT_TRIANGLESTRIP_OLD, 0, 2);
+  }
+
+  _engine->PopRenderTargetDepthStencil();
+  _engine->SetViewport(width, height, 0.0f, 1.0f);
+
+  // Sharp filter
+  {
+    PROFILE_SCOPE_EX(pShar, *);
+
+    SetTextureTemp tTex1(0, _backRT1._srView);
+    SetSamplerStateTemp ss1MINFILTER(0, D3DSAMP_MINFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss1MAGFILTER(0, D3DSAMP_MAGFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss1ADDRESSU(0, D3DSAMP_ADDRESSU_OLD, D3DTADDRESS_CLAMP_OLD);
+    SetSamplerStateTemp ss1ADDRESSV(0, D3DSAMP_ADDRESSV_OLD, D3DTADDRESS_CLAMP_OLD);
+    
+    SetShaderConstantTemp ps1Sharpen(PSC_FxaaPars, D3DXVECTOR4(invW, invH, invW * SharpOffset, invH * SharpOffset));
+    SetShaderConstantTemp ps2Sharpen(PSC_FxaaQuality, D3DXVECTOR4(SharpenEdge, 0.0f, 0.0f, 0.0f));
+
+    _engine->SetPixelShader(cb, _psSharpen);
+
+    if (isLast)
+      _engine->SwitchToBackBufferRenderTarget();
+
+    _engine->DrawPrimitive(cb, D3DPT_TRIANGLESTRIP_OLD, 0, 2);
+  }
+
+  if (!inScene) _engine->D3DEndScene();
+
+  Finish();
+}
+
+void EngineDD11::PPFXAA::SetQuality(int quality)
+{
+  if (!_psFXAAs.Size() || _quality == quality) 
+    return;
+
+  _quality = quality;
+
+  if (_quality <= 0)
+  {
+    _quality = 0;
+    _psFxaa.Free();
+  }
+  else 
+  {
+    if (_quality >= _psFXAAs.Size())
+      _quality = _psFXAAs.Size() - 1;
+    _psFxaa = _psFXAAs[_quality];
+  }
+}
+
+//-----------------------------------------------------------------------------
+// SMAA
+#include "ShaderSources_4_0/PPAA/AreaTex.h"
+#include "ShaderSources_4_0/PPAA/SearchTex.h"
+
+#ifndef STENCIL_FULL
+#define STENCIL_FULL 0xff
+#endif
+
+bool EngineDD11::PPSMAA::Init(const LazyLoadFile &hlsl, const LazyLoadFile &vs, const RenderTarget &sharedRT0, const RenderTarget &sharedRT1)
+{
+  HRESULT hr;
+  const int width = _engine->_w;
+  const int height = _engine->_h;
+
+  _backRT = sharedRT0;
+  _edgeRT = sharedRT1;
+
+  if (FAILED(_engine->CreateRenderTarget(width, height, _engine->_rtFormat, 1, 0, D3D11_USAGE_DEFAULT, true, _blendRT)))
+    return false;
+
+  if (FAILED(_engine->CreateDepthStencil(width, height, DXGI_FORMAT_D24_UNORM_S8_UINT, 1, 0, D3D11_USAGE_DEFAULT, false, _depthBuffer)))
+    return false;
+
+  // Helper textures: AreaTex (160x560, R8G8_UNORM) and SearchTex (66x33, R8_UNORM)
+  {
+    D3D11_TEXTURE2D_DESC desc;
+    ZeroMemory(&desc, sizeof(desc));
+    desc.Width = AREATEX_WIDTH;
+    desc.Height = AREATEX_HEIGHT;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R8G8_UNORM;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    D3D11_SUBRESOURCE_DATA subData;
+    ZeroMemory(&subData, sizeof(subData));
+    subData.pSysMem = areaTexBytes;
+    subData.SysMemPitch = AREATEX_PITCH;
+
+    ComRef<ID3D11Texture2D> tex;
+    hr = _engine->GetD3DDeviceNonRec()->CreateTexture2D(&desc, &subData, tex.Init());
+    if (FAILED(hr))
+      return false;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    ZeroMemory(&srvDesc, sizeof(srvDesc));
+    srvDesc.Format = desc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = 1;
+    hr = _engine->GetD3DDeviceNonRec()->CreateShaderResourceView(tex, &srvDesc, _areaTex.Init());
+    if (FAILED(hr))
+      return false;
+  }
+
+  {
+    D3D11_TEXTURE2D_DESC desc;
+    ZeroMemory(&desc, sizeof(desc));
+    desc.Width = SEARCHTEX_WIDTH;
+    desc.Height = SEARCHTEX_HEIGHT;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R8_UNORM;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    D3D11_SUBRESOURCE_DATA subData;
+    ZeroMemory(&subData, sizeof(subData));
+    subData.pSysMem = searchTexBytes;
+    subData.SysMemPitch = SEARCHTEX_PITCH;
+
+    ComRef<ID3D11Texture2D> tex;
+    hr = _engine->GetD3DDeviceNonRec()->CreateTexture2D(&desc, &subData, tex.Init());
+    if (FAILED(hr))
+      return false;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    ZeroMemory(&srvDesc, sizeof(srvDesc));
+    srvDesc.Format = desc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = 1;
+    hr = _engine->GetD3DDeviceNonRec()->CreateShaderResourceView(tex, &srvDesc, _searchTex.Init());
+    if (FAILED(hr))
+      return false;
+  }
+
+  const D3D11_INPUT_ELEMENT_DESC vertexDecl[] =
+  {
+    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+  };
+
+  // Compile shaders
+  if (!CompileVertexShader(vs, "DX11_SMAAEdgeDetectionVS", _edgeDetectionVS, vertexDecl, sizeof(vertexDecl)/sizeof(vertexDecl[0])))
+    return false;
+
+  const int EdgeDetectorShaders = 2;
+  _edgeDetectionPS.Realloc(EdgeDetectorShaders);
+  _edgeDetectionPS.Resize(EdgeDetectorShaders);
+
+  if (!CompilePixelShader(hlsl, "DX11_SMAALumaEdgeDetectionPS", _edgeDetectionPS[0]))
+    return false;
+
+  if (!CompilePixelShader(hlsl, "DX11_SMAAColorEdgeDetectionPS", _edgeDetectionPS[1]))
+    return false;
+
+  if (!CompileVertexShader(vs, "DX11_SMAABlendingWeightCalculationVS", _blendingWeightVS, vertexDecl, sizeof(vertexDecl)/sizeof(vertexDecl[0])))
+    return false;
+
+  const char * const SMAA_PRESETS[] = { "SMAA_PRESET_LOW", "SMAA_PRESET_MEDIUM", "SMAA_PRESET_HIGH", "SMAA_PRESET_ULTRA" };
+
+  _blendingWeightPS.Realloc(PresetCount);
+  _blendingWeightPS.Resize(PresetCount);
+
+  for (int i = 0; i < PresetCount; i++)
+  {
+    D3DXMacroList defines;
+    _engine->CreateBasicDefines(defines, false);
+
+    D3D10_SHADER_MACRO &presetMacro = defines.Append();
+    presetMacro.Name = SMAA_PRESETS[i];
+    presetMacro.Definition = "1";
+
+    const D3D10_SHADER_MACRO empty = { NULL, NULL };
+    defines.Append(empty);
+
+    if (!CompilePixelShader(hlsl, "DX11_SMAABlendingWeightCalculationPS", _blendingWeightPS[i], false, &defines))
+      return false;
+  }
+
+  if (!CompileVertexShader(vs, "DX11_SMAANeighborhoodBlendingVS", _neighborhoodBlendingVS, vertexDecl, sizeof(vertexDecl)/sizeof(vertexDecl[0])))
+    return false;
+
+  if (!CompilePixelShader(hlsl, "DX11_SMAANeighborhoodBlendingPS", _neighborhoodBlendingPS))
+    return false;
+
+  // Create fullscreen quad buffer
+  VertexP3T2 v[4];
+  v[0].pos = Vector3P(-1.0f, -1.0f, 0.0f); v[0].tc.u = 0.0f; v[0].tc.v = 1.0f;
+  v[1].pos = Vector3P(-1.0f,  1.0f, 0.0f); v[1].tc.u = 0.0f; v[1].tc.v = 0.0f;
+  v[2].pos = Vector3P( 1.0f, -1.0f, 0.0f); v[2].tc.u = 1.0f; v[2].tc.v = 1.0f;
+  v[3].pos = Vector3P( 1.0f,  1.0f, 0.0f); v[3].tc.u = 1.0f; v[3].tc.v = 0.0f;
+
+  ComRef<ID3D11Buffer> vb;
+  D3D11_BUFFER_DESC bd;
+  bd.Usage = D3D11_USAGE_DEFAULT;
+  bd.ByteWidth = sizeof(VertexP3T2) * 4;
+  bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+  bd.CPUAccessFlags = 0;
+  bd.MiscFlags = 0;
+
+  D3D11_SUBRESOURCE_DATA srData;
+  srData.pSysMem = v;
+  srData.SysMemPitch = 0;
+  srData.SysMemSlicePitch = 0;
+
+  hr = _engine->GetD3DDeviceNonRec()->CreateBuffer(&bd, &srData, vb.Init());
+  if (FAILED(hr))
+  {
+    LogF("Error: Vertex buffer creation failed.");
+    return false;
+  }
+
+  _vb = VertexStaticData11::BufferFuture(vb);
+
+  return true;
+}
+
+bool EngineDD11::PPSMAA::UnInit()
+{
+  _vb = VertexStaticData11::BufferFuture();
+
+  _backRT.Free();
+  _edgeRT.Free();
+  _blendRT.Free();
+  _depthBuffer.Free();
+
+  _areaTex.Free();
+  _searchTex.Free();
+
+  _edgeDetectionVS.Free();
+  for (int i = 0; i < _edgeDetectionPS.Size(); i++)
+    _edgeDetectionPS[i].Free();
+  _edgeDetectionPS.Clear();
+
+  _blendingWeightVS.Free();
+  for (int i = 0; i < _blendingWeightPS.Size(); i++)
+    _blendingWeightPS[i].Free();
+  _blendingWeightPS.Clear();
+
+  _neighborhoodBlendingVS.Free();
+  _neighborhoodBlendingPS.Free();
+
+  return true;
+}
+
+void EngineDD11::PPSMAA::Prepare()
+{
+  base::Prepare();
+}
+
+void EngineDD11::PPSMAA::SetQuality(int quality)
+{
+  if (quality < 0) quality = 0;
+  else if (quality >= PresetCount) quality = PresetCount - 1;
+  _currentPreset = (Presets)quality;
+}
+
+void EngineDD11::PPSMAA::Do(bool isLast)
+{
+  PROFILE_SCOPE_GRF_EX(smaa, *, SCOPE_COLOR_GREEN);
+
+  if (!IsEnabled() || _blendingWeightPS.Size() == 0)
+    return;
+
+  bool inScene = _engine->_d3dFrameOpen;
+  if (!inScene) _engine->D3DBeginScene();
+
+  const int cb = -1;
+  const int width = _engine->_w;
+  const int height = _engine->_h;
+
+  TextureHandle11 *rt = _engine->GetCurrRenderTargetAsTexture();
+  bool rescale = _engine->_wRT != width || _engine->_hRT != height;
+
+  if (_engine->_currRenderTarget._resource == _engine->_backBuffer._resource || rescale)
+  {
+    if (_engine->_pp._stretchRect)
+    {
+      _engine->_pp._stretchRect->Do(rt, NULL, _backRT, NULL);
+      rt = _backRT._srView;
+    }
+  }
+
+  Prepare();
+
+  const float invW = 1.0f / (float)width;
+  const float invH = 1.0f / (float)height;
+  D3DXVECTOR4 smaaPixelSize(invW, invH, (float)width, (float)height);
+  SetShaderConstantTemp vsSize(VSC_SmaaPixelSize, smaaPixelSize);
+  SetShaderConstantTemp psSize(PSC_SmaaPixelSize, smaaPixelSize);
+
+  // Common render states
+  SetRenderStateTemp rs0(D3DRS_COLORWRITEENABLE_OLD, D3DCOLORWRITEENABLE_RED_OLD | D3DCOLORWRITEENABLE_GREEN_OLD | D3DCOLORWRITEENABLE_BLUE_OLD | D3DCOLORWRITEENABLE_ALPHA_OLD);
+  SetRenderStateTemp rs1(D3DRS_ALPHABLENDENABLE_OLD, FALSE);
+  SetRenderStateTemp rs6(D3DRS_CULLMODE_OLD, D3DCULL_NONE_OLD);
+  SetRenderStateTemp rs8(D3DRS_ZWRITEENABLE_OLD, TRUE);
+  SetRenderStateTemp rs9(D3DRS_ZENABLE_OLD, FALSE);
+  SetRenderStateTemp rs10(D3DRS_SRGBWRITEENABLE_OLD, FALSE);
+
+  // Stream source
+  _engine->SetStreamSource(cb, _vb, sizeof(VertexP3T2), 4);
+
+  // PASS 1: EDGE DETECTION
+  {
+    SetRenderStateTemp rs11(D3DRS_STENCILENABLE_OLD, TRUE);
+    SetRenderStateTemp rs12(D3DRS_STENCILPASS_OLD, D3DSTENCILOP_REPLACE_OLD);
+    SetRenderStateTemp rs13(D3DRS_STENCILREF_OLD, 1);
+    SetRenderStateTemp rs15(D3DRS_STENCILMASK_OLD, STENCIL_FULL);
+    SetRenderStateTemp rs16(D3DRS_STENCILWRITEMASK_OLD, STENCIL_FULL);
+    SetRenderStateTemp rs17(D3DRS_STENCILFUNC_OLD, D3DCMP_ALWAYS_OLD);
+    SetRenderStateTemp rs18(D3DRS_STENCILFAIL_OLD, D3DSTENCILOP_KEEP_OLD);
+    SetRenderStateTemp rs19(D3DRS_TWOSIDEDSTENCILMODE_OLD, FALSE);
+
+    _engine->SetVertexShader(cb, _edgeDetectionVS);
+    _engine->SetPixelShader(cb, _edgeDetectionPS[1]); // Color edge detection
+
+    _engine->PushRenderTargetDepthStencil();
+    _engine->SetRenderTargetAndDepthStencil(_edgeRT, _depthBuffer, 0.0f, 1.0f);
+    _engine->SetViewport(width, height, 0.0f, 1.0f);
+
+    _engine->Clear(false, true, (PackedColor)0, true);
+
+    SetTextureTemp tTex0(0, rt);
+    SetSamplerStateTemp ss0SRGBTEXTURE(0, D3DSAMP_SRGBTEXTURE_OLD, FALSE);
+    SetSamplerStateTemp ss0MINFILTER(0, D3DSAMP_MINFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss0MAGFILTER(0, D3DSAMP_MAGFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss0ADDRESSU(0, D3DSAMP_ADDRESSU_OLD, D3DTADDRESS_CLAMP_OLD);
+    SetSamplerStateTemp ss0ADDRESSV(0, D3DSAMP_ADDRESSV_OLD, D3DTADDRESS_CLAMP_OLD);
+
+    _engine->DrawPrimitive(cb, D3DPT_TRIANGLESTRIP_OLD, 0, 2);
+
+    _engine->PopRenderTargetDepthStencil();
+  }
+
+  // PASS 2: BLENDING WEIGHT CALCULATION
+  {
+    SetRenderStateTemp rs21(D3DRS_STENCILENABLE_OLD, TRUE);
+    SetRenderStateTemp rs22(D3DRS_STENCILPASS_OLD, D3DSTENCILOP_KEEP_OLD);
+    SetRenderStateTemp rs23(D3DRS_STENCILFUNC_OLD, D3DCMP_EQUAL_OLD);
+    SetRenderStateTemp rs24(D3DRS_STENCILREF_OLD, 1);
+    SetRenderStateTemp rs25(D3DRS_STENCILMASK_OLD, STENCIL_FULL);
+
+    _engine->SetVertexShader(cb, _blendingWeightVS);
+    _engine->SetPixelShader(cb, _blendingWeightPS[_currentPreset]);
+
+    _engine->PushRenderTargetDepthStencil();
+    _engine->SetRenderTargetAndDepthStencil(_blendRT, _depthBuffer, 0.0f, 1.0f);
+    _engine->SetViewport(width, height, 0.0f, 1.0f);
+
+    _engine->Clear(false, true, (PackedColor)0, false);
+
+    SetTextureTemp blendTex0(0, _edgeRT._srView);
+    SetSamplerStateTemp ss0MINFILTER(0, D3DSAMP_MINFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss0MAGFILTER(0, D3DSAMP_MAGFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss0ADDRESSU(0, D3DSAMP_ADDRESSU_OLD, D3DTADDRESS_CLAMP_OLD);
+    SetSamplerStateTemp ss0ADDRESSV(0, D3DSAMP_ADDRESSV_OLD, D3DTADDRESS_CLAMP_OLD);
+
+    SetTextureTemp blendTex1(1, _areaTex);
+    SetSamplerStateTemp ss1MINFILTER(1, D3DSAMP_MINFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss1MAGFILTER(1, D3DSAMP_MAGFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss1ADDRESSU(1, D3DSAMP_ADDRESSU_OLD, D3DTADDRESS_CLAMP_OLD);
+    SetSamplerStateTemp ss1ADDRESSV(1, D3DSAMP_ADDRESSV_OLD, D3DTADDRESS_CLAMP_OLD);
+
+    SetTextureTemp blendTex2(2, _searchTex);
+    SetSamplerStateTemp ss2MINFILTER(2, D3DSAMP_MINFILTER_OLD, D3DTEXF_POINT_OLD);
+    SetSamplerStateTemp ss2MAGFILTER(2, D3DSAMP_MAGFILTER_OLD, D3DTEXF_POINT_OLD);
+    SetSamplerStateTemp ss2ADDRESSU(2, D3DSAMP_ADDRESSU_OLD, D3DTADDRESS_CLAMP_OLD);
+    SetSamplerStateTemp ss2ADDRESSV(2, D3DSAMP_ADDRESSV_OLD, D3DTADDRESS_CLAMP_OLD);
+
+    _engine->DrawPrimitive(cb, D3DPT_TRIANGLESTRIP_OLD, 0, 2);
+
+    _engine->PopRenderTargetDepthStencil();
+  }
+
+  // PASS 3: NEIGHBORHOOD BLENDING
+  {
+    SetRenderStateTemp rs31(D3DRS_STENCILENABLE_OLD, FALSE);
+
+    _engine->SetVertexShader(cb, _neighborhoodBlendingVS);
+    _engine->SetPixelShader(cb, _neighborhoodBlendingPS);
+
+    if (isLast)
+      _engine->SwitchToBackBufferRenderTarget();
+
+    _engine->SetViewport(width, height, 0.0f, 1.0f);
+    _engine->Clear(false, true);
+
+    SetTextureTemp neighborhoodTex0(0, rt);
+    SetSamplerStateTemp ss0MINFILTER(0, D3DSAMP_MINFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss0MAGFILTER(0, D3DSAMP_MAGFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss0ADDRESSU(0, D3DSAMP_ADDRESSU_OLD, D3DTADDRESS_CLAMP_OLD);
+    SetSamplerStateTemp ss0ADDRESSV(0, D3DSAMP_ADDRESSV_OLD, D3DTADDRESS_CLAMP_OLD);
+
+    SetTextureTemp neighborhoodTex1(1, _blendRT._srView);
+    SetSamplerStateTemp ss1MINFILTER(1, D3DSAMP_MINFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss1MAGFILTER(1, D3DSAMP_MAGFILTER_OLD, D3DTEXF_LINEAR_OLD);
+    SetSamplerStateTemp ss1ADDRESSU(1, D3DSAMP_ADDRESSU_OLD, D3DTADDRESS_CLAMP_OLD);
+    SetSamplerStateTemp ss1ADDRESSV(1, D3DSAMP_ADDRESSV_OLD, D3DTADDRESS_CLAMP_OLD);
+
+    _engine->DrawPrimitive(cb, D3DPT_TRIANGLESTRIP_OLD, 0, 2);
+  }
+
+  if (!inScene) _engine->D3DEndScene();
+
+  Finish();
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 void EngineDD11::ISpecialEffect::DestroyHndls()

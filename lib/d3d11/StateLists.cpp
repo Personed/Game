@@ -12,6 +12,23 @@ namespace DX11
 // maximum count of states that can be loaded to GPU
 static const int MaxStateCount = 4096;
 
+static constexpr int DepthStencilRegularStateCount =
+  (1 + DepthStencilStateList::DFCount) * DepthStencilStateList::DWMCount *
+  (DepthStencilStateList::SWMCount +
+    DepthStencilStateList::SRMCount * DepthStencilStateList::SWMCount *
+    DepthStencilStateList::SPOCount * DepthStencilStateList::SFCount *
+    DepthStencilStateList::SPOCount * DepthStencilStateList::SFCount);
+static constexpr int DepthStencilFrontEqualStateCount =
+  (1 + DepthStencilStateList::DFCount) * DepthStencilStateList::DWMCount *
+  DepthStencilStateList::SWMCount * DepthStencilStateList::SPOCount *
+  DepthStencilStateList::SPOCount * DepthStencilStateList::SFCount;
+static_assert(DepthStencilStateList::SFEqual == DepthStencilStateList::SFCount,
+  "Front-face EQUAL must remain outside the regular stencil-function table");
+static_assert(DepthStencilRegularStateCount == 2580 &&
+  DepthStencilFrontEqualStateCount == 640 &&
+  DepthStencilRegularStateCount + DepthStencilFrontEqualStateCount <= MaxStateCount,
+  "Depth/stencil regular and sparse EQUAL state tables must fit MaxStateCount");
+
 // Alpha-only color write mask mapping helpers
 static constexpr bool IsLegacyColorWriteMaskSupported(DWORD writeMask)
 {
@@ -142,6 +159,45 @@ void DepthStencilStateList::CreateStates()
     }
   }
 
+  // EQUAL is needed by the legacy stencil path. A zero read mask makes the
+  // stencil comparison unconditional, so those entries reuse the regular
+  // ALWAYS table and only full-read-mask EQUAL states need separate objects.
+  for (int depthEnable = 0; depthEnable < DECount; ++depthEnable)
+  {
+    for (int depthWriteMask = 0; depthWriteMask < DWMCount; ++depthWriteMask)
+    {
+      for (int depthFunc = 0; depthFunc < DFCount; ++depthFunc)
+      {
+        for (int stencilWriteMask = 0; stencilWriteMask < SWMCount; ++stencilWriteMask)
+        {
+          for (int stencilPassOpFront = 0; stencilPassOpFront < SPOCount; ++stencilPassOpFront)
+          {
+            for (int stencilPassOpBack = 0; stencilPassOpBack < SPOCount; ++stencilPassOpBack)
+            {
+              for (int stencilFuncBack = 0; stencilFuncBack < SFCount; ++stencilFuncBack)
+              {
+                if (CreateState(StateDesc(
+                  (DepthEnable)depthEnable,
+                  (DepthWriteMask)depthWriteMask,
+                  (DepthFunc)depthFunc,
+                  SETrue,
+                  SRMFull,
+                  (StencilWriteMask)stencilWriteMask,
+                  (StencilPassOp)stencilPassOpFront,
+                  SFEqual,
+                  (StencilPassOp)stencilPassOpBack,
+                  (StencilFunc)stencilFuncBack)))
+                {
+                  numCreated++;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   LogF("DepthStencilStateList - created %d states.", numCreated);
   if (numCreated > MaxStateCount)
   {
@@ -193,11 +249,47 @@ void DepthStencilStateList::Clear()
       }
     }
   }
+
+  for (int depthEnable = 0; depthEnable < DECount; ++depthEnable)
+  {
+    for (int depthWriteMask = 0; depthWriteMask < DWMCount; ++depthWriteMask)
+    {
+      for (int depthFunc = 0; depthFunc < DFCount; ++depthFunc)
+      {
+        for (int stencilReadMask = 0; stencilReadMask < SRMCount; ++stencilReadMask)
+        {
+          for (int stencilWriteMask = 0; stencilWriteMask < SWMCount; ++stencilWriteMask)
+          {
+            for (int stencilPassOpFront = 0; stencilPassOpFront < SPOCount; ++stencilPassOpFront)
+            {
+              for (int stencilPassOpBack = 0; stencilPassOpBack < SPOCount; ++stencilPassOpBack)
+              {
+                for (int stencilFuncBack = 0; stencilFuncBack < SFCount; ++stencilFuncBack)
+                {
+                  _statesFrontEqual
+                    [depthEnable]
+                    [depthWriteMask]
+                    [depthFunc]
+                    [stencilReadMask]
+                    [stencilWriteMask]
+                    [stencilPassOpFront]
+                    [stencilPassOpBack]
+                    [stencilFuncBack].Free();
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 bool DepthStencilStateList::CreateState(const DepthStencilStateList::StateDesc &desc)
 {
   if (!IsStateUsable(desc))
+    return false;
+  if (desc._stencilFuncFront == SFEqual && desc._stencilReadMask == SRMZero)
     return false;
   
   D3D11_DEPTH_STENCIL_DESC dsDesc;
@@ -287,6 +379,9 @@ bool DepthStencilStateList::CreateState(const DepthStencilStateList::StateDesc &
   case SFLess:
     dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_LESS;
     break;
+  case SFEqual:
+    dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+    break;
   default:
     Fail("Invalid stencil func front!");      
     dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
@@ -331,19 +426,28 @@ bool DepthStencilStateList::CreateState(const DepthStencilStateList::StateDesc &
   }
 
   // Create state object
-  HRESULT hr = GEngineDD11->GetD3DDeviceNonRec().CreateDepthStencilState(&dsDesc, 
-    _states
-    [desc._depthEnable]
-    [desc._depthWriteMask]
-    [desc._depthFunc]
-    [desc._stencilEnable]
-    [desc._stencilReadMask]
-    [desc._stencilWriteMask]
-    [desc._stencilPassOpFront]
-    [desc._stencilFuncFront]
-    [desc._stencilPassOpBack]
-    [desc._stencilFuncBack].Init()
-    );
+  ComRef<ID3D11DepthStencilState> &state = desc._stencilFuncFront == SFEqual
+    ? _statesFrontEqual
+      [desc._depthEnable]
+      [desc._depthWriteMask]
+      [desc._depthFunc]
+      [desc._stencilReadMask]
+      [desc._stencilWriteMask]
+      [desc._stencilPassOpFront]
+      [desc._stencilPassOpBack]
+      [desc._stencilFuncBack]
+    : _states
+      [desc._depthEnable]
+      [desc._depthWriteMask]
+      [desc._depthFunc]
+      [desc._stencilEnable]
+      [desc._stencilReadMask]
+      [desc._stencilWriteMask]
+      [desc._stencilPassOpFront]
+      [desc._stencilFuncFront]
+      [desc._stencilPassOpBack]
+      [desc._stencilFuncBack];
+  HRESULT hr = GEngineDD11->GetD3DDeviceNonRec().CreateDepthStencilState(&dsDesc, state.Init());
 
   if (FAILED(hr))
   {
@@ -358,6 +462,32 @@ const ID3D11DepthStencilState* DepthStencilStateList::GetState(const DepthStenci
 {
   DoAssert(IsDescValid(desc)); 
   DoAssert(IsStateUsable(desc));
+  if (desc._stencilFuncFront == SFEqual)
+  {
+    if (desc._stencilReadMask == SRMZero)
+    {
+      return _states
+        [desc._depthEnable]
+        [desc._depthWriteMask]
+        [desc._depthFunc]
+        [desc._stencilEnable]
+        [desc._stencilReadMask]
+        [desc._stencilWriteMask]
+        [desc._stencilPassOpFront]
+        [SFAlways]
+        [desc._stencilPassOpBack]
+        [desc._stencilFuncBack];
+    }
+    return _statesFrontEqual
+      [desc._depthEnable]
+      [desc._depthWriteMask]
+      [desc._depthFunc]
+      [desc._stencilReadMask]
+      [desc._stencilWriteMask]
+      [desc._stencilPassOpFront]
+      [desc._stencilPassOpBack]
+      [desc._stencilFuncBack];
+  }
   return _states
     [desc._depthEnable]
     [desc._depthWriteMask]
@@ -398,15 +528,124 @@ bool DepthStencilStateList::IsDescValid(const DepthStencilStateList::StateDesc &
     desc._stencilReadMask >= 0 && desc._stencilReadMask < SRMCount &&
     desc._stencilWriteMask >= 0 && desc._stencilWriteMask < SWMCount &&
     desc._stencilPassOpFront >= 0 && desc._stencilPassOpFront < SPOCount &&
-    desc._stencilFuncFront >= 0 && desc._stencilFuncFront < SFCount &&
+     desc._stencilFuncFront >= SFAlways && desc._stencilFuncFront <= SFEqual &&
     desc._stencilPassOpBack >= 0 && desc._stencilPassOpBack < SPOCount &&
     desc._stencilFuncBack >= 0 && desc._stencilFuncBack < SFCount;
 }
 
 inline static DWORD GetRSValue(const AutoArray<DWORD>& info, int index)
 {
-  Assert(index >= 0 && index < info.Size());
+  if (index < 0 || index >= info.Size())
+    return (DWORD)-1;
   return info[index];
+}
+
+// Rate-limit fallback diagnostics so unexpected legacy values are logged once
+// per state family instead of flooding DayZ.RPT on every draw call.
+static volatile LONG sStateListFallbackReported[20] = {};
+
+static void ReportUnhandledStateOnce(int slot, const char *category, DWORD value)
+{
+  if (slot >= 0 && slot < lenof(sStateListFallbackReported) &&
+      InterlockedCompareExchange(&sStateListFallbackReported[slot], 1, 0) == 0)
+  {
+    RptF("DX11 StateLists fallback: %s=%u (0x%08X)", category, (unsigned)value, (unsigned)value);
+  }
+}
+
+static constexpr DepthStencilStateList::StencilReadMask ConvertStencilReadMask(DWORD value)
+{
+  return value == 0xff ? DepthStencilStateList::SRMFull : DepthStencilStateList::SRMZero;
+}
+
+static constexpr DepthStencilStateList::StencilWriteMask ConvertStencilWriteMask(DWORD value)
+{
+  return value == 0xff ? DepthStencilStateList::SWMFull : DepthStencilStateList::SWMZero;
+}
+
+static_assert(ConvertStencilReadMask(0) == DepthStencilStateList::SRMZero &&
+  ConvertStencilReadMask(0xff) == DepthStencilStateList::SRMFull &&
+  ConvertStencilReadMask(0x01) == DepthStencilStateList::SRMZero,
+  "Stencil read masks must preserve only zero/full legacy masks");
+static_assert(ConvertStencilWriteMask(0) == DepthStencilStateList::SWMZero &&
+  ConvertStencilWriteMask(0xff) == DepthStencilStateList::SWMFull &&
+  ConvertStencilWriteMask(0x01) == DepthStencilStateList::SWMZero,
+  "Stencil write masks must preserve only zero/full legacy masks");
+
+static DepthStencilStateList::StencilPassOp ConvertStencilPassOp(DWORD value, int slot, const char *category)
+{
+  switch (value)
+  {
+  case D3DSTENCILOP_KEEP_OLD:
+  case (DWORD)-1:
+    return DepthStencilStateList::SPOKeep;
+  case D3DSTENCILOP_REPLACE_OLD:
+    return DepthStencilStateList::SPOReplace;
+  case D3DSTENCILOP_INCR_OLD:
+    return DepthStencilStateList::SPOIncr;
+  case D3DSTENCILOP_DECR_OLD:
+    return DepthStencilStateList::SPODecr;
+  default:
+    ReportUnhandledStateOnce(slot, category, value);
+    return DepthStencilStateList::SPOKeep;
+  }
+}
+
+static DepthStencilStateList::StencilFunc ConvertStencilFunc(DWORD value, int slot, const char *category, bool allowEqual)
+{
+  switch (value)
+  {
+  case D3DCMP_EQUAL_OLD:
+    if (allowEqual)
+      return DepthStencilStateList::SFEqual;
+    ReportUnhandledStateOnce(slot, category, value);
+    return DepthStencilStateList::SFAlways;
+  case D3DCMP_LESS_OLD:
+    return DepthStencilStateList::SFLess;
+  case D3DCMP_ALWAYS_OLD:
+  case (DWORD)-1:
+    return DepthStencilStateList::SFAlways;
+  default:
+    ReportUnhandledStateOnce(slot, category, value);
+    return DepthStencilStateList::SFAlways;
+  }
+}
+
+static SamplerStateList::AddressMode ConvertSamplerAddressMode(DWORD value, int slot, const char *category)
+{
+  switch (value)
+  {
+  case D3DTADDRESS_WRAP_OLD:
+  case (DWORD)-1:
+    return SamplerStateList::AMWrap;
+  case D3DTADDRESS_MIRROR_OLD:
+    return SamplerStateList::AMMirror;
+  case D3DTADDRESS_CLAMP_OLD:
+    return SamplerStateList::AMClamp;
+  case D3DTADDRESS_BORDER_OLD:
+    return SamplerStateList::AMBorder;
+  default:
+    if (slot >= 0)
+      ReportUnhandledStateOnce(slot, category, value);
+    return SamplerStateList::AMClamp;
+  }
+}
+
+static bool IsRecognizedSamplerFilter(DWORD value)
+{
+  switch (value)
+  {
+  case D3DTEXF_NONE_OLD:
+  case D3DTEXF_POINT_OLD:
+  case D3DTEXF_LINEAR_OLD:
+  case D3DTEXF_ANISOTROPIC_OLD:
+  case D3DTEXF_PYRAMIDALQUAD_OLD:
+  case D3DTEXF_GAUSSIANQUAD_OLD:
+  case (DWORD)-1:
+    return true;
+  default:
+    return false;
+  }
 }
 
 const ID3D11DepthStencilState* DepthStencilStateList::GetState(const AutoArray<DWORD>& info) const
@@ -414,16 +653,18 @@ const ID3D11DepthStencilState* DepthStencilStateList::GetState(const AutoArray<D
   StateDesc desc;
 
   // DepthEnable
-  if (GetRSValue(info,   D3DRS_ZENABLE_OLD))
+  if (GetRSValue(info,   D3DRS_ZENABLE_OLD) != FALSE)
   {
     desc._depthEnable = DETrue;
     // DepthFunc
-    switch (GetRSValue(info,  D3DRS_ZFUNC_OLD))
+    DWORD zFunc = GetRSValue(info,  D3DRS_ZFUNC_OLD);
+    switch (zFunc)
     {
     case D3DCMP_EQUAL_OLD:
       desc._depthFunc = DFEqual;
       break;
     case D3DCMP_LESSEQUAL_OLD:
+    case (DWORD)-1:
       desc._depthFunc = DFLessEqual;
       break;
     case D3DCMP_GREATEREQUAL_OLD:
@@ -434,7 +675,8 @@ const ID3D11DepthStencilState* DepthStencilStateList::GetState(const AutoArray<D
       break;
     default:
       desc._depthFunc = DFAlways;
-      Fail("DX11 Error: Not handled");
+      ReportUnhandledStateOnce(0, "depthFunc", zFunc);
+      break;
     }
   }
   else
@@ -445,7 +687,7 @@ const ID3D11DepthStencilState* DepthStencilStateList::GetState(const AutoArray<D
 
 
   // DepthWriteMask
-  if (GetRSValue(info,  D3DRS_ZWRITEENABLE_OLD))
+  if (GetRSValue(info,  D3DRS_ZWRITEENABLE_OLD) != FALSE)
   {
     desc._depthWriteMask = DWMAll;
   }
@@ -456,94 +698,25 @@ const ID3D11DepthStencilState* DepthStencilStateList::GetState(const AutoArray<D
 
 
   // StencilEnable
-  if (GetRSValue(info,  D3DRS_STENCILENABLE_OLD))
+  if (GetRSValue(info,  D3DRS_STENCILENABLE_OLD) == TRUE)
   {
     desc._stencilEnable = SETrue;
 
     // StencilReadMask
-    switch (GetRSValue(info,  D3DRS_STENCILMASK_OLD))
-    {
-    case 0:
-      desc._stencilReadMask = SRMZero;
-      break;
-    case 0xff:
-      desc._stencilReadMask = SRMFull;
-      break;
-    default:
-      desc._stencilReadMask = SRMZero;
-      Fail("DX11 Error: Not handled");
-      break;
-    }
+    DWORD stencilReadMask = GetRSValue(info, D3DRS_STENCILMASK_OLD);
+    desc._stencilReadMask = ConvertStencilReadMask(stencilReadMask);
+    if (stencilReadMask != 0 && stencilReadMask != 0xff)
+      ReportUnhandledStateOnce(1, "stencilReadMask", stencilReadMask);
 
-    // FrontFace.StencilPassOp
-    switch (GetRSValue(info,  D3DRS_STENCILPASS_OLD))
-    {
-    case D3DSTENCILOP_KEEP_OLD:
-      desc._stencilPassOpFront = SPOKeep;
-      break;
-    case D3DSTENCILOP_REPLACE_OLD:
-      desc._stencilPassOpFront = SPOReplace;
-      break;
-    case D3DSTENCILOP_INCR_OLD:
-      desc._stencilPassOpFront = SPOIncr;
-      break;
-    case D3DSTENCILOP_DECR_OLD:
-      desc._stencilPassOpFront = SPODecr;
-      break;
-    default:
-      desc._stencilPassOpFront = SPOKeep;
-      Fail("DX11 Error: Not handled");
-    }
+    // FrontFace
+    desc._stencilPassOpFront = ConvertStencilPassOp(GetRSValue(info, D3DRS_STENCILPASS_OLD), 2, "stencilPassOpFront");
+    desc._stencilFuncFront = ConvertStencilFunc(GetRSValue(info, D3DRS_STENCILFUNC_OLD), 3, "stencilFuncFront", true);
 
-    // FrontFace.StencilFunc
-    switch (GetRSValue(info,  D3DRS_STENCILFUNC_OLD))
+    if (GetRSValue(info,  D3DRS_TWOSIDEDSTENCILMODE_OLD) == TRUE)
     {
-    case D3DCMP_LESS_OLD:
-      desc._stencilFuncFront = SFLess;
-      break;
-    case D3DCMP_ALWAYS_OLD:
-      desc._stencilFuncFront = SFAlways;
-      break;
-    default:
-      desc._stencilFuncFront = SFAlways;
-      Fail("DX11 Error: Not handled");
-    }
-
-    if (GetRSValue(info,  D3DRS_TWOSIDEDSTENCILMODE_OLD))
-    {
-      // BackFace.StencilPassOp
-      switch (GetRSValue(info,  D3DRS_CCW_STENCILPASS_OLD))
-      {
-      case D3DSTENCILOP_KEEP_OLD:
-        desc._stencilPassOpBack = SPOKeep;
-        break;
-      case D3DSTENCILOP_REPLACE_OLD:
-        desc._stencilPassOpBack = SPOReplace;
-        break;
-      case D3DSTENCILOP_INCR_OLD:
-        desc._stencilPassOpBack = SPOIncr;
-        break;
-      case D3DSTENCILOP_DECR_OLD:
-        desc._stencilPassOpBack = SPODecr;
-        break;
-      default:
-        desc._stencilPassOpBack = SPOKeep;
-        Fail("DX11 Error: Not handled");
-      }
-
-      // BackFace.StencilFunc
-      switch (GetRSValue(info,  D3DRS_CCW_STENCILFUNC_OLD))
-      {
-      case D3DCMP_LESS_OLD:
-        desc._stencilFuncBack = SFLess;
-        break;
-      case D3DCMP_ALWAYS_OLD:
-        desc._stencilFuncBack = SFAlways;
-        break;
-      default:
-        desc._stencilFuncBack = SFAlways;
-        Fail("DX11 Error: Not handled");
-      }
+      // BackFace
+      desc._stencilPassOpBack = ConvertStencilPassOp(GetRSValue(info, D3DRS_CCW_STENCILPASS_OLD), 4, "stencilPassOpBack");
+      desc._stencilFuncBack = ConvertStencilFunc(GetRSValue(info, D3DRS_CCW_STENCILFUNC_OLD), 5, "stencilFuncBack", false);
     }
     else
     {
@@ -563,19 +736,10 @@ const ID3D11DepthStencilState* DepthStencilStateList::GetState(const AutoArray<D
   }
 
   // StencilWriteMask
-  switch (GetRSValue(info,  D3DRS_STENCILWRITEMASK_OLD))
-  {
-  case 0:
-    desc._stencilWriteMask = SWMZero;
-    break;
-  case 0xff:
-    desc._stencilWriteMask = SWMFull;
-    break;
-  default:
-    desc._stencilWriteMask = SWMZero;
-    Fail("DX11 Error: Not handled");
-    break;
-  }
+  DWORD stencilWriteMask = GetRSValue(info, D3DRS_STENCILWRITEMASK_OLD);
+  desc._stencilWriteMask = ConvertStencilWriteMask(stencilWriteMask);
+  if (stencilWriteMask != 0 && stencilWriteMask != 0xff)
+    ReportUnhandledStateOnce(6, "stencilWriteMask", stencilWriteMask);
 
   const ID3D11DepthStencilState* state = GetState(desc);
   if (!state)
@@ -727,33 +891,37 @@ const ID3D11BlendState* BlendStateList::GetState(const AutoArray<DWORD>& info) c
     desc._alphaToCoverageEnable =  ATOCFalse;
 
   // blend enable
-  if (GetRSValue(info, D3DRS_ALPHABLENDENABLE_OLD))
+  if (GetRSValue(info, D3DRS_ALPHABLENDENABLE_OLD) == TRUE)
   {
     desc._blendEnable = BETrue;
 
     // SrcBlend
-    switch (GetRSValue(info,  D3DRS_SRCBLEND_OLD))
+    DWORD srcBlend = GetRSValue(info, D3DRS_SRCBLEND_OLD);
+    switch (srcBlend)
     {
     case D3DBLEND_ZERO_OLD:
       desc._srcBlend = SBZero;
       break;
     case D3DBLEND_ONE_OLD:
+    case (DWORD)-1:
       desc._srcBlend = SBOne;
       break;
     case D3DBLEND_SRCALPHA_OLD:
+    case D3DBLEND_SRCALPHASAT_OLD:
       desc._srcBlend = SBSrcAlpha;
       break;
     case D3DBLEND_DESTCOLOR_OLD:
       desc._srcBlend = SBDestColor;
       break;
     default:
-      Fail("DX11 Error: Not handled");
+      ReportUnhandledStateOnce(7, "srcBlend", srcBlend);
       desc._srcBlend = SBOne;
       break;
     }
 
     // DestBlend
-    switch (GetRSValue(info,  D3DRS_DESTBLEND_OLD))
+    DWORD destBlend = GetRSValue(info, D3DRS_DESTBLEND_OLD);
+    switch (destBlend)
     {
     case D3DBLEND_ZERO_OLD:
       desc._destBlend = DBZero;
@@ -762,54 +930,62 @@ const ID3D11BlendState* BlendStateList::GetState(const AutoArray<DWORD>& info) c
       desc._destBlend = DBOne;
       break;
     case D3DBLEND_INVSRCALPHA_OLD:
+    case D3DBLEND_SRCALPHA_OLD:
+    case (DWORD)-1:
       desc._destBlend = DBInvSrcAlpha;
       break;
     case D3DBLEND_SRCCOLOR_OLD:
       desc._destBlend = DBSrcColor;
       break;
     default:
-      Fail("DX11 Error: Not handled");
+      ReportUnhandledStateOnce(8, "destBlend", destBlend);
       desc._destBlend = DBInvSrcAlpha;
       break;
     }
 
     // BlendOp
-    switch (GetRSValue(info,  D3DRS_BLENDOP_OLD))
+    DWORD blendOp = GetRSValue(info, D3DRS_BLENDOP_OLD);
+    switch (blendOp)
     {
     case D3DBLENDOP_ADD_OLD:
+    case (DWORD)-1:
       desc._blendOp = BOAdd;
       break;
     default:
-      Fail("DX11 Error: Not handled");
+      ReportUnhandledStateOnce(9, "blendOp", blendOp);
       desc._blendOp = BOAdd;
       break;
     }
 
     // separate alpha BlendEnable
-    if (GetRSValue(info,   D3DRS_SEPARATEALPHABLENDENABLE_OLD))
+    if (GetRSValue(info,   D3DRS_SEPARATEALPHABLENDENABLE_OLD) == TRUE)
     {
       desc._alphaBlendEnable = BETrue;
 
       // SrcBlend
-      switch (GetRSValue(info,  D3DRS_SRCBLENDALPHA_OLD))
+      DWORD alphaSrcBlend = GetRSValue(info, D3DRS_SRCBLENDALPHA_OLD);
+      switch (alphaSrcBlend)
       {
       case D3DBLEND_ZERO_OLD:
         desc._alphaSrcBlend = SBZero;
         break;
       case D3DBLEND_ONE_OLD:
+      case (DWORD)-1:
         desc._alphaSrcBlend = SBOne;
         break;
       case D3DBLEND_SRCALPHA_OLD:
+      case D3DBLEND_SRCALPHASAT_OLD:
         desc._alphaSrcBlend = SBSrcAlpha;
         break;
       default:
-        Fail("DX11 Error: Not handled");
+        ReportUnhandledStateOnce(10, "alphaSrcBlend", alphaSrcBlend);
         desc._alphaSrcBlend = SBOne;
         break;
       }
 
-      // DestBlend
-      switch (GetRSValue(info,  D3DRS_DESTBLENDALPHA_OLD))
+      // DestBlend (SBDestColor/DBSrcColor are excluded by BlendStateList::IsStateUsable for alpha channel)
+      DWORD alphaDestBlend = GetRSValue(info, D3DRS_DESTBLENDALPHA_OLD);
+      switch (alphaDestBlend)
       {
       case D3DBLEND_ZERO_OLD:
         desc._alphaDestBlend = DBZero;
@@ -818,25 +994,26 @@ const ID3D11BlendState* BlendStateList::GetState(const AutoArray<DWORD>& info) c
         desc._alphaDestBlend = DBOne;
         break;
       case D3DBLEND_INVSRCALPHA_OLD:
+      case D3DBLEND_SRCALPHA_OLD:
+      case (DWORD)-1:
         desc._alphaDestBlend = DBInvSrcAlpha;
         break;
-      case D3DBLEND_SRCCOLOR_OLD:
-        desc._alphaDestBlend = DBSrcColor;
-        break;
       default:
-        Fail("DX11 Error: Not handled");
+        ReportUnhandledStateOnce(11, "alphaDestBlend", alphaDestBlend);
         desc._alphaDestBlend = DBInvSrcAlpha;
         break;
       }
 
       // BlendOp
-      switch (GetRSValue(info,  D3DRS_BLENDOPALPHA_OLD))
+      DWORD alphaBlendOp = GetRSValue(info, D3DRS_BLENDOPALPHA_OLD);
+      switch (alphaBlendOp)
       {
       case D3DBLENDOP_ADD_OLD:
+      case (DWORD)-1:
         desc._alphaBlendOp = BOAdd;
         break;
       default:
-        Fail("DX11 Error: Not handled");
+        ReportUnhandledStateOnce(12, "alphaBlendOp", alphaBlendOp);
         desc._alphaBlendOp = BOAdd;
         break;
       }
@@ -864,9 +1041,13 @@ const ID3D11BlendState* BlendStateList::GetState(const AutoArray<DWORD>& info) c
 
   // write mask
   DWORD writeMask = GetRSValue(info,  D3DRS_COLORWRITEENABLE_OLD);
-  if (!IsLegacyColorWriteMaskSupported(writeMask))
+  if (writeMask == (DWORD)-1)
   {
-    Fail("DX11 Error: Not handled");
+    desc._renderTargetWriteMask = RTWMFull;
+  }
+  else if (!IsLegacyColorWriteMaskSupported(writeMask))
+  {
+    ReportUnhandledStateOnce(13, "colorWriteMask", writeMask);
     desc._renderTargetWriteMask = RTWMFull;
   }
   else
@@ -1187,22 +1368,26 @@ const ID3D11RasterizerState* RasterizerStateList::GetState(const AutoArray<DWORD
   StateDesc desc;
 
   // FillMode
-  switch (GetRSValue(info,   D3DRS_FILLMODE_OLD))
+  DWORD fillMode = GetRSValue(info, D3DRS_FILLMODE_OLD);
+  switch (fillMode)
   {
+  case D3DFILL_POINT_OLD:
   case D3DFILL_WIREFRAME_OLD:
     desc._fillMode = FMWireframe;
     break;
   case D3DFILL_SOLID_OLD:
+  case (DWORD)-1:
     desc._fillMode = FMSolid;
     break;
   default:
-    Fail("DX11 Error: Not handled");
+    ReportUnhandledStateOnce(14, "fillMode", fillMode);
     desc._fillMode = FMSolid;
     break;
   }
 
   // CullMode
-  switch (GetRSValue(info,  D3DRS_CULLMODE_OLD))
+  DWORD cullMode = GetRSValue(info, D3DRS_CULLMODE_OLD);
+  switch (cullMode)
   {
   case D3DCULL_NONE_OLD:
     desc._cullMode = CMNone;
@@ -1213,11 +1398,12 @@ const ID3D11RasterizerState* RasterizerStateList::GetState(const AutoArray<DWORD
     desc._frontCounterClockwise = FCCWTrue;
     break;
   case D3DCULL_CCW_OLD:
+  case (DWORD)-1:
     desc._cullMode = CMBack;
     desc._frontCounterClockwise = FCCWFalse;
     break;
   default:
-    Fail("DX11 Error: Not handled");
+    ReportUnhandledStateOnce(15, "cullMode", cullMode);
     desc._cullMode = CMBack;
     desc._frontCounterClockwise = FCCWTrue;
     break;
@@ -1442,151 +1628,57 @@ const ID3D11SamplerState* SamplerStateList::GetState(const AutoArray<DWORD>& inf
   DWORD mipFilter = GetRSValue(info,   D3DSAMP_MIPFILTER_OLD);
 
   // Filter
-  if (minFilter == D3DTEXF_POINT_OLD &&
-    magFilter == D3DTEXF_POINT_OLD &&
-    mipFilter == D3DTEXF_POINT_OLD)
+  if (!IsRecognizedSamplerFilter(minFilter) ||
+      !IsRecognizedSamplerFilter(magFilter) ||
+      !IsRecognizedSamplerFilter(mipFilter))
+  {
+    DWORD packed = (minFilter & 0xFF) | ((magFilter & 0xFF) << 8) | ((mipFilter & 0xFF) << 16);
+    ReportUnhandledStateOnce(16, "samplerFilter", packed);
+  }
+
+  if (mipFilter == D3DTEXF_NONE_OLD)
+  {
+    desc._mipFiltering = MFFalse;
+    desc._filter = (minFilter == D3DTEXF_POINT_OLD && magFilter == D3DTEXF_POINT_OLD)
+      ? F_MIN_MAG_MIP_POINT
+      : F_MIN_MAG_LINEAR_MIP_POINT;
+  }
+  else if (minFilter == D3DTEXF_POINT_OLD &&
+           magFilter == D3DTEXF_POINT_OLD &&
+           mipFilter == D3DTEXF_ANISOTROPIC_OLD)
   {
     desc._filter = F_MIN_MAG_MIP_POINT;
   }
-  else if (minFilter == D3DTEXF_POINT_OLD &&
-    magFilter == D3DTEXF_POINT_OLD &&
-    mipFilter == D3DTEXF_LINEAR_OLD)
-  {
-    desc._filter = F_MIN_MAG_POINT_MIP_LINEAR;
-  }
-
-  else if (minFilter == D3DTEXF_POINT_OLD &&
-    magFilter == D3DTEXF_LINEAR_OLD &&
-    mipFilter == D3DTEXF_POINT_OLD)
-  {
-    desc._filter = F_MIN_POINT_MAG_LINEAR_MIP_POINT;
-  }
-  else if (minFilter == D3DTEXF_POINT_OLD &&
-    magFilter == D3DTEXF_LINEAR_OLD &&
-    mipFilter == D3DTEXF_LINEAR_OLD)
-  {
-    desc._filter = F_MIN_POINT_MAG_MIP_LINEAR;
-  }
-  else if (minFilter == D3DTEXF_LINEAR_OLD &&
-    magFilter == D3DTEXF_POINT_OLD &&
-    mipFilter == D3DTEXF_POINT_OLD)
-  {
-    desc._filter = F_MIN_LINEAR_MAG_MIP_POINT;
-  }
-  else if (minFilter == D3DTEXF_LINEAR_OLD &&
-    magFilter == D3DTEXF_POINT_OLD &&
-    mipFilter == D3DTEXF_LINEAR_OLD)
-  {
-    desc._filter = F_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-  }
-  else if (minFilter == D3DTEXF_LINEAR_OLD &&
-    magFilter == D3DTEXF_LINEAR_OLD &&
-    mipFilter == D3DTEXF_POINT_OLD)
-  {
-    desc._filter = F_MIN_MAG_LINEAR_MIP_POINT;
-  }
-  else if (minFilter == D3DTEXF_LINEAR_OLD &&
-    magFilter == D3DTEXF_LINEAR_OLD &&
-    mipFilter == D3DTEXF_LINEAR_OLD)
-  {
-    desc._filter = F_MIN_MAG_MIP_LINEAR;
-  }
-
-  else if (minFilter == D3DTEXF_ANISOTROPIC_OLD &&
-    magFilter == D3DTEXF_ANISOTROPIC_OLD &&
-    mipFilter == D3DTEXF_ANISOTROPIC_OLD)
+  else if (minFilter == D3DTEXF_ANISOTROPIC_OLD ||
+           magFilter == D3DTEXF_ANISOTROPIC_OLD ||
+           mipFilter == D3DTEXF_ANISOTROPIC_OLD)
   {
     desc._filter = F_ANISOTROPIC;
   }
-  else if (minFilter == D3DTEXF_POINT_OLD &&
-    magFilter == D3DTEXF_POINT_OLD &&
-    mipFilter == D3DTEXF_NONE_OLD)
-  {
-    desc._filter = F_MIN_MAG_MIP_POINT;
-    desc._mipFiltering = MFFalse;
-  }
-  else if (minFilter == D3DTEXF_LINEAR_OLD &&
-    magFilter == D3DTEXF_LINEAR_OLD &&
-    mipFilter == D3DTEXF_NONE_OLD)
-  {
-    desc._filter = F_MIN_MAG_LINEAR_MIP_POINT;
-    desc._mipFiltering = MFFalse;
-  }
-  else if (minFilter == D3DTEXF_POINT_OLD &&
-    magFilter == D3DTEXF_POINT_OLD &&
-    mipFilter == D3DTEXF_ANISOTROPIC_OLD)
-  {
-    desc._filter = F_MIN_MAG_MIP_POINT;
-  }
   else
   {
-    desc._filter = F_MIN_MAG_MIP_LINEAR;
-    Fail("DX11 Error: Not handled");
+    static const Filter FilterTable[2][2][2] = {
+      // minLinear
+      {
+        { F_MIN_MAG_MIP_LINEAR,        F_MIN_MAG_LINEAR_MIP_POINT },
+        { F_MIN_LINEAR_MAG_POINT_MIP_LINEAR, F_MIN_LINEAR_MAG_MIP_POINT }
+      },
+      // minPoint
+      {
+        { F_MIN_POINT_MAG_MIP_LINEAR,  F_MIN_POINT_MAG_LINEAR_MIP_POINT },
+        { F_MIN_MAG_POINT_MIP_LINEAR,  F_MIN_MAG_MIP_POINT }
+      }
+    };
+    const int minIdx = (minFilter == D3DTEXF_POINT_OLD) ? 1 : 0;
+    const int magIdx = (magFilter == D3DTEXF_POINT_OLD) ? 1 : 0;
+    const int mipIdx = (mipFilter == D3DTEXF_POINT_OLD) ? 1 : 0;
+    desc._filter = FilterTable[minIdx][magIdx][mipIdx];
   }
 
-  // AddressU
-  switch (GetRSValue(info,   D3DSAMP_ADDRESSU_OLD))
-  {
-  case D3DTADDRESS_WRAP_OLD:
-    desc._addressModeU = AMWrap;
-    break;
-  case D3DTADDRESS_MIRROR_OLD:
-    desc._addressModeU = AMMirror;
-    break;
-  case D3DTADDRESS_CLAMP_OLD:
-    desc._addressModeU = AMClamp;
-    break;
-  case D3DTADDRESS_BORDER_OLD:
-    desc._addressModeU = AMBorder;
-    break;
-  default:
-    Fail("DX11 Error: Not handled");
-    desc._addressModeU = AMClamp;
-    break;
-  }
-
-  // AddressV
-  switch (GetRSValue(info,   D3DSAMP_ADDRESSV_OLD))
-  {
-  case D3DTADDRESS_WRAP_OLD:
-    desc._addressModeV = AMWrap;
-    break;
-  case D3DTADDRESS_MIRROR_OLD:
-    desc._addressModeV = AMMirror;
-    break;
-  case D3DTADDRESS_CLAMP_OLD:
-    desc._addressModeV = AMClamp;
-    break;
-  case D3DTADDRESS_BORDER_OLD:
-    desc._addressModeV = AMBorder;
-    break;
-  default:
-    Fail("DX11 Error: Not handled");
-    desc._addressModeV = AMClamp;
-    break;
-  }
-
-  // AddressW
-  switch (GetRSValue(info, D3DSAMP_ADDRESSW_OLD))
-  {
-  case D3DTADDRESS_WRAP_OLD:
-    desc._addressModeW = AMWrap;
-    break;
-  case D3DTADDRESS_MIRROR_OLD:
-    desc._addressModeW = AMMirror;
-    break;
-  case D3DTADDRESS_CLAMP_OLD:
-    desc._addressModeW = AMClamp;
-    break;
-  case D3DTADDRESS_BORDER_OLD:
-    desc._addressModeW = AMBorder;
-    break;
-  default:
-    //Fail("DX11 Error: Not handled");
-    // do not write message here - addressw don't have to be set
-    desc._addressModeW = AMClamp;
-    break;
-  }
+  // AddressU/V/W
+  desc._addressModeU = ConvertSamplerAddressMode(GetRSValue(info, D3DSAMP_ADDRESSU_OLD), 17, "addressU");
+  desc._addressModeV = ConvertSamplerAddressMode(GetRSValue(info, D3DSAMP_ADDRESSV_OLD), 18, "addressV");
+  desc._addressModeW = ConvertSamplerAddressMode(GetRSValue(info, D3DSAMP_ADDRESSW_OLD), -1, "addressW");
 
   // border color
   if (desc._addressModeU != AMBorder && desc._addressModeV != AMBorder && desc._addressModeW != AMBorder)
@@ -1595,7 +1687,8 @@ const ID3D11SamplerState* SamplerStateList::GetState(const AutoArray<DWORD>& inf
   }
   else
   {
-    switch (GetRSValue(info,   D3DSAMP_BORDERCOLOR_OLD))
+    DWORD borderColor = GetRSValue(info, D3DSAMP_BORDERCOLOR_OLD);
+    switch (borderColor)
     {
     case 0x0:
       desc._borderColor = BCBlack;
@@ -1604,7 +1697,7 @@ const ID3D11SamplerState* SamplerStateList::GetState(const AutoArray<DWORD>& inf
       desc._borderColor = BCWhite;
       break;
     default:
-      Fail("DX11 Error: Not handled");
+      ReportUnhandledStateOnce(19, "borderColor", borderColor);
       desc._borderColor = BCBlack;
       break;
     }
@@ -1613,7 +1706,11 @@ const ID3D11SamplerState* SamplerStateList::GetState(const AutoArray<DWORD>& inf
   // MaxAnisotropy
   if (desc._filter == F_ANISOTROPIC)
   {
-    desc._anisotropy = GetRSValue(info,   D3DSAMP_MAXANISOTROPY_OLD);
+    DWORD rawAniso = GetRSValue(info, D3DSAMP_MAXANISOTROPY_OLD);
+    int aniso = (rawAniso == (DWORD)-1 || rawAniso < 1)
+      ? 1
+      : (rawAniso > (DWORD)MaxAnisotropy ? MaxAnisotropy : (int)rawAniso);
+    desc._anisotropy = aniso;
   }
   else
   {

@@ -13,8 +13,8 @@
 #include <d3d11.h>
 
 #include <Es/Memory/normalNew.hpp>
-#include <d3dx11.h>
-#include <D3DX10math.h>
+#include "Dx11MathCompat.hpp"
+#include <d3dcompiler.h>
 #include <Es/Memory/debugNew.hpp>
 
 #include "../engineDll.hpp"
@@ -2654,6 +2654,8 @@ class EngineDD11: public Engine, public MemoryFreeOnDemandHelper,
   class PPDynamicBlur;
   class PPColorsInversion;
   class PPStretchRect;
+  class PPFXAA;
+  class PPSMAA;
 
   class PPResources;
   class PPColorResources;
@@ -3055,6 +3057,8 @@ public:
   virtual void SetWBuffer(bool val);
 
   virtual bool CanTwoSidedStencil() const {return _caps._canTwoSidedStencil;}
+  HWND GetHWND() const { return _hwndApp; }
+  virtual void *GetWindowHandle() const { return _hwndApp; }
 
   virtual void ProjectionChanged(int cb);
   virtual void EnableSunLight(int cb, EMainLight mainLight);
@@ -3716,6 +3720,7 @@ private:
 
   /// postprocess effects quality
   int _postFxQuality;
+  int _ppaaQuality;
 
   /// HDR precision requested by the user (8,16 or 32 may make a sense)
   HDRPrec _hdrPrecWanted;
@@ -4429,6 +4434,8 @@ protected:
     Ref<PPColorsInversion> _clrInvers;
     Ref<PPStretchRect> _stretchRect;
     Ref<PPDiagDepthBuffer> _diagDepthBuffer;
+    Ref<PPFXAA> _fxaa;
+    Ref<PPSMAA> _smaa;
 
 #if ENABLE_NVG_NOISE
     Ref<PPFilmGrain> _nvgNoise;
@@ -5633,6 +5640,7 @@ protected:
       }
 
       _depthStencilStateLast.Free();
+      _stencilRefLast = (DWORD)-1;
       _blendStateLast.Free();
       _rasterizerStateLast.Free();
 
@@ -5657,6 +5665,7 @@ protected:
     TextureHandle11* _lastHandle[MaxSamplerStages];
     TextureHandle11* _setHandle[MaxSamplerStages];
     ComRefFake<ID3D11DepthStencilState> _depthStencilStateLast;
+    DWORD _stencilRefLast;
     ComRefFake<ID3D11BlendState> _blendStateLast;
     ComRefFake<ID3D11RasterizerState> _rasterizerStateLast;
     ComRefFake<ID3D11SamplerState> _samplerStateLast[MaxSamplerStages];
@@ -6150,6 +6159,8 @@ protected:
 
   //! quality of ssao
   void SetSSAOQuality(int quality);
+  virtual void SetPPAAQuality(int quality);
+  virtual int GetPPAAQuality() const { return _ppaaQuality; }
 
   void SwitchRecordingToHighLevel();
   void EndHighLevelRecording();

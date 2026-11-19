@@ -64,6 +64,7 @@ private:
   ID3D11BlendState *_cloudBlendState;
   ID3D11DepthStencilState *_cloudDepthState;
   Dx11ConstantBuffer _cloudConstants;
+  std::vector<Vertex_t> _vertices;
 };
 
 #endif

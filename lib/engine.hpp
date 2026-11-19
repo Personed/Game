@@ -2060,7 +2060,7 @@ public:
   virtual void ReleaseAllVertexBuffers() {}
   virtual void DeferVBufferRelease( VertexBuffer *buffer ) {}
 
-  //virtual HWND GetWindowHandle() const = 0;
+  virtual void *GetWindowHandle() const { return NULL; }
 
   // shadow related functions
   virtual float ZShadowEpsilon() const = 0; // bias used for shadows

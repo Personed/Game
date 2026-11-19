@@ -391,3 +391,47 @@ VSPP_OUT VsPpDynamicBlurFinal(
   o.tc0.w = weight0;
   return o;
 }
+
+//==================================================================================================
+// FXAA Vertex Shader
+//==================================================================================================
+void VsPpFxaa3_11(in float3 iPos: POSITION0, in float2 itc0: TEXCOORD0, 
+	out float4 oPos: SV_POSITION, out float2 otc0: TEXCOORD0)
+{
+	oPos = float4(iPos.xy, 1.0, 1.0);
+	otc0.xy = itc0.xy + VSC_VsFxaa.xy;
+}
+
+//==================================================================================================
+// SMAA Vertex Shaders
+//==================================================================================================
+#define SMAA_PIXEL_SIZE (VSC_SmaaPixelSize.xy)
+#define SMAA_HLSL_3 1
+#define SMAA_ONLY_COMPILE_VS 1
+#include "PPAA\SMAA.h"
+
+void DX11_SMAAEdgeDetectionVS(in float3 position : POSITION, in float2 texcoord : TEXCOORD0,
+    out float4 oPos : SV_POSITION, out float2 oTexcoord : TEXCOORD0, out float4 offset[3] : TEXCOORD1) 
+{
+    float4 pos = float4(position.xy, 0.0, 1.0);
+    oTexcoord = texcoord;
+    SMAAEdgeDetectionVS(pos, oPos, oTexcoord, offset);
+}
+
+void DX11_SMAABlendingWeightCalculationVS(in float3 position : POSITION, in float2 texcoord : TEXCOORD0,
+    out float4 oPos : SV_POSITION, out float2 oTexcoord : TEXCOORD0, out float2 pixcoord : TEXCOORD1, out float4 offset[3] : TEXCOORD2) 
+{
+    float4 pos = float4(position.xy, 0.0, 1.0);
+    oTexcoord = texcoord;
+    SMAABlendingWeightCalculationVS(pos, oPos, oTexcoord, pixcoord, offset);
+}
+
+void DX11_SMAANeighborhoodBlendingVS(in float3 position : POSITION, in float2 texcoord : TEXCOORD0,
+    out float4 oPos : SV_POSITION, out float2 oTexcoord : TEXCOORD0, out float4 offset[2] : TEXCOORD1) 
+{
+    float4 pos = float4(position.xy, 0.0, 1.0);
+    oTexcoord = texcoord;
+    SMAANeighborhoodBlendingVS(pos, oPos, oTexcoord, offset);
+}
+
+

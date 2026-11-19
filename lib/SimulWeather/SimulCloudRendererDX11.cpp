@@ -101,7 +101,7 @@ SimulCloudRendererDX11::SimulCloudRendererDX11(Dx11DeviceAccess *engine)
     fade_interp(0.0f), _cloudVertexShader(NULL), _cloudPixelShader(NULL),
     _cloudInputLayout(NULL), _cloudSampler(NULL),
     _noiseSampler(NULL), _fadeSampler(NULL), _cloudBlendState(NULL),
-    _cloudDepthState(NULL)
+    _cloudDepthState(NULL), _vertices(MaxVertices)
 {
   for (int i = 0; i < TextureCount; ++i) _cloudTextureViews[i] = NULL;
 }
@@ -365,9 +365,8 @@ void SimulCloudRendererDX11::Render(int, bool cubemap)
     return;
 
   Camera *camera = GScene->GetCamera();
-  std::vector<Vertex_t> vertices(MaxVertices);
-  int count = FillVertices(this, &vertices[0], MaxVertices, sizeof(Vertex_t),
-    *camera, camera->ProjectionNormal(), false, false, false);
+  int count = FillVertices(this, &_vertices[0], MaxVertices, sizeof(Vertex_t),
+    *camera, camera->ProjectionNormal(), cubemap, false, false);
   if (count < 3) return;
 
   ID3D11DeviceContext *context = _engine->D3D11Context();
@@ -376,7 +375,7 @@ void SimulCloudRendererDX11::Render(int, bool cubemap)
   HRESULT hr = _cloudVertexStream.LockVertices(context, (UINT)count,
     firstVertex, &mappedVertices);
   if (FAILED(hr)) return;
-  memcpy(mappedVertices, &vertices[0], (size_t)count * sizeof(Vertex_t));
+  memcpy(mappedVertices, &_vertices[0], (size_t)count * sizeof(Vertex_t));
   hr = _cloudVertexStream.UnlockVertices(context);
   if (FAILED(hr)) return;
 
@@ -441,13 +440,36 @@ void SimulCloudRendererDX11::Render(int, bool cubemap)
   context->IASetVertexBuffers(0, 1, &cloudVertexBuffer, &stride, &offset);
   context->VSSetShader(_cloudVertexShader, NULL, 0);
   context->PSSetShader(_cloudPixelShader, NULL, 0);
+
+  ID3D11BlendState *prevBlendState = NULL;
+  float prevBlendFactor[4] = {0, 0, 0, 0};
+  UINT prevSampleMask = 0xffffffff;
+  context->OMGetBlendState(&prevBlendState, prevBlendFactor, &prevSampleMask);
+
+  ID3D11DepthStencilState *prevDepthState = NULL;
+  UINT prevStencilRef = 0;
+  context->OMGetDepthStencilState(&prevDepthState, &prevStencilRef);
+
   const float blendFactor[4] = {0, 0, 0, 0};
   context->OMSetBlendState(_cloudBlendState, blendFactor, 0xffffffff);
   context->OMSetDepthStencilState(_cloudDepthState, 0);
   context->Draw((UINT)count, firstVertex);
 
+  context->OMSetBlendState(prevBlendState, prevBlendFactor, prevSampleMask);
+  if (prevBlendState) prevBlendState->Release();
+  context->OMSetDepthStencilState(prevDepthState, prevStencilRef);
+  if (prevDepthState) prevDepthState->Release();
+
   ID3D11ShaderResourceView *nullViews[8] = {};
   context->PSSetShaderResources(0, lenof(nullViews), nullViews);
+  ID3D11SamplerState *nullSamplers[4] = {};
+  context->PSSetSamplers(0, lenof(nullSamplers), nullSamplers);
+  ID3D11Buffer *nullCB[1] = {NULL};
+  context->VSSetConstantBuffers(0, 1, nullCB);
+  context->PSSetConstantBuffers(0, 1, nullCB);
+  ID3D11Buffer *nullVB[1] = {NULL};
+  UINT nullStride = 0, nullOffset = 0;
+  context->IASetVertexBuffers(0, 1, nullVB, &nullStride, &nullOffset);
 }
 
 #endif

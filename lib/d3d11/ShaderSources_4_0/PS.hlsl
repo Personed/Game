@@ -2088,3 +2088,140 @@ float4 PSPostProcessDiagDepthBuffer(VSPP_OUTPUT input) : COLOR
   float val = tex2D(sampler0, input.TexCoord);
   return float4(val, val, val, 1);
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// FXAA post process
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if (FXAA_SHADER_SOURCE == 2)
+	#define FXAA_PC					1
+	#define FXAA_HLSL_3				1
+	#define FXAA_GREEN_AS_LUMA		1
+
+	#include "Fxaa3_11.h"
+#endif
+
+#define FxaaSampler0 sampler0
+
+float4 PsPpFxaa3_11(in float2 pos: TEXCOORD0): COLOR 
+{	
+	float4 clr = (float4) 0;
+	
+#if (FXAA_SHADER_SOURCE == 2)
+
+	clr = FxaaPixelShader(
+		pos.xy,						// FxaaFloat2 pos
+		0,							// FxaaFloat4 fxaaConsolePosPos
+		FxaaSampler0, 
+		FxaaSampler0,
+		FxaaSampler0,
+		PSC_FxaaPars.xy,			// FxaaFloat2 fxaaQualityRcpFrame
+		0,							// FxaaFloat4 fxaaConsoleRcpFrameOpt
+		0,							// FxaaFloat4 fxaaConsoleRcpFrameOpt2
+		0,							// FxaaFloat4 fxaaConsole360RcpFrameOpt2
+		PSC_FxaaQuality.x,			// FxaaFloat fxaaQualitySubpix
+		PSC_FxaaQuality.y,			// FxaaFloat fxaaQualityEdgeThreshold
+		PSC_FxaaQuality.z,			// FxaaFloat fxaaQualityEdgeThresholdMin
+		0,							// FxaaFloat fxaaConsoleEdgeSharpness
+		0,							// FxaaFloat fxaaConsoleEdgeThreshold
+		0,							// FxaaFloat fxaaConsoleEdgeThresholdMin
+		0							// fxaaConsole360ConstDir
+	);
+#endif
+	
+#if (FXAA_SHADER_DEBUG == 1) 
+	if (PSC_FxaaQuality.w > 0.5) 
+	{
+		clr = clr - tex2D(FxaaSampler0, pos.xy);
+	}
+#endif
+		
+	return clr;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  Modified Sharpen complex v2 from Media Player Classic Home Cinema
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#define CoefGauss 2
+#define CoefClr (1 + CoefGauss)
+#define Sharpen_val0 2
+#define Sharpen_val1 ((Sharpen_val0 - 1) / 8.0)
+
+#define SharpenSampler0 sampler0
+
+float4 PsSharpenFilter(in float2 tex: TEXCOORD0): COLOR
+{
+	float3 clr = tex2D(SharpenSampler0, tex).rgb;
+
+	// calculate image floue (filtre gaussien)
+	float3 c1 = tex2D(SharpenSampler0, tex + float2(-PSC_FxaaPars.z, -PSC_FxaaPars.w)).rgb;
+	float3 c2 = tex2D(SharpenSampler0, tex + float2(  		   0, -PSC_FxaaPars.w)).rgb;
+	float3 c3 = tex2D(SharpenSampler0, tex + float2( PSC_FxaaPars.z,-PSC_FxaaPars.w)).rgb;
+	float3 c4 = tex2D(SharpenSampler0, tex + float2(-PSC_FxaaPars.z, 0 )).rgb;
+	float3 c5 = tex2D(SharpenSampler0, tex + float2( PSC_FxaaPars.z, 0 )).rgb;
+	float3 c6 = tex2D(SharpenSampler0, tex + float2(-PSC_FxaaPars.z, PSC_FxaaPars.w)).rgb;
+	float3 c7 = tex2D(SharpenSampler0, tex + float2(  		   0, PSC_FxaaPars.w)).rgb;
+	float3 c8 = tex2D(SharpenSampler0, tex + float2( PSC_FxaaPars.z, PSC_FxaaPars.w)).rgb;
+
+	// 1 / (1+2+1+2+4+2+1+2+1) = 1 / 16 = .0625
+	float3 clrGauss = (c1+c3+c6+c8+ 2*(c2+c4+c5+c7) + 4*clr) * 0.0625;
+
+	// substract gauss - image
+	float3 cori = CoefClr*clr - CoefGauss*clrGauss;
+
+	c1 = tex2D(SharpenSampler0, tex + float2(-PSC_FxaaPars.x, -PSC_FxaaPars.y)).rgb;
+	c2 = tex2D(SharpenSampler0, tex + float2(			0, -PSC_FxaaPars.y)).rgb;
+	c3 = tex2D(SharpenSampler0, tex + float2( PSC_FxaaPars.x, -PSC_FxaaPars.y)).rgb;
+	c4 = tex2D(SharpenSampler0, tex + float2(-PSC_FxaaPars.x, 0)).rgb;
+	c5 = tex2D(SharpenSampler0, tex + float2( PSC_FxaaPars.x, 0)).rgb;
+	c6 = tex2D(SharpenSampler0, tex + float2(-PSC_FxaaPars.x, PSC_FxaaPars.y)).rgb;
+	c7 = tex2D(SharpenSampler0, tex + float2(			0, PSC_FxaaPars.y)).rgb;
+	c8 = tex2D(SharpenSampler0, tex + float2( PSC_FxaaPars.x, PSC_FxaaPars.y)).rgb;
+
+	float3 delta1 = (c3 + 2*c5 + c8)-(c1 + 2*c4 + c6);	
+	float3 delta2 = (c6 + 2*c7 + c8)-(c1 + 2*c2 + c3);
+	
+	if (sqrt(dot(delta1, delta1) + dot(delta2, delta2)) > PSC_FxaaQuality.x) {	
+		return float4(clr * Sharpen_val0 - (c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8) * Sharpen_val1, 1);
+	} else {
+		return float4(cori.rgb, 1.0);
+	}
+}
+
+//==================================================================================================
+// SMAA Pixel Shaders
+//==================================================================================================
+#define SMAA_PIXEL_SIZE (PSC_SmaaPixelSize.xy)
+#define SMAA_HLSL_3 1
+#define SMAA_ONLY_COMPILE_PS 1
+#include "PPAA\SMAA.h"
+
+#define SmaaColorGammaTex sampler0
+#define SmaaEdgesTex sampler0
+#define SmaaAreaTex sampler1
+#define SmaaSearchTex sampler2
+#define SmaaColorTex sampler0
+#define SmaaBlendTex sampler1
+
+float4 DX11_SMAALumaEdgeDetectionPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD0, float4 offset[3] : TEXCOORD1) : COLOR0 
+{
+	return SMAALumaEdgeDetectionPS(texcoord, offset, SmaaColorGammaTex);
+}
+
+float4 DX11_SMAAColorEdgeDetectionPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD0, float4 offset[3] : TEXCOORD1) : COLOR0 
+{
+	return SMAAColorEdgeDetectionPS(texcoord, offset, SmaaColorGammaTex);
+}
+
+float4 DX11_SMAABlendingWeightCalculationPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD0, float2 pixcoord : TEXCOORD1, float4 offset[3] : TEXCOORD2) : COLOR0 
+{
+	return SMAABlendingWeightCalculationPS(texcoord, pixcoord, offset, SmaaEdgesTex, SmaaAreaTex, SmaaSearchTex, 0);
+}
+
+float4 DX11_SMAANeighborhoodBlendingPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD0, float4 offset[2] : TEXCOORD1) : COLOR0 
+{
+	return SMAANeighborhoodBlendingPS(texcoord, offset, SmaaColorTex, SmaaBlendTex);
+}
+
+

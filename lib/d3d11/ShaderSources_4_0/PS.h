@@ -2786,7 +2786,7 @@ float3x3 ComputeTangentSpace(float3 normal)
 
 static const int ColorsCount = 2;
 static const half3 Colors[ColorsCount] = {
-  1.0, 1.0, 0.5,
+  1.0, 0.75, 0.5,
   0.7, 0.7, 0.9
 };
 
@@ -2799,8 +2799,8 @@ half3 CalculateLightColor(half clr)
   return clr * lerp(Colors[1], Colors[0], clr) * PSC_NightEmissiveCoef.xyz;
 }
 
-#define HELISIM_NIGHT_LIGHTING 0
-#define HELISIM_WATER_LAYER 0
+#define HELISIM_NIGHT_LIGHTING 1
+#define HELISIM_WATER_LAYER 1
 
 Light GetLightTerrain(half3 position, half3 normal, half3 detailNormal, half3 lightDir, half3 eyeDir,
                       half3 ambientColor, half3 specularColor,
@@ -2852,7 +2852,8 @@ FOut PFTerrainBodyX(STerrain input, const bool layers[6], bool simple, bool gras
   float2 satMask = input.tSatAndMask_GrassMap.xy;
   half3 satTexture   = tex2D0(satMask);
   half4 maskTexture  = tex2D(sampler1,satMask);
-  half wAlpha = 0;
+  half waterAlpha = 0;
+  int waterLayerIdx = -1;
 
   Half8 alphas = Half8Zeros;
   {
@@ -2889,13 +2890,12 @@ FOut PFTerrainBodyX(STerrain input, const bool layers[6], bool simple, bool gras
         }
         else alpha = 1;
 
-#if HELISIM_WATER_LAYER
         if (layerOn < -0.5)
         {
-          wAlpha = alpha;
+          waterAlpha = alpha;
+          waterLayerIdx = passIndex;
           layerOn = 0;
         }
-#endif
 
         // we want the first layer which is really used to be always opaque
         // on the other hand, if the channel is off, we want the alpha to be fully transparent
@@ -3290,33 +3290,71 @@ FOut PFTerrainBodyX(STerrain input, const bool layers[6], bool simple, bool gras
     normalize(normal);
   }
 
+  // Calculate the diffuse coefficient and initialize the ordinary terrain lighting.
+  half nDotL = dot(normal, lightDir);
+  diffuse = max(nDotL, 0) * selfshadow;
+  diffuseBack = max(-nDotL, 0) * selfshadow;
 
-#if HELISIM_WATER_LAYER 
+  half3 upLocal = half3(0, 0, 1);
+  fout.light.indirect = GetIndirectLight(dot(normal, upLocal)) +
+    input.ambientColor.rgb +
+    // Transform the mapped normal into the object-space basis used by local lights.
+    PointSpotLighting(input.tPSFog.xyz, mul(tspace, normal.xzy)) +
+    PSC_LDirectionGround_DiffuseBack * diffuseBack;
+  fout.light.direct = diffuse * PSC_Diffuse;
+  fout.light.specular = input.specularColor.rgb;
+  fout.light.specularEnv = 0;
+  fout.light.diffuseShadowCoef = 1;
+
   if (water)
   {
-    // calculate the color
-    fout.light = GetLightTerrain(input.tPSFog.xyz, normal, normalDetail, lightDir, eyeWorld, 
-      input.ambientColor.rgb, input.specularColor.rgb, indirectLight, selfshadow, wAlpha);
-
-    colorTexel.rgb = lerp(colorTexel, satTexture, wAlpha).rgb;
-  }
-  else
+#if HELISIM_NIGHT_LIGHTING
+    fout.light.indirect += CalculateLightColor(indirectLight);
 #endif
-  {
-    // Calculate the diffuse coefficient  
-    half nDotL = dot(normal, lightDir);
-    diffuse = max(nDotL, 0) * selfshadow;
-    diffuseBack = max(-nDotL, 0) * selfshadow;
 
-    // Fill out the Light structure
-    half3 upLocal = half3(0, 0, 1); // We can consider the normal map on ground is mapped always the similar way - down the ground. That's why this is roughly correct
-    fout.light.indirect = GetIndirectLight(dot(normal, upLocal)) + input.ambientColor.rgb
-      + PointSpotLighting(input.tPSFog.xyz, input.grassAlpha.xyz)
-      + PSC_LDirectionGround_DiffuseBack * diffuseBack;
-    fout.light.direct = diffuse * PSC_Diffuse;
-    fout.light.specular = input.specularColor.rgb;
-    fout.light.specularEnv = 0;
-    fout.light.diffuseShadowCoef = 1;
+#if HELISIM_WATER_LAYER
+    if (waterAlpha > 0.001)
+    {
+      half3 waterNormal = 0;
+      half3 envColor = 0;
+
+      [unroll] for (int i=0; i<LandMatLayerCount; i++)
+      {
+        if (layers[i] && i == waterLayerIdx)
+        {
+          int base = LandMatStageLayers+LandMatStagePerLayer*i;
+          waterNormal.xy = tex2D(samplers[base+LandMatNoInStage], noMap*0.05).ag;
+        }
+      }
+
+      waterNormal.xy = half2(1 - waterNormal.x,waterNormal.y)*2-1;
+      waterNormal.z = sqrt(max(0, 1-dot(waterNormal.xy, waterNormal.xy)));
+      half3 upLocal = half3(0, 0, 1);
+      half dCoef = saturate((length(input.tEyeLocal.xyz) -
+        4*PSC_TerrainSatNormDist.x)/PSC_TerrainSatNormDist.y);
+      waterNormal = lerp(waterNormal, upLocal, dCoef);
+
+      [unroll] for (int i=0; i<LandMatLayerCount; i++)
+      {
+        if (layers[i] && i == waterLayerIdx)
+        {
+          int base = LandMatStageLayers+LandMatStagePerLayer*i;
+          float2 r = reflect(eyeWorld, waterNormal).xy;
+          envColor = tex2D(samplers[base+LandMatDtInStage],
+            r.xy*half2(0.5,-0.5)+0.5);
+        }
+      }
+
+      envColor = lerp(envColor, 0, dCoef);
+      half3 halfway = normalize((lightDir + eyeWorld) / 2);
+      half4 litCoef = lit(dot(lightDir, waterNormal),
+        dot(waterNormal, halfway), 128) * PSC_Diffuse;
+      fout.light.direct = litCoef.y;
+      fout.light.specular = litCoef.z * waterAlpha * 0.4;
+      fout.light.specularEnv = PSC_Diffuse * envColor * waterAlpha;
+      colorTexel.rgb = lerp(colorTexel, satTexture, waterAlpha);
+    }
+#endif
   }
   
   // Calculate the color

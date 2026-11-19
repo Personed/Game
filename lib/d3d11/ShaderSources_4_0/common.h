@@ -214,6 +214,8 @@ A  B
   XXS(11, float4,    VSC_PPWDPhases,                                    29) /* randX, randY, posX, posY */\
   XXS(11, float4,    VSC_PPDynBlurPars0,                                30) \
   XXS(11, float4,    VSC_PPDynBlurPars1,                                31) \
+  XXS(11, float4,    VSC_VsFxaa,                                        32) \
+  XXS(11, float4,    VSC_SmaaPixelSize,                                 33) \
   XXEND(VSCB_PostProcess) \
   XXBEG(VSCB_Lights1, 12, false) \
   XXS(12, float4,    VSC_PointLoopCount,                                0)     /*holds number of point lights, it is being used for static looping*/\
@@ -363,6 +365,9 @@ A  B
   XXS(13, float4, PSC_PPColorRadPars1,                     77) /* color correction radial params 1 */ \
   XXS(13, float4, PSC_PPColorRadPars2,                     78) /* color correction radial params 2 */ \
   XXS(13, float4, PSC_BlurKernelSize,                      79) /* size of kernel for gaussian blur */ \
+  XXS(13, float4, PSC_FxaaPars,                            80) /* x = fxaaQualityRcpFrame.x, y = fxaaQualityRcpFrame.y, z, w */ \
+  XXS(13, float4, PSC_FxaaQuality,                         81) /* x = fxaaQualitySubpix, y = fxaaQualityEdgeThreshold, z = fxaaQualityEdgeThresholdMin, w = debug */ \
+  XXS(13, float4, PSC_SmaaPixelSize,                        82) /* x = 1/w, y = 1/h, z = w, w = h */ \
   XXEND(PSCB_PostProcess) \
 
  
