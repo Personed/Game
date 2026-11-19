@@ -1897,6 +1897,13 @@ struct DelayedPublicVariable
 };
 TypeIsMovableZeroed(DelayedPublicVariable)
 
+struct DelayedSpawnForPlayer
+{
+  RString _code;
+  GameValue _args;
+};
+TypeIsGeneric(DelayedSpawnForPlayer)
+
 //! Network Client
 class NetworkClient : public NetworkComponent
 {
@@ -2128,6 +2135,10 @@ protected:
 
   /// public variables which have Null networkId during PublicVariable are stored to be proccessed later again
   AutoArray<DelayedPublicVariable> _delayedPublicVariables;
+
+  /// spawnForClient code received before the mission init script ran (player scripts are not compiled yet)
+  AutoArray<DelayedSpawnForPlayer> _delayedSpawns;
+  bool _initScriptRun = false;
 
   //! time synchronized from server to clients
   DWORD _serverTime;
@@ -2678,6 +2689,10 @@ public:
   void ProcessDelayedPublicVariables();
   void ClearDelayedPublicVariables();
   void AddDelayedPublicVariable(RString name, int dpnid);
+
+  //! Run spawnForClient code queued until the mission init script ran
+  void ProcessDelayedSpawns();
+  void RunSpawnedCode(RString code, GameValuePar args);
 
   //! Send chat message
   /*!

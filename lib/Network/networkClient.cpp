@@ -2025,6 +2025,11 @@ void NetworkClient::SetClientState(NetworkClientState state)
   if (state == NCSPlaying && _clientState != NCSPlaying)
     OnMissionStarted();
 
+  if (state <= NCSMissionAsked || state == NCSGameFinished)
+    _initScriptRun = false;
+  if (state == NCSNone || state == NCSGameFinished)
+    _delayedSpawns.Clear();
+
 #if _GAMES_FOR_WINDOWS
   // Xbox Live - start / end the session
   if (state == NCSPlaying)
@@ -4307,10 +4312,16 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
         //GameVarSpace local(state->GetContext(), false);
         //state->BeginContext(&local);
         // TODO: check signature
-        GameState *state = GWorld->GetGameState();
-        Ref<GameDataCode> code = new GameDataCode(state,spawnMsg._code, GWorld->GetMissionNamespace());
-        ScriptVM *script = new ScriptVM(ScriptVMDirect, *code, args, GWorld->GetMissionNamespace());
-        GWorld->AddScriptVM(script, false);
+        if (!_initScriptRun && !IsBotClient())
+        {
+          // the code typically calls functions compiled by the mission init script
+          DelayedSpawnForPlayer &item = _delayedSpawns.Append();
+          item._code = spawnMsg._code;
+          item._args = args;
+          RptF("spawnForClient code delayed until mission init script runs");
+          break;
+        }
+        RunSpawnedCode(spawnMsg._code, args);
         //state->EndContext();
       }
       break;
@@ -5774,6 +5785,7 @@ LogF("Mission %s received", (const char *)_missionHeader.GetLocalizedMissionName
 
   void RunInitFunctionsScript();
   RunInitFunctionsScript();
+  ProcessDelayedSpawns();
 
   return true;
 }
@@ -7549,6 +7561,22 @@ void NetworkClient::ProcessDelayedPublicVariables()
     PublicVariable(item._name, item._player);
   }
   _delayedPublicVariables.Clear();
+}
+
+void NetworkClient::RunSpawnedCode(RString code, GameValuePar args)
+{
+  GameState *state = GWorld->GetGameState();
+  Ref<GameDataCode> compiled = new GameDataCode(state, code, GWorld->GetMissionNamespace());
+  ScriptVM *script = new ScriptVM(ScriptVMDirect, *compiled, args, GWorld->GetMissionNamespace());
+  GWorld->AddScriptVM(script, false);
+}
+
+void NetworkClient::ProcessDelayedSpawns()
+{
+  _initScriptRun = true;
+  for (int i=0; i<_delayedSpawns.Size(); i++)
+    RunSpawnedCode(_delayedSpawns[i]._code, _delayedSpawns[i]._args);
+  _delayedSpawns.Clear();
 }
 
 void NetworkClient::ApplyWeather()

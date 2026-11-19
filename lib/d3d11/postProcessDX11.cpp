@@ -11228,15 +11228,26 @@ GameValue PPEffectCommitArr(const GameState *state, GameValuePar oper1, GameValu
 
 #endif
 
-#if defined(_ARMA3_DX11_SCRIPT_PP_API)
+} // namespace DX11
+
+const GameType GameScalarOrArray(GameScalar | GameArray);
+// helper only for template instantiation
+extern GameTypeType GTypeGameScalarOrArray;
+
+template<>
+class ConvertTypes<&GTypeGameScalarOrArray> : public ConvertTypes<&GTypeGameAny> {};
+
+namespace DX11 {
+
 #define FUNCTIONS_VISUAL(XX, Category) \
   XX(GameBool, "ppEffectCommitted", PPEffectCommitted, GameString, "effect", "Check whether given post process effect is commited", "", "", "5501", "", Category) \
   XX(GameBool, "ppEffectCommitted", PPEffectCommitted1, GameScalar, "effect", "Check whether given post process effect is commited", "", "", "5501", "", Category) \
-  XX(GameScalar, "ppEffectCreate", PPEffectCreate, GameArray, "effect", "Create post process effect specified by name and priority", "", "", "5501", "", Category) \
-  XX(GameArray, "ppEffectCreate", PPEffectCreate, GameArray, "effect", "Create post process effect specified by name and priority", "", "", "5501", "", Category) \
+  XX(GameScalarOrArray, "ppEffectCreate", PPEffectCreate, GameArray, "effect", "Create post process effect specified by name and priority", "", "", "5501", "", Category) \
   XX(GameNothing, "ppEffectDestroy", PPEffectDestroy, GameScalar, "effect", "Destroy post process effect given by handle", "", "", "5501", "", Category) \
   XX(GameNothing, "ppEffectDestroy", PPEffectDestroyArr, GameArray, "effect", "Create post process effect specified by name and priority", "", "", "5501", "", Category)
 
+
+FUNCTIONS_VISUAL(JNI_FUNCTION, "Visual")
 
 static const GameFunction PPUnary[]=
 {
@@ -11253,6 +11264,8 @@ static const GameFunction PPUnary[]=
   XX(GameNothing, "ppEffectCommit", function, PPEffectCommit1, GameScalar, GameScalar, "number", "number", "Set time when old pars are replaced by last set, if 0 set immediately", "hndl ppEffectCommit 0", "", "2.92", "", Category) \
   XX(GameNothing, "ppEffectCommit", function, PPEffectCommitArr, GameArray, GameScalar, "array", "scalar", "Set time when old pars are replaced by last set, if 0 set immediately", "hndl ppEffectCommit 0", "", "2.92", "", Category)
  
+OPERATORS_VISUAL(JNI_OPERATOR, "Visual")
+
 static const GameOperator PPBinary[]=
 {
   OPERATORS_VISUAL(REGISTER_OPERATOR, "Visual")
@@ -11277,7 +11290,6 @@ INIT_MODULE(PostProcess, 2)
   }
 #endif
 };
-#endif // _ARMA3_DX11_SCRIPT_PP_API
 
 } //namespace DX11
 #endif //#if _ENABLE_DX11

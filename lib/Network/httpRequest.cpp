@@ -65,6 +65,10 @@ static rapidjson::DocumentValue CreateErrorObject(const char *errorString)
 }
 
 
+/// after a transport failure, skip further requests for a while so an unreachable hive does not stall the server loop
+static DWORD HostUnreachableUntil = 0;
+static const DWORD HostUnreachableRetryMs = 60000;
+
 //int GetResponse( RString &response, const char *site, const char *query, const char *postString, const char *adv )
 int NOTHROW GetResponse( EHttpRequestType eRequest, RString &response, const char* sServerPath, const char* sArgumentList, const char* sPostData )
 {
@@ -79,6 +83,12 @@ int NOTHROW GetResponse( EHttpRequestType eRequest, RString &response, const cha
 	  url.PrintF("%s/?id=%s",sServerPath,ServerInstanceId.Data());
 
   RptF( "XXX GetResponse %s", cc_cast(url) );
+
+  if (HostUnreachableUntil && (int)(HostUnreachableUntil - cntStart) > 0)
+  {
+    response = "HTTP host unreachable, request skipped";
+    return 503;
+  }
 
 #ifndef _CONSOLE
   try
@@ -104,7 +114,7 @@ curl_easy_setopt(c, CURLOPT_SSL_VERIFYPEER, 1);
 #endif
 
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT,20);
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT,20);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT,5);
     /* no need to use CURLOPT_SSL_VERIFYPEER, CURLOPT_SSL_VERIFYHOST - defaults are good */
 
     struct curl_slist *slist=NULL;
@@ -151,6 +161,7 @@ curl_easy_setopt(c, CURLOPT_SSL_VERIFYPEER, 1);
     switch (res)
     {
       case CURLE_OK:
+        HostUnreachableUntil = 0;
         if (http_code<400)
         {
           response = ctx.out;
@@ -169,6 +180,8 @@ curl_easy_setopt(c, CURLOPT_SSL_VERIFYPEER, 1);
       default:
         http_code = 500;
         response = curl_easy_strerror(res);
+        HostUnreachableUntil = GetTickCount() + HostUnreachableRetryMs;
+        RptF("HTTP request failed (%s), skipping requests for %d s", cc_cast(response), HostUnreachableRetryMs/1000);
         break;
     }
     return http_code;
