@@ -70,7 +70,7 @@ inline void ShiftLeftBy1(IdFlags &F)
 inline void LeftShift1(IdFlags &F,int j)
 {
 	char i=(char)j;
-#if defined(WIN32) && !defined(__GNUC__) && defined(_M_IX86)
+#if defined(WIN32) && !defined(__GNUC__)
 	_asm
 	{
 		xorps xmm1,xmm1
@@ -125,7 +125,7 @@ inline void SetBit(IdFlags &F,int bit)
 	if(bit>=IdFlags::BitSize())
 		throw IdFlags::FlagOverflow();
 #endif
-#if defined(WIN32) && !defined(__GNUC__) && defined(_M_IX86)
+#if defined(WIN32) && !defined(__GNUC__)
 	_asm
 	{
 		mov ebx,bit
@@ -143,7 +143,7 @@ inline void ClearBit(IdFlags &Flags,int bit)
 	if(bit>=IdFlags::BitSize())
 		throw IdFlags::FlagOverflow();
 #endif
-#if defined(WIN32) && !defined(__GNUC__) && defined(_M_IX86)
+#if defined(WIN32) && !defined(__GNUC__)
 	_asm
 	{
 		mov ebx,bit
@@ -157,7 +157,7 @@ inline void ClearBit(IdFlags &Flags,int bit)
 /// \brief return the value of \em bit.
 inline bool IsBitSet(const IdFlags &Flags,int bit)
 {
-#if !defined(WIN32) || defined(__GNUC__) || !defined(_M_IX86)
+#if !defined(WIN32) || defined(__GNUC__)
 	return((Flags&(OneBitShifted[bit])));
 #else
 	_asm

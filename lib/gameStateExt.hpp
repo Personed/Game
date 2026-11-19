@@ -487,8 +487,8 @@ AITeamMember *GetValTeamMember( GameValuePar oper );
 bool WriteValue(GameValuePar var, QOStrStream &out);
 
 inline GameValue CreateGameSide( TargetSide side ) {return GameValueExt(side);}
-bool CheckSize(const GameState *state, GameArrayType array, int size);
-bool CheckType(const GameState *state, GameValuePar oper, const GameType &type);
+inline bool CheckSize(const GameState *state, GameArrayType array, int size);
+inline bool CheckType(const GameState *state, GameValuePar oper, const GameType &type);
 
 void OnPlayerConnecting(int dpnid, RString uid, int playerId, RString name);
 void OnPlayerConnecting(int dpnid, RString uid, int playerId, RString name, GameValuePar codeValue);
@@ -500,4 +500,3 @@ int Quick_Hull_2D(int Nb, const VECT2 *Pts, int *Ind);
 void DebugLogFSM( const char *format, ... );
 
 #endif
-

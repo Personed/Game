@@ -14,3 +14,7 @@ buildNo.h
 # extern stuff
 extern/bullet*/out
 extern/libBullet*.lib
+
+# Legacy x86 RotorLib binaries; normal and retail builds disable RotorLib.
+# GitHub rejects two of these files because they exceed its 100 MB file limit.
+extern/RotorLib/RTDynamics 4.0/Lib/

@@ -208,18 +208,17 @@ small_prime_numbers[] = {
 int iobuf_debug_mode = 0;
 int memory_debug_mode = 0;
 
-extern "C" {
 int m_is_secure(void const *)
 {
 	return 1;
 }
 
-void *secmem_malloc(size_t size)
+void *secmem_malloc(unsigned int size)
 {
 	return malloc(size);
 }
 
-void *secmem_realloc(void *block, size_t size)
+void *secmem_realloc(void *block, unsigned int size)
 {
 	return realloc(block, size);
 }
@@ -231,5 +230,4 @@ void secmem_free(void *block)
 
 void secmem_dump_stats()
 {
-}
 }

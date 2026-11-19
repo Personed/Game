@@ -271,7 +271,7 @@ class EventSpinningShort
 
 class EventRecyclingPool: private NoCopy
 {
-  HANDLE *_pool;
+  AtomicInt *_pool;
   AtomicInt _used;
 
   static const int _maxPoolSize;

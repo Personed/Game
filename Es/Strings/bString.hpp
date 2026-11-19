@@ -385,7 +385,7 @@ no const here - we want to use this only when destination can be modified */
 template <int Size>
 LString BString<Size>::operator + (int index)
 {
-  return LString(*this)+static_cast<size_t>(index);
+  return LString(*this)+index;
 }
 
 template <int Size>

@@ -5,8 +5,6 @@
 #ifndef _FILE_SERVER_MT_HPP
 #define _FILE_SERVER_MT_HPP
 
-#include <stdint.h>
-
 #include "fileServer.hpp"
 #include <Es/Memory/fastAlloc.hpp>
 #include <Es/Containers/staticArray.hpp>
@@ -794,12 +792,7 @@ public:
     //! calculate hash value
     static unsigned int CalculateHashValue(KeyType key)
     {
-      const uintptr_t handle = reinterpret_cast<uintptr_t>(key._handle);
-      unsigned int handleHash = static_cast<unsigned int>(handle);
-#if defined(_WIN64)
-      handleHash ^= static_cast<unsigned int>(handle >> 32) * 0x9e3779b1U;
-#endif
-      return (key._start>>12) + handleHash;
+      return (key._start>>12) + (unsigned int)key._handle;
     }
 
     //! compare keys, return negative when k1<k2, positive when k1>k2, zero when equal

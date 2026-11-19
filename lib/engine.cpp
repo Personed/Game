@@ -11,12 +11,6 @@
 #include <stdarg.h>
 Engine *GEngine;
 
-bool Engine::D3DPerformLock = true;
-bool Engine::D3DUseDynamicConstantBuffers = true;
-bool Engine::D3DUseMultiSizeConstantBuffers = true;
-bool Engine::D3DCreateSingleThreaded = false;
-bool Engine::D3DCreateNoThreadOpt = false;
-
 const int TITexSource[] =
 {
   0, // Normal
@@ -149,16 +143,6 @@ const int TITexSource[] =
   0, // SuperExt
   0, // SuperAToC
 	0, // PSNonTLHeatHaze
-	0, // InterpolationAlpha
-	0, // VolCloud
-	0, // VolCloudSimple
-	0, // UnderwaterOcclusion
-	0, // SuperHair
-	0, // SuperHairAtoC
-	0, // Caustics
-	0, // Refract
-	0, // SpriteRefract
-	0, // SpriteRefractSimple
 };
 namespace Unique0
 {
@@ -225,12 +209,6 @@ const EVertexDecl ShaderVertexDeclarations[] =
   VD_Position_Normal_Tex0_ST,         // VSTreeAdvTrunk
   VD_SimulWeatherClouds,             // VSSimulWeatherClouds
   VD_SimulWeatherCloudsCPU,           //VSSimulWeatherCloudsCPU
-  VD_Tex0,                            // VolCloud
-  VD_Position_Normal_Tex0_ST_Float3,  // Road
-  VD_Position_Normal_Tex0,            // UnderwaterOcclusion
-  VD_Tex0,                            // SpriteOnSurface
-  VD_Position_Normal_Tex0_ST,         // TreeAdvModNormals
-  VD_Position_Normal_Tex0_ST          // Refract
 };
 namespace Unique2
 {
@@ -274,48 +252,10 @@ const VertexShaderPoolID VSToVSP[] =
   VSPTreeAdvTrunk,
   NVertexShaderPoolID,
   NVertexShaderPoolID,
-  NVertexShaderPoolID,               // VolCloud
-  NVertexShaderPoolID,               // Road
-  VSPUnderwaterOcclusion,             // UnderwaterOcclusion
-  NVertexShaderPoolID,               // SpriteOnSurface
-  VSPTreeAdvModNormals,               // TreeAdvModNormals
-  VSPRefract                          // Refract
 };
 namespace Unique3
 {
   COMPILETIME_COMPARE(lenof(VSToVSP),NVertexShaderID)
-}
-
-const VertexShaderID VSPToVS[] =
-{
-  VSBasic,
-  VSNormalMap,
-  VSNormalMapDiffuse,
-  VSGrass,
-  VSNormalMapThrough,
-  VSBasicAS,
-  VSNormalMapAS,
-  VSNormalMapDiffuseAS,
-  VSGlass,
-  VSNormalMapSpecularThrough,
-  VSNormalMapThroughNoFade,
-  VSNormalMapSpecularThroughNoFade,
-  VSSuper,
-  VSMulti,
-  VSTree,
-  VSTreeNoFade,
-  VSTreePRT,
-  VSTreePRTNoFade,
-  VSSkin,
-  VSTreeAdv,
-  VSTreeAdvTrunk,
-  VSUnderwaterOcclusion,
-  VSTreeAdvModNormals,
-  VSRefract
-};
-namespace UniqueVSPToVS
-{
-  COMPILETIME_COMPARE(lenof(VSPToVS),NVertexShaderPoolID)
 }
 
 const VertexShaderSpecialID VSToVSS[] =
@@ -354,13 +294,7 @@ const VertexShaderSpecialID VSToVSS[] =
   NVertexShaderSpecialID,
   NVertexShaderSpecialID,
   VSSSimulWeatherClouds,
-  VSSSimulWeatherCloudsCPU,
-  VSSVolCloud,
-  NVertexShaderSpecialID,             // Road
-  NVertexShaderSpecialID,             // UnderwaterOcclusion
-  VSSSpriteOnSurface,
-  NVertexShaderSpecialID,             // TreeAdvModNormals
-  NVertexShaderSpecialID              // Refract
+  VSSSimulWeatherCloudsCPU
 };
 namespace Unique4
 {

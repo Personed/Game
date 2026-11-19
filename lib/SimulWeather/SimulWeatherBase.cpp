@@ -11,10 +11,7 @@
 #include "SimulWeatherUtils.hpp"
 #include "../global.hpp"
 #include "../scene.hpp"
-// x64 builds render through DX11; nothing here uses EngineDD9.
-#if !defined(_WIN64)
 #include "../d3d9/engdd9.hpp"
-#endif
 #include "../world.hpp"
 
 //=====================================================================================

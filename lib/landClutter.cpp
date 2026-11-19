@@ -15,7 +15,6 @@ Ground clutter handling
 #include <El/Common/perfProf.hpp>
 #include <El/PerlinNoise/perlinNoise.hpp>
 #include <Es/Types/scopeLock.hpp>
-#include <Es/Threads/multisync.hpp>
 #include <El/Multicore/jobs.hpp>
 #include "fileLocator.hpp"
 #include "gridEventLogger.hpp"
@@ -575,9 +574,6 @@ Alpha could be then used to simulate clutter density. This would be probably fas
 */
 class GroundClutterPosMap: public RefCount, public LinkBidirWithFrameStore, public CountInstances<GroundClutterPosMap>
 {
-  // Calculate() and the memory pressure callback can run on different worker
-  // threads. Protect the lazily generated arrays from concurrent Unload().
-  mutable CriticalSection _dataLock;
   mutable InitVal<bool> _loaded;
   
   mutable Array2D<PosPair> _pos;
@@ -586,31 +582,22 @@ class GroundClutterPosMap: public RefCount, public LinkBidirWithFrameStore, publ
   int _x,_z;
   int _layer;
   SurfaceCharacter _surf;
-
-  void GenerateLocked() const;
   
   public:
   GroundClutterPosMap(int x, int z, int layer, RandomGenerator &randGen, const SurfaceCharacter &surf);
-  ~GroundClutterPosMap()
-  {
-    static volatile LONG dtorDiagnostics = 0;
-    LONG dtorDiagnostic = InterlockedIncrement(&dtorDiagnostics);
-    if (dtorDiagnostic <= 32)
-      RptF("Clutter map dtor: n=%d this=%p refs=%d ranges=%dx%d pos=%p",
-        (int)dtorDiagnostic,this,RefCounter(),_x,_z,_pos.Data1D());
-  }
+  ~GroundClutterPosMap() {}
   
   void Generate() const;
 
   void Unload() const
   {
-    ScopeLockSection lock(_dataLock);
     _loaded=false;
     _pos.Clear();
     _isHere.Clear();
   }
   
-  bool GetCellData(int x, int z, PosPair &pos, int &isHere) const;
+  int IsHere(int x, int z) const {Assert(_loaded);return _isHere(x,z);}
+  const PosPair &GetPos(int x, int z) const {Assert(_loaded);return _pos(x,z);}
   int GetXRange() const {return _x;}
   int GetZRange() const {return _z;}
   
@@ -1067,21 +1054,9 @@ void LayerMaskCacheItem::TexAccess::Load()
   int h = _tex->AHeight();
   PacFormat format = _tex->GetFormat();
   int dataSize = PacLevelMem::MipmapSize(format,w,h);
-  if (format==PacDXT1 || format==PacDXT2 || format==PacDXT3 ||
-      format==PacDXT4 || format==PacDXT5)
-  {
-    RptF("Layer mask DXT load: %s %dx%d format=%d bytes=%d",
-      cc_cast(_tex->Name()),w,h,(int)format,dataSize);
-  }
   _data.Realloc(dataSize);
   _data.Resize(dataSize);
   bool dataOk = _tex->GetRect(0,0,0,w,h,format,_data.Data());
-  if (format==PacDXT1 || format==PacDXT2 || format==PacDXT3 ||
-      format==PacDXT4 || format==PacDXT5)
-  {
-    RptF("Layer mask DXT read: %s ok=%d data=%p size=%d",
-      cc_cast(_tex->Name()),dataOk ? 1 : 0,_data.Data(),_data.Size());
-  }
   if (!dataOk)
   {
     _data.Clear();
@@ -1708,29 +1683,14 @@ GroundClutterPosMap::GroundClutterPosMap(
   int x, int z, int layer, RandomGenerator &randGen, const SurfaceCharacter &surf
 )
 {
-  static volatile LONG ctorDiagnostics = 0;
-  LONG ctorDiagnostic = InterlockedIncrement(&ctorDiagnostics);
-  if (ctorDiagnostic <= 8)
-    RptF("Clutter map ctor: n=%d this=%p args=%dx%d layer=%d rand=%p surf=%p size=%u",
-      (int)ctorDiagnostic,this,x,z,layer,&randGen,&surf,(unsigned)sizeof(*this));
   _x = x;
   _z = z;
   _layer = layer;
   _surf = surf;
-  if (ctorDiagnostic <= 8)
-    RptF("Clutter map ctor initialized: n=%d this=%p ranges=%dx%d loaded=%d pos=%p(%d) presence=%p(%d) refs=%d",
-      (int)ctorDiagnostic,this,_x,_z,(bool)_loaded,_pos.Data1D(),_pos.Size1D(),
-      _isHere.Data1D(),_isHere.Size1D(),RefCounter());
   //Generate();
 }
 
 void GroundClutterPosMap::Generate() const
-{
-  ScopeLockSection lock(_dataLock);
-  GenerateLocked();
-}
-
-void GroundClutterPosMap::GenerateLocked() const
 {
   if (_loaded) return;
   
@@ -1740,35 +1700,9 @@ void GroundClutterPosMap::GenerateLocked() const
   int layer = _layer;
   RandomGenerator &randGen = GLandscape->GetRandGen();
   const SurfaceCharacter &surf = _surf;
-
-  // Capture stale/corrupted Array2D storage before Dim() clears/reallocates
-  // it; the x64 crash currently reaches the AutoArray destructor in this
-  // function with 0x3f800000 passed as its data pointer.
-  void *posData = _pos.Data1D();
-  void *isHereData = _isHere.Data1D();
-  static volatile LONG mapDiagnostics = 0;
-  LONG mapDiagnostic = InterlockedIncrement(&mapDiagnostics);
-  if (mapDiagnostic <= 8)
-  {
-    RptF("Clutter map before Dim: n=%d map=%p size=%dx%d loaded=%d pos=%p(%d) presence=%p(%d)",
-      (int)mapDiagnostic,this,x,z,(bool)_loaded,posData,_pos.Size1D(),
-      isHereData,_isHere.Size1D());
-  }
-  if (posData && (size_t)posData < 0x100000000ULL)
-    RptF("Invalid clutter pos array before Dim: map=%p data=%p size=%d loaded=%d",
-      this,posData,_pos.Size1D(),(bool)_loaded);
-  if (isHereData && (size_t)isHereData < 0x100000000ULL)
-    RptF("Invalid clutter presence array before Dim: map=%p data=%p size=%d loaded=%d",
-      this,isHereData,_isHere.Size1D(),(bool)_loaded);
   
   _pos.Dim(x,z);
   _isHere.Dim(x,z);
-  if (mapDiagnostic <= 8)
-  {
-    RptF("Clutter map after Dim: n=%d pos=%p(%d) presence=%p(%d)",
-      (int)mapDiagnostic,_pos.Data1D(),_pos.Size1D(),
-      _isHere.Data1D(),_isHere.Size1D());
-  }
   
   // generate a position pair for each grid location
   for (int zz=0; zz<z; zz++) for (int xx=0; xx<x; xx++)
@@ -1798,20 +1732,6 @@ void GroundClutterPosMap::GenerateLocked() const
 
   }
   _loaded=true;
-}
-
-bool GroundClutterPosMap::GetCellData(int x, int z, PosPair &pos,
-  int &isHere) const
-{
-  ScopeLockSection lock(_dataLock);
-  GenerateLocked();
-  if (x < 0 || x >= _pos.GetXRange() || z < 0 ||
-      z >= _pos.GetYRange() || x >= _isHere.GetXRange() ||
-      z >= _isHere.GetYRange())
-    return false;
-  pos = _pos.Get(x, z);
-  isHere = _isHere.GetValue(x, z);
-  return true;
 }
 
 /// texture source 
@@ -1864,12 +1784,7 @@ GroundClutterTextureSource::GroundClutterTextureSource(GroundClutterPosMap *posM
 :base(PacARGB8888,size.w,size.h,size.mipmaps),
 _posMap(posMap)
 {
-  static volatile LONG sourceDiagnostics = 0;
-  LONG sourceDiagnostic = InterlockedIncrement(&sourceDiagnostics);
-  if (sourceDiagnostic <= 16)
-    RptF("Clutter texture source ctor: n=%d source=%p map=%p refs=%d ranges=%dx%d tex=%dx%d",
-      (int)sourceDiagnostic,this,posMap,posMap ? posMap->RefCounter() : -1,
-      posMap ? posMap->GetXRange() : 0,posMap ? posMap->GetZRange() : 0,size.w,size.h);
+
 }
 
 static float ClutterHeightIgnored = 0.10f;
@@ -1918,14 +1833,12 @@ bool GroundClutterTextureSource::GetMipmapData(void *mem, const PacLevelMem &mip
         // perform looped access as needed, + is needed to avoid mod of negative number
         int zWrap = (zz+zRange)%zRange;
         int xWrap = (xx+xRange)%xRange;
-        PosPair cellPos;
-        int isHere;
-        if (!_posMap->GetCellData(xWrap,zWrap,cellPos,isHere)) continue;
+        int isHere = _posMap->IsHere(xWrap,zWrap);
         if (isHere<0) continue;
         if (CheckClutterIgnored(GLandscape,isHere)) continue;
         // check center position
-        float xGrid = xWrap + cellPos.x;
-        float zGrid = zWrap + cellPos.z;
+        float xGrid = xWrap + _posMap->GetPos(xWrap,zWrap).x;
+        float zGrid = zWrap + _posMap->GetPos(xWrap,zWrap).z;
         
 
         // compute x and z distance considering wrapping
@@ -1968,7 +1881,6 @@ bool GroundClutterTextureSource::GetMipmapData(void *mem, const PacLevelMem &mip
 class GroundClutterPosMapWithTex: public GroundClutterPosMap
 {
   Ref<Texture> _tex;
-  bool _used;
 
   typedef GroundClutterPosMap base;
 
@@ -1978,8 +1890,6 @@ class GroundClutterPosMapWithTex: public GroundClutterPosMap
   );
   ~GroundClutterPosMapWithTex(){}
 
-  void InitTexture();
-
   Texture *GetTexture() const {return _tex;}
   void Destroy() {_tex.Free();}
 };
@@ -1988,19 +1898,10 @@ GroundClutterPosMapWithTex::GroundClutterPosMapWithTex(
   int x, int z, int layer, RandomGenerator &randGen, const SurfaceCharacter &surf, bool used
 )
 :base(x,z,layer,randGen,surf)
-,_used(used)
 {
-  // Do not create a texture source here. This object has RefCount zero until
-  // the caller stores the returned pointer in GroundClutterPosMaps::_maps.
-  // The source owns a Ref back to this map, so constructing it here can
-  // release and destroy the map before its constructor's caller gets it.
-}
-
-void GroundClutterPosMapWithTex::InitTexture()
-{
-  if (_used && !_tex)
+  // GlobLoadTexture will take ownership over src
+  if (used)
   {
-    // The caller must first hold this object in a Ref.
     ITextureSource *src = new GroundClutterTextureSource(this,TextureSizeFromPosMap(this));
     _tex = GlobLoadTexture(src);
   }
@@ -2617,11 +2518,8 @@ bool GroundClutterCache::Calculate(
         posMap->Generate();
         _posMap.AddOrRefresh(posMap);
         
-        PosPair cellPos;
-        int isHere;
-        if (!posMap->GetCellData(xxx,zzz,cellPos,isHere)) continue;
-        float xIn = xxx*clutterStep + cellPos.x*clutterStep - (xx-xxBeg)*terrainGrid;
-        float zIn = zzz*clutterStep + cellPos.z*clutterStep - (zz-zzBeg)*terrainGrid;
+        float xIn = xxx*clutterStep + posMap->GetPos(xxx,zzz).x*clutterStep - (xx-xxBeg)*terrainGrid;
+        float zIn = zzz*clutterStep + posMap->GetPos(xxx,zzz).z*clutterStep - (zz-zzBeg)*terrainGrid;
         //float xIn = xxx*clutterStep - (xx-xxBeg)*terrainGrid;
         //float zIn = zzz*clutterStep - (zz-zzBeg)*terrainGrid;
         //Log("pos %.2f,%.2f, xxx=%d,zzz=%d, in %.2f,%.2f",pos.X(),pos.Z(),xxx,zzz,xIn,zIn);
@@ -2634,6 +2532,7 @@ bool GroundClutterCache::Calculate(
 
         // clutter presence pattern is defined by the position map
 //         int isHere = 0;
+        int isHere = posMap->IsHere(xxx,zzz);
         if (isHere<0) continue;
 
         const Clutter &clutter = land->_clutter[isHere];
@@ -4770,7 +4669,6 @@ void Landscape::BuildClutterMapping()
       // color of the detail texture needs to be stored in the custom data of the detail texture
       // detail texture also contains the SurfaceInfo
       maps->_maps[p] = ::BuildClutterPosMap(this,mat,p);
-      if (maps->_maps[p]) maps->_maps[p]->InitTexture();
 //       if (maps->_maps[p])
 //       {
 //         builtPasses++;

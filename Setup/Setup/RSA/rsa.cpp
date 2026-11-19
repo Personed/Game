@@ -213,17 +213,17 @@ int m_is_secure(void const *)
 	return true;
 }
 
-extern "C" void *secmem_malloc(size_t size)
+void *secmem_malloc(unsigned int size)
 {
 	return malloc(size);
 }
 
-extern "C" void *secmem_realloc(void *block, size_t size)
+void *secmem_realloc(void *block, unsigned int size)
 {
 	return realloc(block, size);
 }
 
-extern "C" void secmem_free(void *block)
+void secmem_free(void *block)
 {
 	free(block);
 }

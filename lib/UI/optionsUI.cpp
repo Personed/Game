@@ -1068,7 +1068,7 @@ void RenameUserProfile(RString oldName, RString newName)
 
     // copy all files to new save
     _finddata_t info;
-    intptr_t h = _findfirst(srcDir + RString("*.*"), &info); // u: drive
+    long h = _findfirst(srcDir + RString("*.*"), &info); // u: drive
     if (h != -1)
     {
       do
@@ -7227,7 +7227,7 @@ void DisplayMainVBS::OnButtonClicked(int idc)
     {
       _finddata_t info;
       RString dir = GetUserRootDir(name);
-      intptr_t check = X_findfirst(dir, &info);
+      long check = X_findfirst(dir, &info);
 
       Glob.header.SetPlayerName(name);      
       SaveLastPlayer();
@@ -10024,7 +10024,7 @@ void FlushReadHandles(const char *dir)
   sprintf(buffer, "%s\\*.*", dir);
 
   _finddata_t info;
-  intptr_t h = X_findfirst(buffer, &info);
+  long h = X_findfirst(buffer, &info);
   if (h != -1)
   {
     do
@@ -12488,7 +12488,7 @@ void DisplaySingleMission::LoadDirectory()
     _missionList->ClearStrings();
 #ifdef _XBOX
     _finddata_t info;
-      intptr_t h = _findfirst(_directory + RString("*.*"), &info);  // t: drive
+    long h = _findfirst(_directory + RString("*.*"), &info);  // t: drive
     if (h != -1)
     {
       do
@@ -12611,13 +12611,13 @@ void DisplaySingleMission::LoadDirectory()
         {
           bool exist = true;
           for (int i=0; i< cnd.GetSize();++i)
-            if (!(Pars >> "CfgPatches").FindEntry((RString)cnd[i].GetValue())) exist = false;
+            if (!(Pars >> "CfgPatches").FindEntry((RString)cnd[i])) exist = false;
 
           if (!exist) continue;
         }
         else if (cnd.IsTextValue())
         {
-          if (!(Pars >> "CfgPatches").FindEntry((RString)cnd.GetValue())) continue;
+          if (!(Pars >> "CfgPatches").FindEntry((RString)cnd)) continue;
         }
       }
 
@@ -12652,9 +12652,9 @@ void DisplaySingleMission::LoadDirectory()
 
   // first search for .pbo files
   #ifdef _XBOX
-    intptr_t h = X_findfirst(dir + RString("*"), &info);
+    long h = X_findfirst(dir + RString("*"), &info);
   #else
-    intptr_t h = _findfirst(dir + RString("*.pbo"), &info);  // not used on Xbox
+    long h = _findfirst(dir + RString("*.pbo"), &info);  // not used on Xbox
   #endif
   if (h != -1)
   {

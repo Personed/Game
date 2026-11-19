@@ -1,9 +1,5 @@
 #pragma once
-#ifdef _DEBUG
 #pragma comment(lib, "xapobased.lib")
-#else
-#pragma comment(lib, "xapobase.lib")
-#endif
 #pragma comment(lib, "xapofx.lib")
 
 #include <Es/Common/win.h>

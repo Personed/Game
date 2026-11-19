@@ -28,7 +28,7 @@
 	#define ALIGN32
 #endif
 
-#if defined(_MSC_VER) && !defined(__GNUC__) && !defined(_M_X64) && !defined(_M_AMD64)
+#if defined(_MSC_VER) && !defined(__GNUC__) && !defined(WIN64)
 	#define USE_ASSEMBLY_COMPARE
 #endif
 
@@ -56,7 +56,7 @@ namespace simul
 		extern float SIMUL_MATH_EXPORT_FN InverseTangent(float y,float x);
 		inline bool CompareNormalList(const float *x,float *NormalX,float *NormalY,float *NormalZ,float *NormalD,int Num)
 		{
-		#if defined(USE_ASSEMBLY_COMPARE) && !defined(_M_X64) && !defined(_M_AMD64)
+		#ifdef USE_ASSEMBLY_COMPARE
 			x;NormalX;NormalY;NormalZ;NormalD;Num;
 			_asm
 			{
@@ -122,7 +122,7 @@ namespace simul
 		}
 		inline bool LocalOnSurfaceNormalList(float *x,float *NormalX,float *NormalY,float *NormalZ,float *NormalD,int Num,int except_surface)
 		{
-		#if defined(USE_ASSEMBLY_COMPARE) && !defined(_M_X64) && !defined(_M_AMD64)
+		#ifdef USE_ASSEMBLY_COMPARE
 			static float big_number=1e12f;
 			_asm
 			{
@@ -199,7 +199,7 @@ namespace simul
 		}
 		inline bool LocalOnSurfaceNormalList(float *x,float *NormalX,float *NormalY,float *NormalZ,float *NormalD,int Num,float t,int except_surface)
 		{
-		#if defined(USE_ASSEMBLY_COMPARE) && !defined(_M_X64) && !defined(_M_AMD64)
+		#ifdef USE_ASSEMBLY_COMPARE
 			static float big_number=1e12f;
 			_asm
 			{
@@ -279,7 +279,7 @@ namespace simul
 		}
 		inline bool CompareNormalList(float *x,float *NormalX,float *NormalY,float *NormalZ,float *NormalD,int Num,float t)
 		{
-		#if defined(USE_ASSEMBLY_COMPARE) && !defined(_M_X64) && !defined(_M_AMD64)
+		#ifdef USE_ASSEMBLY_COMPARE
 			_asm
 			{
 				mov ebx,Num
@@ -369,7 +369,7 @@ namespace simul
 		}
 		inline bool ComparePositionListToSurface(float *PointsX,float *PointsY,float *PointsZ,float *N,float D,int Num)
 		{
-		#if defined(USE_ASSEMBLY_COMPARE) && !defined(_M_X64) && !defined(_M_AMD64)
+		#ifdef USE_ASSEMBLY_COMPARE
 			_asm
 			{
 				mov ebx,Num

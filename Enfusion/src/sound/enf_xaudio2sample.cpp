@@ -13,8 +13,6 @@
 #include "enf_main.h"
 #include "system/enf_vfilesystem.h"
 #include <vorbis/codec.h>
-#include <mmintrin.h>
-#include <emmintrin.h>
 //#include "stb_vorbis.c"
 
 namespace enf
@@ -387,7 +385,7 @@ synthloop:;
 									int cnt1 = samples;
 
 #ifdef ENF_SSE
-									int al = (int)(uintptr_t)mono & 15;
+									int al = (int)mono & 15;
 
 									if(al != 0)
 									{
@@ -415,14 +413,14 @@ synthloop:;
 										in = _mm_min_ps(in, max);
 										in = _mm_max_ps(in, min);
 
-										__m128i ints = _mm_cvtps_epi32(in);
-										__m128i packed = _mm_packs_epi32(ints, _mm_setzero_si128());
-										_mm_storel_epi64((__m128i*)ptr, packed);
+										__m64 out = _mm_cvtps_pi16(in);
+										*(__m64*)ptr = out;
 
 										ptr += 4;
 										mono += 4;
 									}
 
+									_mm_empty();
 
 									cnt1 &= 3;
 #endif

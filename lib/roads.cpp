@@ -3338,6 +3338,8 @@ int AmbientRoadNetwork::Load( ParamEntryPar par )
       newRoad->_points[j] = Vector3(x,y,z);
     }
 
+    Assert(sizeof(long) == sizeof(AmbientRoad*));
+
     newRoad->_prevMask = in.getiw();
     newRoad->_nextMask = in.getiw();
 
@@ -3350,12 +3352,9 @@ int AmbientRoadNetwork::Load( ParamEntryPar par )
       newRoad->_phases.Append(u.f);
       
       // problem: can't get pointers to non-existing indices
-      // Hold serialized 32-bit indices as pointer-sized integer tokens until
-      // every road has been loaded. A token is never dereferenced here.
-      if (newRoad->_prevMask & 1<<(trajectoryCount-j-1))
-        newRoad->_prevR.Append(reinterpret_cast<AmbientRoad*>(static_cast<intptr_t>(in.getil())));
-      if (newRoad->_nextMask & 1<<(trajectoryCount-j-1))
-        newRoad->_nextR.Append(reinterpret_cast<AmbientRoad*>(static_cast<intptr_t>(in.getil())));
+      // dirty hack: read indices into _prevR and _nextR (assume sizeof(long) == sizeof(AmbientRoad*)), change them to pointers after the load
+      if (newRoad->_prevMask & 1<<(trajectoryCount-j-1)) newRoad->_prevR.Append(reinterpret_cast<AmbientRoad*>(in.getil()));
+      if (newRoad->_nextMask & 1<<(trajectoryCount-j-1)) newRoad->_nextR.Append(reinterpret_cast<AmbientRoad*>(in.getil()));
     }
 
     newRoad->Seal();
@@ -3373,11 +3372,11 @@ int AmbientRoadNetwork::Load( ParamEntryPar par )
     roads[i]->_prevR.Compact();
     roads[i]->_nextR.Compact();
     for (int j = 0; j < roads[i]->_prevR.Size(); j++) {
-      intptr_t prev = reinterpret_cast<intptr_t>(roads[i]->_prevR[j]);
+      long prev = reinterpret_cast<long>(roads[i]->_prevR[j]);
       roads[i]->_prevR[j] = (prev==-1 ? 0 : roads[prev].GetRef());
     }
     for (int j = 0; j < roads[i]->_nextR.Size(); j++) {
-      intptr_t next = reinterpret_cast<intptr_t>(roads[i]->_nextR[j]);
+      long next = reinterpret_cast<long>(roads[i]->_nextR[j]);
       roads[i]->_nextR[j] = roads[next].GetRef();
     }
   }

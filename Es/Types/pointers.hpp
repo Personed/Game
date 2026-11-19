@@ -751,11 +751,7 @@ public:
 //! Segment of alternative NULL addresses: 0 to MaxNull-1
 #define MaxNull 0x0004
 
-#if defined(_WIN64)
-#define DNull(x) ((uintptr_t)(x) < MaxNull)
-#else
 #define DNull(x) ((unsigned)(x) < MaxNull)
-#endif
 
 /*!
   The same as Ref<> but uses alternative NULL addresses (0-3) and

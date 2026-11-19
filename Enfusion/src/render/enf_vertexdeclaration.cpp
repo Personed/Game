@@ -44,7 +44,7 @@ void Renderer::SetVertexDeclaration(IVertexDeclaration pdecl)
 		return;
 	}
 
-	uint index = static_cast<uint>(reinterpret_cast<uint64>(pdecl)) - 1;
+	uint index = (uint)pdecl - 1;
 	enf_assert(index < m_pVertexDeclarations.GetCardinality());
 
 	const VertexDeclaration& decl = *m_pVertexDeclarations[index];
@@ -115,7 +115,7 @@ IVertexDeclaration IRenderer::CreateVertexDeclaration(const VertexDeclaration& d
 	for(uint n = 0; n < m_pVertexDeclarations.GetCardinality(); n++)
 	{
 		if(m_pVertexDeclarations[n]->IsEqual(decl))
-			return reinterpret_cast<IVertexDeclaration>(static_cast<uint64>(n + 1));
+			return (IVertexDeclaration)(n + 1);
 	}
 
 	VertexDeclaration* newdecl = NULL;
@@ -234,7 +234,7 @@ IVertexDeclaration IRenderer::CreateVertexDeclaration(const VertexDeclaration& d
 		numelems++;
 	}
 	if(m_pd3dDevice->CreateVertexDeclaration(elems, &pdecl) != D3D_OK)
-		return NULL;
+		return (IVertexDeclaration)0;
 
 	newdecl = ENF_NEW VertexDeclaration();
 
@@ -244,7 +244,7 @@ IVertexDeclaration IRenderer::CreateVertexDeclaration(const VertexDeclaration& d
 
 	m_pVertexDeclarations.Insert(newdecl);
 
-	return reinterpret_cast<IVertexDeclaration>(static_cast<uint64>(m_pVertexDeclarations.GetCardinality()));
+	return (IVertexDeclaration)m_pVertexDeclarations.GetCardinality();
 #elif defined(ENF_PS3)
 	newdecl = ENF_NEW VertexDeclaration();
 
@@ -356,7 +356,7 @@ IVertexDeclaration IRenderer::CreateVertexDeclaration(const VertexDeclaration& d
 
 	m_pVertexDeclarations.Insert(newdecl);
 
-	return reinterpret_cast<IVertexDeclaration>(static_cast<uint64>(m_pVertexDeclarations.GetCardinality()));
+	return (IVertexDeclaration)m_pVertexDeclarations.GetCardinality();
 #elif defined(ENF_OGL)
 	newdecl = ENF_NEW VertexDeclaration();
 
@@ -364,7 +364,7 @@ IVertexDeclaration IRenderer::CreateVertexDeclaration(const VertexDeclaration& d
 	*newdecl = decl;
 	m_pVertexDeclarations.Insert(newdecl);
 
-	return reinterpret_cast<IVertexDeclaration>(static_cast<uint64>(m_pVertexDeclarations.GetCardinality()));
+	return (IVertexDeclaration)m_pVertexDeclarations.GetCardinality();
 #endif
 }
 

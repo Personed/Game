@@ -1679,14 +1679,14 @@ const GameType GameTextOrString(GameText | GameString);
     return Veh##Xxx(state, oper1, false); \
   }
 
-bool CheckSize(const GameState *state, GameArrayType array, int size)
+inline bool CheckSize(const GameState *state, GameArrayType array, int size)
 {
   if (array.Size() == size) return true;
   state->SetError(EvalDim, array.Size(), size);
   return false;
 }
 
-bool CheckType(const GameState *state, GameValuePar oper, const GameType &type)
+inline bool CheckType(const GameState *state, GameValuePar oper, const GameType &type)
 {
   if (oper.GetType() == type) return true;
   state->TypeError(type, oper.GetType());
@@ -9769,7 +9769,7 @@ GameValue ObjName( const GameState *state, GameValuePar oper1 )
   if (!unit)
   {
     RptF("WARNING: Function 'name' - %s has no unit", (const char *)veh->GetDebugName());
-    RptF(" - network id %d:%" OID_FORMAT"", veh->GetNetworkId().creator.CreatorInt(), veh->GetNetworkId().id);
+    RptF(" - network id %d:%"OID_FORMAT"", veh->GetNetworkId().creator.CreatorInt(), veh->GetNetworkId().id);
     Person *person = dyn_cast<Person>(veh);
     if (person)
     {
@@ -10493,7 +10493,7 @@ GameValue ObjMoveInDriver( const GameState *state, GameValuePar oper1, GameValue
 /*
 RptF
 (
-  "Move in driver (procedure): %s (id %d:%" OID_FORMAT") into %s (id %d:%" OID_FORMAT")",
+  "Move in driver (procedure): %s (id %d:%"OID_FORMAT") into %s (id %d:%"OID_FORMAT")",
   cc_cast(soldier->GetDebugName()), soldier->GetNetworkId().creator.CreatorInt(), soldier->GetNetworkId().id,
   cc_cast(veh->GetDebugName()), veh->GetNetworkId().creator.CreatorInt(), veh->GetNetworkId().id
 );
@@ -15622,7 +15622,7 @@ GameValue ConfigListNames(const GameState *state)
   RString mask = GetUserDirectory() + RString("Config\\*.*");
 
   _finddata_t info;
-  intptr_t h = X_findfirst(mask, &info);
+  long h = X_findfirst(mask, &info);
   if (h != -1)
   {
     do
@@ -19763,7 +19763,7 @@ GameValue SelectPlayer(const GameState *state, GameValuePar oper1)
   }
 
   //NetworkId mid = veh->GetNetworkId();
-  //RptF(" %d:%" OID_FORMAT" LastSimulationTime = %.3f (%.3f)", mid.creator.CreatorInt(), mid.id, veh->GetLastSimulationTime().toFloat(), veh->GetSimSkip());
+  //RptF(" %d:%"OID_FORMAT" LastSimulationTime = %.3f (%.3f)", mid.creator.CreatorInt(), mid.id, veh->GetLastSimulationTime().toFloat(), veh->GetSimSkip());
 
   AIBrain *unit = veh->CommanderUnit();
   if (!unit) return NOTHING;
@@ -30139,4 +30139,3 @@ INIT_MODULE(ComRef, 1000)
 #endif
 #endif
 }
-

@@ -11,7 +11,7 @@
 #include "appName.h"
 // Registry key for saving player's name, IP address of server etc.
 #define ConfigAppRoot "Software\\Bohemia Interactive Studio\\"
-#define ConfigApp ConfigAppRoot DayZAppName
+#define ConfigApp ConfigAppRoot AppName
 
 
 #if _SERVER

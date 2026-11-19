@@ -1507,7 +1507,7 @@ bool InGameUI::DrawTargetInfo(
         GEngine->DrawTextF
         (
           pos, dFontSize, dFont, ftColorA, 0, 
-          "%s: %d:%" OID_FORMAT,
+          "%s: %d:%"OID_FORMAT,
           v->IsLocal() ? "Local" : "Remote", v->GetNetworkId().creator, v->GetNetworkId().id
         );
         pos.y += GEngine->PixelAlignedY(dFontSize * h2d); 

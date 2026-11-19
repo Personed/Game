@@ -2652,7 +2652,7 @@ static void JSONSaveArray(JSONValue &result, const GameArrayType &array, JSONAll
     else if (t == GameScalar)
       result.PushBack((float)value, allocator);
     else if (t == GameString)
-      result.PushBack((RString)value.GetText(), allocator);
+      result.PushBack((RString)value, allocator);
     else if (t == GameArray)
     {
       JSONValue subarray;
@@ -2742,7 +2742,7 @@ void EntityAI::JSONSaveVariables(JSONValue &container, JSONAllocator &allocator)
         else if (t == GameScalar)
           vars.AddMember(name, (float)value, allocator);
         else if (t == GameString)
-          vars.AddMember(name, (RString)value.GetText(), allocator);
+          vars.AddMember(name, (RString)value, allocator);
         else if (t == GameArray)
         {
           JSONValue array;
@@ -10930,7 +10930,7 @@ TargetSide EntityAI::GetTargetSide(float accuracy) const
 
 RString EntityAI::GetDebugName() const
 {
-  RString id = Format("%d:%" OID_FORMAT, GetNetworkId().creator.CreatorInt(), GetNetworkId().id);
+  RString id = Format("%d:%"OID_FORMAT, GetNetworkId().creator.CreatorInt(), GetNetworkId().id);
   if (_varName.GetLength()>0)
   {
     return _varName;

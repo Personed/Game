@@ -26,7 +26,6 @@
 #include <sys/stat.h>
 #include <Es/Memory/normalNew.hpp>
 #include <xutility>
-#include <algorithm>
 #include <Es/Memory/debugNew.hpp>
 
 #include "imexhnd.h"
@@ -35,9 +34,6 @@
 #include <Es/Files/filenames.hpp>
 
 #include "mapFile.hpp"
-#include <DbgHelp.h>
-
-extern MapFile GMapFile;
 
 
 
@@ -63,8 +59,6 @@ extern MapFile GMapFile;
 
 
 DebugExceptionTrap GDebugExceptionTrap;  // Declare global instance of class
-
-static void KnownFunctionAddress();
 
 //============================== Class Methods =============================
 
@@ -374,7 +368,7 @@ void DebugExceptionTrap::ReportContext( const char *text, CONTEXT *context, bool
   {
   }
   
-  #if !_ENABLE_REPORT && !defined(_WIN64)
+  #if !_ENABLE_REPORT
   GDebugExceptionTrap.IntelStackSave(context);
   #endif
 
@@ -384,14 +378,12 @@ void DebugExceptionTrap::ReportContext( const char *text, CONTEXT *context, bool
 
   #if _M_PPC
     PrintContext((void *)context->Iar,context,mtSafe);
-  #elif defined(_WIN64)
-    PrintContext((void *)context->Rip,context,mtSafe);
   #else
     PrintContext((void *)context->Eip,context,mtSafe);
   #endif
   FlushLogFile();
   
-  #if _ENABLE_REPORT && !defined(_WIN64)
+  #if _ENABLE_REPORT
   IntelStackWalk(context);
   #endif
 
@@ -404,85 +396,6 @@ void DebugExceptionTrap::ReportContext( const char *text, CONTEXT *context, bool
 
 void DebugExceptionTrap :: ExtractThreadCallstack(HANDLE threadHandle, DWORD *stackBot, CallInfo *callstack, int &calls, bool validate)
 {
-#if defined(_WIN64)
-  (void)stackBot;
-  (void)validate;
-  const int maxCalls = calls > 128 ? 128 : calls;
-  calls = 0;
-  if (!threadHandle || !callstack || maxCalls <= 0) return;
-
-  if (SuspendThread(threadHandle) == (DWORD)-1) return;
-  CONTEXT context = {};
-  context.ContextFlags = CONTEXT_FULL;
-  if (!GetThreadContext(threadHandle, &context))
-  {
-    ResumeThread(threadHandle);
-    return;
-  }
-
-  typedef BOOL (WINAPI *StackWalk64Fn)(DWORD, HANDLE, HANDLE, LPSTACKFRAME64,
-    PVOID, PREAD_PROCESS_MEMORY_ROUTINE64, PFUNCTION_TABLE_ACCESS_ROUTINE64,
-    PGET_MODULE_BASE_ROUTINE64, PTRANSLATE_ADDRESS_ROUTINE64);
-  typedef BOOL (WINAPI *SymInitializeFn)(HANDLE, PCSTR, BOOL);
-  typedef BOOL (WINAPI *SymCleanupFn)(HANDLE);
-  typedef PVOID (WINAPI *SymFunctionTableAccess64Fn)(HANDLE, DWORD64);
-  typedef DWORD64 (WINAPI *SymGetModuleBase64Fn)(HANDLE, DWORD64);
-
-  HMODULE dbgHelp = LoadLibraryA("dbghelp.dll");
-  if (!dbgHelp)
-  {
-    ResumeThread(threadHandle);
-    return;
-  }
-  StackWalk64Fn walk = (StackWalk64Fn)GetProcAddress(dbgHelp, "StackWalk64");
-  SymInitializeFn symInitialize = (SymInitializeFn)GetProcAddress(dbgHelp, "SymInitialize");
-  SymCleanupFn symCleanup = (SymCleanupFn)GetProcAddress(dbgHelp, "SymCleanup");
-  SymFunctionTableAccess64Fn functionTable =
-    (SymFunctionTableAccess64Fn)GetProcAddress(dbgHelp, "SymFunctionTableAccess64");
-  SymGetModuleBase64Fn moduleBase =
-    (SymGetModuleBase64Fn)GetProcAddress(dbgHelp, "SymGetModuleBase64");
-
-  HANDLE process = GetCurrentProcess();
-  BOOL initialized = FALSE;
-  if (walk && symInitialize && functionTable && moduleBase)
-  {
-    initialized = symInitialize(process, NULL, TRUE);
-    if (initialized || GetLastError() == ERROR_INVALID_PARAMETER)
-    {
-      STACKFRAME64 frame = {};
-      frame.AddrPC.Offset = context.Rip;
-      frame.AddrPC.Mode = AddrModeFlat;
-      frame.AddrFrame.Offset = context.Rbp;
-      frame.AddrFrame.Mode = AddrModeFlat;
-      frame.AddrStack.Offset = context.Rsp;
-      frame.AddrStack.Mode = AddrModeFlat;
-
-      MapFile *map = &GMapFile;
-      if (map->Empty()) map->ParseMapFile();
-      uintptr_t mapAddress = map->PhysicalAddress("?KnownFunctionAddress@@YAXXZ");
-      uintptr_t realAddress = (uintptr_t)KnownFunctionAddress;
-      if (mapAddress && realAddress != mapAddress)
-        map->OffsetPhysicalAddress((intptr_t)(realAddress - mapAddress));
-      while (calls < maxCalls && frame.AddrPC.Offset)
-      {
-        CallInfo &info = callstack[calls++];
-        info.retAddr = (void *)(uintptr_t)frame.AddrPC.Offset;
-        info.fStart = map->FunctionStartFromPhysical(info.retAddr);
-        info.calledAddr = NULL;
-        info.stackFrameSize = 0;
-        if (calls >= maxCalls || !walk(IMAGE_FILE_MACHINE_AMD64, process, threadHandle,
-            &frame, &context, NULL,
-            (PFUNCTION_TABLE_ACCESS_ROUTINE64)functionTable,
-            (PGET_MODULE_BASE_ROUTINE64)moduleBase, NULL))
-          break;
-      }
-    }
-  }
-
-  if (initialized && symCleanup) symCleanup(process);
-  FreeLibrary(dbgHelp);
-  ResumeThread(threadHandle);
-#else
   CONTEXT context;
   context.ContextFlags=CONTEXT_FULL; // TODO: replace with minimal context needed
   ::SuspendThread(threadHandle);
@@ -508,7 +421,6 @@ void DebugExceptionTrap :: ExtractThreadCallstack(HANDLE threadHandle, DWORD *st
   }
   
   ::ResumeThread(threadHandle);
-#endif
 }
 
 void DebugExceptionTrap :: FlushLogFile()
@@ -729,9 +641,7 @@ void DebugExceptionTrap :: SaveContext(const char *name)
   GetThreadContext(GetCurrentThread(),&context);
   DWORD espReg,ebpReg;
 
-  #if defined(_WIN64)
-    // Keep the instruction pointer captured by GetThreadContext.
-  #elif !_M_PPC
+  #if !_M_PPC
     context.Eip = (DWORD)GetEIP(espReg,ebpReg);
   #else
     context.Iar = (DWORD)GetEIP(espReg,ebpReg);
@@ -1089,7 +999,7 @@ BOOL DebugExceptionTrap :: GetLogicalAddress(
     if ( !VirtualQuery( addr, &mbi, sizeof(mbi) ) )
         return FALSE;
 
-    uintptr_t hMod = (uintptr_t)mbi.AllocationBase;
+    DWORD hMod = (DWORD)mbi.AllocationBase;
     // we need to get read access
     // if not, it is not a module and we will not try to get its name
     // Point to the DOS header in memory
@@ -1124,8 +1034,7 @@ BOOL DebugExceptionTrap :: GetLogicalAddress(
       return FALSE;
     }
 
-    uintptr_t address = (uintptr_t)addr;
-    DWORD rva = (DWORD)(address - hMod); // PE RVA is a 32-bit offset
+    DWORD rva = (DWORD)addr - hMod; // RVA is offset from module load address
 
     // Iterate through the section table, looking for the one that encompasses
     // the linear address.
@@ -1155,27 +1064,27 @@ BOOL DebugExceptionTrap :: GetLogicalAddress(
 //============================================================
 // Walks the stack, and writes the results to the report file 
 //============================================================
-void DebugExceptionTrap :: IntelPCPrint( MapFile &map, uintptr_t pc, bool doEol)
+void DebugExceptionTrap :: IntelPCPrint( MapFile &map, int pc, bool doEol)
 {
   TCHAR szModule[MAX_PATH] = _T("");
-  DWORD section = 0, logicalOffset = 0;
+  DWORD section = 0, offset = 0;
 
-  GetLogicalAddress((PVOID)pc, szModule,sizeof(szModule),section,logicalOffset );
+  GetLogicalAddress((PVOID)pc, szModule,sizeof(szModule),section,offset );
 
-  uintptr_t nameValue=0;
-  const char *name=map.MapNameFromLogical(logicalOffset,&nameValue);
-  uintptr_t nameOffset=logicalOffset-nameValue;
+  int nameValue=0;
+  const char *name=map.MapNameFromLogical(offset,&nameValue);
+  int nameOffset=offset-nameValue;
 
   
   if( section==1 && nameValue!=0 )
   {
-    _tlprintf( _T("%p %p %p + %s"),
-              (void *)pc, (void *)nameValue, (void *)nameOffset, name );
+    _tlprintf( _T("%8X %8X %8X + %s"),
+              pc, nameValue, nameOffset, name );
   }
   else
   {
-    _tlprintf( _T("%p %04X:%08X       %s"),
-               (void *)pc, section, logicalOffset, szModule );
+    _tlprintf( _T("%08X %04X:%08X       %s"),
+               pc, section, offset, szModule );
   }
   if (doEol)
   {
@@ -1318,15 +1227,15 @@ void DebugExceptionTrap::PrintCalls( CallInfo *callstack, int &calls, MapFile &m
     "Address","Logical","Function","Stack size"
   );
 
-    IntelPCPrint(map,(uintptr_t)pc);
+    IntelPCPrint(map,(int)pc);
   
   //int minPc=map.MinLogicalAddress();
   //int maxPc=map.MaxLogicalAddress();
   
-  uintptr_t offset=map.MinPhysicalAddress()-map.MinLogicalAddress();
+  int offset=map.MinPhysicalAddress()-map.MinLogicalAddress();
 
-  uintptr_t functionStart=0;
-  const char *name = map.MapNameFromLogical((uintptr_t)pc-offset,&functionStart);
+  int functionStart=0;
+  const char *name = map.MapNameFromLogical((int)pc-offset,&functionStart);
 
   (void)name;
   
@@ -1336,13 +1245,13 @@ void DebugExceptionTrap::PrintCalls( CallInfo *callstack, int &calls, MapFile &m
     void *pc = callstack[i].retAddr;
     void *called = callstack[i].calledAddr;
 
-    uintptr_t nameValue=0;
-    const char *name=map.MapNameFromLogical((uintptr_t)pc-offset,&nameValue);
-    uintptr_t nameOffset = (uintptr_t)pc-offset-nameValue;
+    int nameValue=0;
+    const char *name=map.MapNameFromLogical((int)pc-offset,&nameValue);
+    int nameOffset = (int)pc-offset-nameValue;
   
     _tlprintf(
-      _T("%p %p %p + %-30s"),
-       pc, (void *)nameValue, (void *)nameOffset, name
+      _T("%8X %8X %8X + %-30s"),
+       pc, nameValue, nameOffset, name
      );
 
     int stackSize = callstack[i].stackFrameSize;
@@ -1379,80 +1288,7 @@ void DebugExceptionTrap::PrintCalls( CallInfo *callstack, int &calls, MapFile &m
 
 void DebugExceptionTrap :: IntelStackWalk( PCONTEXT pContext )
 {
-  #if defined(_WIN64)
-    if (!pContext) return;
-
-    typedef BOOL (WINAPI *StackWalk64Fn)(DWORD, HANDLE, HANDLE, LPSTACKFRAME64,
-      PVOID, PREAD_PROCESS_MEMORY_ROUTINE64, PFUNCTION_TABLE_ACCESS_ROUTINE64,
-      PGET_MODULE_BASE_ROUTINE64, PTRANSLATE_ADDRESS_ROUTINE64);
-    typedef BOOL (WINAPI *SymInitializeFn)(HANDLE, PCSTR, BOOL);
-    typedef BOOL (WINAPI *SymCleanupFn)(HANDLE);
-    typedef PVOID (WINAPI *SymFunctionTableAccess64Fn)(HANDLE, DWORD64);
-    typedef DWORD64 (WINAPI *SymGetModuleBase64Fn)(HANDLE, DWORD64);
-
-    HMODULE dbgHelp = LoadLibraryA("dbghelp.dll");
-    if (!dbgHelp)
-    {
-      _tlprintf(_T("\r\nCall stack unavailable: dbghelp.dll could not be loaded.\r\n"));
-      return;
-    }
-    StackWalk64Fn walk = (StackWalk64Fn)GetProcAddress(dbgHelp, "StackWalk64");
-    SymInitializeFn symInitialize = (SymInitializeFn)GetProcAddress(dbgHelp, "SymInitialize");
-    SymCleanupFn symCleanup = (SymCleanupFn)GetProcAddress(dbgHelp, "SymCleanup");
-    SymFunctionTableAccess64Fn functionTable =
-      (SymFunctionTableAccess64Fn)GetProcAddress(dbgHelp, "SymFunctionTableAccess64");
-    SymGetModuleBase64Fn moduleBase =
-      (SymGetModuleBase64Fn)GetProcAddress(dbgHelp, "SymGetModuleBase64");
-    if (!walk || !symInitialize || !functionTable || !moduleBase)
-    {
-      _tlprintf(_T("\r\nCall stack unavailable: required DbgHelp functions are missing.\r\n"));
-      FreeLibrary(dbgHelp);
-      return;
-    }
-
-    HANDLE process = GetCurrentProcess();
-    BOOL symbolsInitialized = symInitialize(process, NULL, TRUE);
-    if (!symbolsInitialized && GetLastError() != ERROR_INVALID_PARAMETER)
-    {
-      _tlprintf(_T("\r\nCall stack unavailable: SymInitialize failed (%u).\r\n"), GetLastError());
-      FreeLibrary(dbgHelp);
-      return;
-    }
-
-    STACKFRAME64 frame = {};
-    frame.AddrPC.Offset = pContext->Rip;
-    frame.AddrPC.Mode = AddrModeFlat;
-    frame.AddrFrame.Offset = pContext->Rbp;
-    frame.AddrFrame.Mode = AddrModeFlat;
-    frame.AddrStack.Offset = pContext->Rsp;
-    frame.AddrStack.Mode = AddrModeFlat;
-
-    MapFile &map = GMapFile;
-    if (map.Empty())
-    {
-      map.ParseMapFile();
-      uintptr_t mapAddress = map.PhysicalAddress("?KnownFunctionAddress@@YAXXZ");
-      uintptr_t realAddress = (uintptr_t)KnownFunctionAddress;
-      if (mapAddress && realAddress != mapAddress)
-        map.OffsetPhysicalAddress((intptr_t)(realAddress - mapAddress));
-    }
-
-    _tlprintf(_T("\r\nCall stack (x64):\r\n"));
-    for (unsigned i = 0; i < 128; ++i)
-    {
-      if (!walk(IMAGE_FILE_MACHINE_AMD64, process, GetCurrentThread(), &frame,
-          pContext, NULL, (PFUNCTION_TABLE_ACCESS_ROUTINE64)functionTable,
-          (PGET_MODULE_BASE_ROUTINE64)moduleBase, NULL))
-        break;
-      if (!frame.AddrPC.Offset) break;
-
-      const char *symbol = map.MapNameFromPhysical((uintptr_t)frame.AddrPC.Offset);
-      _tlprintf(_T("  %p  %s\r\n"), (void *)(uintptr_t)frame.AddrPC.Offset, symbol);
-    }
-
-    if (symbolsInitialized && symCleanup) symCleanup(process);
-    FreeLibrary(dbgHelp);
-  #elif defined _M_PPC
+  #if defined _M_PPC
     // TODOX360: PowerPC stack walk
   #else
     #if STACK_FRAME_POINTERS
@@ -1747,34 +1583,8 @@ it could be possible to start with enter as well, but it is very unlikely
 */
 
 //! extract callstack information from current context
-#if defined(_WIN64)
-static USHORT CaptureStackFrames64(ULONG framesToSkip, ULONG framesToCapture,
-  PVOID *backTrace)
-{
-  typedef USHORT (WINAPI *CaptureStackBackTraceFn)(ULONG, ULONG, PVOID *, PULONG);
-  HMODULE kernel = GetModuleHandleA("kernel32.dll");
-  if (!kernel) return 0;
-  CaptureStackBackTraceFn capture = (CaptureStackBackTraceFn)
-    GetProcAddress(kernel, "RtlCaptureStackBackTrace");
-  if (!capture)
-    capture = (CaptureStackBackTraceFn)GetProcAddress(kernel, "CaptureStackBackTrace");
-  return capture ? capture(framesToSkip, framesToCapture, backTrace, NULL) : 0;
-}
-#endif
-
 void DebugExceptionTrap::ExtractCallstack(void **callstack, int &calls, bool validate, MapFile *map)
 {
-#if defined(_WIN64)
-  (void)validate;
-  int maxCalls = calls;
-  if (maxCalls < 0) maxCalls = 0;
-  if (maxCalls > 256) maxCalls = 256;
-  void *frames[256];
-  USHORT captured = CaptureStackFrames64(1, (ULONG)maxCalls, frames);
-  for (USHORT i = 0; i < captured; ++i) callstack[i] = frames[i];
-  calls = captured;
-  (void)map;
-#else
   int maxCalls = calls;
 
   DWORD espReg,ebpReg;
@@ -1810,27 +1620,11 @@ void DebugExceptionTrap::ExtractCallstack(void **callstack, int &calls, bool val
     }
     calls = fullCalls;
   }
-#endif
+
 }
 
 void DebugExceptionTrap::ExtractCallstack(CallInfo *callstack, int &calls, bool validate, MapFile *map)
 {
-#if defined(_WIN64)
-  (void)validate;
-  int maxCalls = calls;
-  if (maxCalls < 0) maxCalls = 0;
-  if (maxCalls > 256) maxCalls = 256;
-  void *frames[256];
-  USHORT captured = CaptureStackFrames64(1, (ULONG)maxCalls, frames);
-  for (USHORT i = 0; i < captured; ++i)
-  {
-    callstack[i].retAddr = frames[i];
-    callstack[i].fStart = map ? map->FunctionStartFromPhysical(frames[i]) : NULL;
-    callstack[i].calledAddr = NULL;
-    callstack[i].stackFrameSize = 0;
-  }
-  calls = captured;
-#else
   // get eip, esp
   DWORD esp, ebp;
   DWORD eip = GetEIP(esp,ebp);
@@ -1838,7 +1632,6 @@ void DebugExceptionTrap::ExtractCallstack(CallInfo *callstack, int &calls, bool 
   NextFrame(ebp,eip);
 
   ExtractCallstack(callstack,calls,(void *)eip,(DWORD *)ebp,(DWORD *)esp,(DWORD *)m_stackBottom,validate,map);
-#endif
 }
 
 /*!
@@ -1860,9 +1653,7 @@ void FunctionWithKnownAddress()
 
 void DebugExceptionTrap :: IntelStackSave( PCONTEXT pContext, char *fileExt )
 {
-  #if defined(_WIN64)
-    (void)pContext; (void)fileExt;
-  #elif defined _M_PPC  
+  #if defined _M_PPC  
     // TODOX360: PowerPC stack walk
   #else
   //DWORD eip = pContext->Eip;

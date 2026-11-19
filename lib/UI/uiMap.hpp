@@ -181,7 +181,7 @@ public:
 
   virtual void OnDrawBackGround(UIViewport *vp, float alpha) override;
   virtual void DrawTooltip(UIViewport *vp, float x, float y) override;
-  virtual intptr_t GetTooltipArea(float x, float y) override;
+  virtual int GetTooltipArea(float x, float y) override;
 
   static void DrawItem(InventoryItem *item, float x, float y, float w, float h, float z, float alpha, Color color, Matrix3 *rot = nullptr);
 

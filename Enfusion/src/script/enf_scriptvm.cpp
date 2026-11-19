@@ -13,75 +13,9 @@
 #include "common/enf_staticbuffer.h"
 #include "enf_main.h"
 #include "script/enf_scriptdebuginfo.h"
-#if defined(_WIN64)
-#include <stdint.h>
-#include <string.h>
-#endif
 
 namespace enf
 {
-#if defined(_WIN64)
-struct EnfWin64NativeCall
-{
-	void *Function;
-	uint32_t Count;
-	uintptr_t *Values;
-	uint8_t *FloatFlags;
-	uintptr_t IntegerResult;
-	float FloatResult;
-};
-
-extern "C" void EnfCallWin64(EnfWin64NativeCall *call);
-
-static bool EnfIsPointerArgument(VType type)
-{
-	return type == VARTYPE_VECTOR || type == VARTYPE_STRING || type == VARTYPE_CLASS ||
-		type == VARTYPE_FUNCPTR || type == VARTYPE_CLASSREF || type == VARTYPE_ARRAY ||
-		type >= VARTYPE_USER0;
-}
-
-static void EnfCallNativeWin64(Funct *fn, void *function, Variable **sparms, Instance *instance, bool hasThis)
-{
-	uintptr_t values[64] = {};
-	uint8_t floatFlags[64] = {};
-	uint32_t count = 0;
-	Variable *returnValue = fn->GetReturnVariable();
-	const VType returnType = returnValue->GetVType();
-	if (hasThis) values[count++] = reinterpret_cast<uintptr_t>(instance);
-	if (returnType == VARTYPE_VECTOR)
-		values[count++] = reinterpret_cast<uintptr_t>(returnValue->Pointer);
-
-	for (uint i = 0; i < fn->GetNumParameters(); ++i)
-	{
-		Variable *parameter = fn->GetVariable(i);
-		const VType type = parameter->GetVType();
-		if (type == VARTYPE_FLOAT)
-		{
-			uint32_t bits;
-			memcpy(&bits, &sparms[i]->Float, sizeof(bits));
-			values[count] = bits;
-			floatFlags[count] = 1;
-		}
-		else if (EnfIsPointerArgument(type))
-			values[count] = reinterpret_cast<uintptr_t>(sparms[i]->Pointer);
-		else
-			values[count] = static_cast<uintptr_t>(static_cast<intptr_t>(sparms[i]->Int));
-		++count;
-	}
-
-	enf_assert(count <= 64);
-	EnfWin64NativeCall call = { function, count, values, floatFlags, 0, 0.0f };
-	EnfCallWin64(&call);
-	if (returnType == VARTYPE_VECTOR) return;
-	if (returnType == VARTYPE_FLOAT)
-		returnValue->Float = call.FloatResult;
-	else if (EnfIsPointerArgument(returnType))
-		returnValue->Pointer = reinterpret_cast<void *>(call.IntegerResult);
-	else
-		returnValue->Int = static_cast<int>(call.IntegerResult);
-}
-#endif
-
 #if defined(ENF_DEVELOPER) && !defined(ENF_CONSOLE)
 	//Turn ON to enable debugging services. Otherwise VM is slightly faster
 	#define ENF_ENABLE_DEBUGGER
@@ -1049,11 +983,6 @@ void* pesp = NULL;
 				else
 					CallFuncI(parmArray, parmNum, fnptr, &fn->ReturnValue->Pointer);
 
-#elif defined(_WIN64)
-				EnfCallNativeWin64(fn, (void *)fn->Func, sparms, NULL, false);
-				#ifdef ENF_GUARD_STACK
-				pesp = stack->m_pStackPointer;
-				#endif
 #elif defined(WIN32)
 				__asm
 				{
@@ -1237,11 +1166,6 @@ nofloatn:
 				else
 					CallFuncI(parmArray, parmNum, fnptr, (void*)&fn->ReturnValue->Pointer);
 
-#elif defined(_WIN64)
-				EnfCallNativeWin64(fn, (void *)fn->Func, sparms, inst, true);
-				#ifdef ENF_GUARD_STACK
-				pesp = stack->m_pStackPointer;
-				#endif
 #elif defined(WIN32)
 				__asm
 				{
@@ -1400,7 +1324,7 @@ nofloatni:
 				ScriptThread* rt = CreateThread(true);
 
 				int bstack = rt->m_iStackPos;
-				int sreg = static_cast<int>(reinterpret_cast<uintptr_t>(pstat->Op[0]));
+				int sreg = (int)pstat->Op[0];
 				Variable** sparms = (Variable**)&pstat->Op[1];
 
 				Instance* prevThis = m_pvThis->InstancePtr;
@@ -1436,7 +1360,7 @@ nofloatni:
 				ScriptModule* cmod = stack->m_pfFunc->Module;
 				const ScriptModule::CallRef& ref = cmod->m_FunctRefs[off & 0x1fff];
 
-				int sreg = static_cast<int>(reinterpret_cast<uintptr_t>(pstat->Op[0]));
+				int sreg = (int)pstat->Op[0];
 				Variable** sparms = (Variable**)&pstat->Op[1];
 
 				m_pParms = sparms;
@@ -1498,7 +1422,7 @@ nofloatni:
 					for(int c = 0; c < (sreg & 0xf); c++)
 					{
 						currentThread->PushData(VARTYPE_CLASS);
-						currentThread->PushData(reinterpret_cast<uintptr_t>(m_vCRegs[c].InstancePtr));
+						currentThread->PushData(m_vCRegs[c].Int);
 					}
 					sreg >>= 4;
 
@@ -1509,7 +1433,7 @@ nofloatni:
 						if(IsStatic(m_vSRegs[c].Pointer))
 							currentThread->PushData(m_vSRegs[c].Int);
 						else
-							currentThread->PushData(reinterpret_cast<uintptr_t>(AllocString(static_cast<uint>(strlen((char *)m_vSRegs[c].Pointer) + 1), m_vSRegs[c].Pointer)));
+							currentThread->PushData((int)AllocString(strlen((char *)m_vSRegs[c].Pointer) + 1, m_vSRegs[c].Pointer));
 					}
 					sreg >>= 4;
 
@@ -1594,26 +1518,10 @@ nofloatni:
 			{
 				int off = XCMD_OFFSET(xcmd);
 				Variable* v1 = (Variable*)pstat->Op[0];
-				VType vt = v1->GetVType();
-				enf_assert(vt == VARTYPE_INT || vt == VARTYPE_FLOAT || vt == VARTYPE_CLASS || vt == VARTYPE_CLASSREF);
-				if(vt == VARTYPE_CLASS)
-				{
-					Instance** arr = v1->IsPtr() ? (Instance**)v1->Pointer : &v1->InstancePtr;
-					for(int n = off - 1; n >= 0; n--)
-						arr[n] = reinterpret_cast<Instance*>(currentThread->PopData());
-				}
-				else if(vt == VARTYPE_CLASSREF)
-				{
-					Variable** arr = v1->IsPtr() ? (Variable**)v1->Pointer : (Variable**)&v1->Pointer;
-					for(int n = off - 1; n >= 0; n--)
-						arr[n] = reinterpret_cast<Variable*>(currentThread->PopData());
-				}
-				else
-				{
-					int* arr = v1->IsPtr() ? (int*)v1->Pointer : &v1->Int;
-					for(int n = off - 1; n >= 0; n--)
-						arr[n] = static_cast<int>(currentThread->PopData());
-				}
+				enf_assert(v1->GetVType() == VARTYPE_INT || v1->GetVType() == VARTYPE_FLOAT || v1->GetVType() == VARTYPE_CLASS || v1->GetVType() == VARTYPE_CLASSREF);
+				int* arr = v1->IsPtr() ? (int*)v1->Pointer : &v1->Int;
+				for(int n = off - 1; n >= 0; n--)
+					arr[n] = currentThread->PopData();
 				currentThread->PopData();	//skip type (don't need to know during runtime)
 			}
 			break;
@@ -1628,24 +1536,9 @@ nofloatni:
 				VType vt = v1->GetVType();
 				enf_assert(vt == VARTYPE_INT || vt == VARTYPE_FLOAT || vt == VARTYPE_CLASS || vt == VARTYPE_CLASSREF);
 				currentThread->PushData(ENCODE_PUSHTYPE(vt, off));
-				if(vt == VARTYPE_CLASS)
-				{
-					Instance* const* arr = v1->IsPtr() ? (Instance* const*)v1->Pointer : &v1->InstancePtr;
-					for(int n = 0; n < off; n++)
-						currentThread->PushData(reinterpret_cast<uintptr_t>(arr[n]));
-				}
-				else if(vt == VARTYPE_CLASSREF)
-				{
-					Variable* const* arr = v1->IsPtr() ? (Variable* const*)v1->Pointer : (Variable* const*)&v1->Pointer;
-					for(int n = 0; n < off; n++)
-						currentThread->PushData(reinterpret_cast<uintptr_t>(arr[n]));
-				}
-				else
-				{
-					const int* arr = v1->IsPtr() ? (const int*)v1->Pointer : &v1->Int;
-					for(int n = 0; n < off; n++)
-					currentThread->PushData(static_cast<uintptr_t>(static_cast<uint>(arr[n])));
-				}
+				const int* arr = v1->IsPtr() ? (const int*)v1->Pointer : &v1->Int;
+				for(int n = 0; n < off; n++)
+					currentThread->PushData(arr[n]);
 			}
 			break;
 
@@ -1658,7 +1551,7 @@ nofloatni:
 				{				
 					if(!IsStatic(arr[n]))
 						FreeString(arr[n]);
-					arr[n] = reinterpret_cast<char*>(currentThread->PopData());
+					arr[n] = (char*)currentThread->PopData();
 				}
 				currentThread->PopData();	//skip type (don't need to know during runtime)
 			}
@@ -1674,9 +1567,9 @@ nofloatni:
 				for(int n = 0; n < off; n++)
 				{				
 					if(IsStatic(arr[n]))
-					currentThread->PushData(reinterpret_cast<uintptr_t>(arr[n]));
+						currentThread->PushData((int)arr[n]);
 					else
-						currentThread->PushData(reinterpret_cast<uintptr_t>(AllocString(strlen(arr[n]) + 1, arr[n])));
+						currentThread->PushData((int)AllocString(strlen(arr[n]) + 1, arr[n]));
 				}
 			}
 			break;

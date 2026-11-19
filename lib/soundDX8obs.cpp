@@ -43,7 +43,7 @@
 #define DIAG_STREAM_FILL 0 // 0...50
 
 #if defined _WIN32 && !_DISABLE_GUI && !defined _XBOX
-#pragma comment(lib,"DxErr")
+#pragma comment(lib,"dxerr9")
 #pragma comment(lib,"eaxguid")
 // CoCreateInstance used for dsound object creation - dll not needed
 //#pragma comment(lib,"dsound")

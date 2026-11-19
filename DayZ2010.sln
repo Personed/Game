@@ -1,4 +1,4 @@
-﻿Microsoft Visual Studio Solution File, Format Version 11.00
+Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cfg", "cfg\cfg2010.vcxproj", "{2BCED5C3-4061-4241-A019-73BC2F07DD01}"
 EndProject
@@ -31,7 +31,6 @@ Global
 		Retail Server|Win32 = Retail Server|Win32
 		Retail Steam|Win32 = Retail Steam|Win32
 		Retail|Win32 = Retail|Win32
-		Retail|x64 = Retail|x64
 		Testing|Win32 = Testing|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
@@ -58,9 +57,7 @@ Global
 		{2BCED5C3-4061-4241-A019-73BC2F07DD01}.Retail Steam|Win32.ActiveCfg = Release|Win32
 		{2BCED5C3-4061-4241-A019-73BC2F07DD01}.Retail Steam|Win32.Build.0 = Release|Win32
 		{2BCED5C3-4061-4241-A019-73BC2F07DD01}.Retail|Win32.ActiveCfg = Release|Win32
-		{2BCED5C3-4061-4241-A019-73BC2F07DD01}.Retail|x64.ActiveCfg = Release|x64
 		{2BCED5C3-4061-4241-A019-73BC2F07DD01}.Retail|Win32.Build.0 = Release|Win32
-		{2BCED5C3-4061-4241-A019-73BC2F07DD01}.Retail|x64.Build.0 = Release|x64
 		{2BCED5C3-4061-4241-A019-73BC2F07DD01}.Testing|Win32.ActiveCfg = Release|Win32
 		{2BCED5C3-4061-4241-A019-73BC2F07DD01}.Testing|Win32.Build.0 = Release|Win32
 		{B4D51730-A7DF-49BC-A392-5762A5CC2CA5}.Buldozer|Win32.ActiveCfg = Buldozer|Win32
@@ -86,9 +83,7 @@ Global
 		{B4D51730-A7DF-49BC-A392-5762A5CC2CA5}.Retail Steam|Win32.ActiveCfg = Retail Steam|Win32
 		{B4D51730-A7DF-49BC-A392-5762A5CC2CA5}.Retail Steam|Win32.Build.0 = Retail Steam|Win32
 		{B4D51730-A7DF-49BC-A392-5762A5CC2CA5}.Retail|Win32.ActiveCfg = Retail|Win32
-		{B4D51730-A7DF-49BC-A392-5762A5CC2CA5}.Retail|x64.ActiveCfg = Retail|x64
 		{B4D51730-A7DF-49BC-A392-5762A5CC2CA5}.Retail|Win32.Build.0 = Retail|Win32
-		{B4D51730-A7DF-49BC-A392-5762A5CC2CA5}.Retail|x64.Build.0 = Retail|x64
 		{B4D51730-A7DF-49BC-A392-5762A5CC2CA5}.Testing|Win32.ActiveCfg = Testing|Win32
 		{B4D51730-A7DF-49BC-A392-5762A5CC2CA5}.Testing|Win32.Build.0 = Testing|Win32
 		{9AE1E9E2-4A59-4DAC-A9F3-5BFA8FF83EAA}.Buldozer|Win32.ActiveCfg = Release|Win32
@@ -104,7 +99,6 @@ Global
 		{9AE1E9E2-4A59-4DAC-A9F3-5BFA8FF83EAA}.Retail Server|Win32.ActiveCfg = Release|Win32
 		{9AE1E9E2-4A59-4DAC-A9F3-5BFA8FF83EAA}.Retail Steam|Win32.ActiveCfg = Retail Steam|Win32
 		{9AE1E9E2-4A59-4DAC-A9F3-5BFA8FF83EAA}.Retail|Win32.ActiveCfg = Retail|Win32
-		{9AE1E9E2-4A59-4DAC-A9F3-5BFA8FF83EAA}.Retail|x64.ActiveCfg = Retail|Win32
 		{9AE1E9E2-4A59-4DAC-A9F3-5BFA8FF83EAA}.Testing|Win32.ActiveCfg = Release|Win32
 		{B6BD46C4-55B7-4706-9B81-7C9C8389E4E6}.Buldozer|Win32.ActiveCfg = Release|Win32
 		{B6BD46C4-55B7-4706-9B81-7C9C8389E4E6}.Buldozer|Win32.Build.0 = Release|Win32
@@ -128,9 +122,7 @@ Global
 		{B6BD46C4-55B7-4706-9B81-7C9C8389E4E6}.Retail Steam|Win32.ActiveCfg = Release|Win32
 		{B6BD46C4-55B7-4706-9B81-7C9C8389E4E6}.Retail Steam|Win32.Build.0 = Release|Win32
 		{B6BD46C4-55B7-4706-9B81-7C9C8389E4E6}.Retail|Win32.ActiveCfg = Release|Win32
-		{B6BD46C4-55B7-4706-9B81-7C9C8389E4E6}.Retail|x64.ActiveCfg = Release|x64
 		{B6BD46C4-55B7-4706-9B81-7C9C8389E4E6}.Retail|Win32.Build.0 = Release|Win32
-		{B6BD46C4-55B7-4706-9B81-7C9C8389E4E6}.Retail|x64.Build.0 = Release|x64
 		{B6BD46C4-55B7-4706-9B81-7C9C8389E4E6}.Testing|Win32.ActiveCfg = Release LTCG|PS3
 		{6C251A3C-6C27-4535-8539-02F4E83AA299}.Buldozer|Win32.ActiveCfg = Release|Win32
 		{6C251A3C-6C27-4535-8539-02F4E83AA299}.Buldozer|Win32.Build.0 = Release|Win32
@@ -154,9 +146,7 @@ Global
 		{6C251A3C-6C27-4535-8539-02F4E83AA299}.Retail Steam|Win32.ActiveCfg = Release|Win32
 		{6C251A3C-6C27-4535-8539-02F4E83AA299}.Retail Steam|Win32.Build.0 = Release|Win32
 		{6C251A3C-6C27-4535-8539-02F4E83AA299}.Retail|Win32.ActiveCfg = Release|Win32
-		{6C251A3C-6C27-4535-8539-02F4E83AA299}.Retail|x64.ActiveCfg = Release|x64
 		{6C251A3C-6C27-4535-8539-02F4E83AA299}.Retail|Win32.Build.0 = Release|Win32
-		{6C251A3C-6C27-4535-8539-02F4E83AA299}.Retail|x64.Build.0 = Release|x64
 		{6C251A3C-6C27-4535-8539-02F4E83AA299}.Testing|Win32.ActiveCfg = Release LTCG|PS3
 		{A40A7FC2-1B96-46D2-9C0E-1BCE78172E9B}.Buldozer|Win32.ActiveCfg = Release|Win32
 		{A40A7FC2-1B96-46D2-9C0E-1BCE78172E9B}.Buldozer|Win32.Build.0 = Release|Win32
@@ -180,9 +170,7 @@ Global
 		{A40A7FC2-1B96-46D2-9C0E-1BCE78172E9B}.Retail Steam|Win32.ActiveCfg = Release|Win32
 		{A40A7FC2-1B96-46D2-9C0E-1BCE78172E9B}.Retail Steam|Win32.Build.0 = Release|Win32
 		{A40A7FC2-1B96-46D2-9C0E-1BCE78172E9B}.Retail|Win32.ActiveCfg = Release|Win32
-		{A40A7FC2-1B96-46D2-9C0E-1BCE78172E9B}.Retail|x64.ActiveCfg = Release|x64
 		{A40A7FC2-1B96-46D2-9C0E-1BCE78172E9B}.Retail|Win32.Build.0 = Release|Win32
-		{A40A7FC2-1B96-46D2-9C0E-1BCE78172E9B}.Retail|x64.Build.0 = Release|x64
 		{A40A7FC2-1B96-46D2-9C0E-1BCE78172E9B}.Testing|Win32.ActiveCfg = Release LTCG|PS3
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution

@@ -166,7 +166,7 @@ void Person::ApplyIdentity()
     Assert(Brain());
     if (Brain())
       Brain()->SetSpeaker(info._speaker, info._pitch);
-    LogF("*** AI identity %s applied on person %d:%" OID_FORMAT" (%s)", (const char *)info._fullName, GetNetworkId().creator, GetNetworkId().id, cc_cast(GetDebugName()));
+    LogF("*** AI identity %s applied on person %d:%"OID_FORMAT" (%s)", (const char *)info._fullName, GetNetworkId().creator, GetNetworkId().id, cc_cast(GetDebugName()));
   }
   else
   { // use PlayerIdentity
@@ -178,10 +178,10 @@ void Person::ApplyIdentity()
       Assert(Brain());
       if (Brain())
         Brain()->SetSpeaker(SelectSpeaker(identity->speakerType), identity->pitch);
-      LogF("*** Player identity %s applied on person %d:%" OID_FORMAT" (%s)", (const char *)identity->name, GetNetworkId().creator, GetNetworkId().id,cc_cast(GetDebugName()));
+      LogF("*** Player identity %s applied on person %d:%"OID_FORMAT" (%s)", (const char *)identity->name, GetNetworkId().creator, GetNetworkId().id,cc_cast(GetDebugName()));
     }
     else
-      RptF("*** Player identity cannot be applied on person %d:%" OID_FORMAT" (%s) - player %d not found", GetNetworkId().creator.CreatorInt(), GetNetworkId().id, cc_cast(GetDebugName()), dpnid);
+      RptF("*** Player identity cannot be applied on person %d:%"OID_FORMAT" (%s) - player %d not found", GetNetworkId().creator.CreatorInt(), GetNetworkId().id, cc_cast(GetDebugName()), dpnid);
   }
 }
 
@@ -545,7 +545,7 @@ TMError Person::TransferMsg(NetworkMessageContext &ctx)
             NetworkId id = message->_slot##name; \
             if (!id.IsNull() && _inventorySlots[typeprefix##name].IsNull()) \
             {\
-              LogF("%s: inventory not found: %d:%" OID_FORMAT"",cc_cast(GetDebugName()),id.creator.CreatorInt(),id.id); \
+              LogF("%s: inventory not found: %d:%"OID_FORMAT"",cc_cast(GetDebugName()),id.creator.CreatorInt(),id.id); \
               /*DoAssert (!_inventorySlots[typeprefix##name].IsNull());*/ \
             }} while (false);
         INVENTORY_SLOT_ENUM(InventorySlotId, IS, LOG_SLOT)

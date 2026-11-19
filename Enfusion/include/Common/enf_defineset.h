@@ -11,7 +11,6 @@
 
 #include "enf_config.h"
 #include "common/enf_types.h"
-#include "common/enf_pointerhash.h"
 #include "common/enf_set.h"
 #include "common/enf_strings.h"
 
@@ -110,8 +109,8 @@ public:
 		uint hashval = 0;
 		for(uint c = 0; c < GetCardinality(); c++)
 		{
-			hashval += HashPointer(GetElement(c).Name.cstr());
-			hashval += HashPointer(GetElement(c).Value.cstr());
+			hashval += (uint)GetElement(c).Name.cstr();
+			hashval += (uint)GetElement(c).Value.cstr();
 		}
 		return hashval;
 	}

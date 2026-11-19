@@ -1841,14 +1841,7 @@ ERESULT Texture::FilterMipMaps(uint level, uint _flags)
 	if(_flags & TFF_MIRROR)
 		flags |= D3DX_FILTER_MIRROR;
 
-#if defined(_WIN64)
-	// This Enfusion helper operates on IDirect3DTexture9.  In the x64 client,
-	// ask the texture to generate mip levels when it was created for autogen.
-	GetD3DTexture()->GenerateMipSubLevels();
-	return EE_OK;
-#else
 	return D3DXFilterTexture(GetD3DTexture(), NULL, level, flags);
-#endif
 #elif defined(ENF_OGL)
 	return EE_OK;
 #endif

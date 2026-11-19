@@ -10,7 +10,7 @@ Supported protections:
 
 */
 
-# if _SECUROM && !defined(_M_X64) && !defined(_M_AMD64)
+# if _SECUROM
     // SecuROM
 #   include <Es/Common/win.h> // SecuROM is using windows.h - use our version
 #   include "securom_api.h"

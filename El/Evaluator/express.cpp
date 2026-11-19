@@ -2460,14 +2460,14 @@ GameValue NamespaceSetVariable(const GameState *state, GameValuePar oper1, GameV
   return NOTHING;
 }
 
-static inline bool CheckSize(const GameState *state, GameArrayType array, int size)
+inline bool CheckSize(const GameState *state, GameArrayType array, int size)
 {
   if (array.Size() == size) return true;
   state->SetError(EvalDim, array.Size(), size);
   return false;
 }
 
-static inline bool CheckType(const GameState *state, GameValuePar oper, const GameType &type)
+inline bool CheckType(const GameState *state, GameValuePar oper, const GameType &type)
 {
   if (oper.GetType() == type) return true;
   state->TypeError(type, oper.GetType());

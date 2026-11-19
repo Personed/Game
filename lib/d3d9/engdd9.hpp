@@ -33,7 +33,6 @@
 #include "../Shape/plane.hpp"
 #include "ShaderSources_3_0/common.h"
 #include "../d3d9/d3d9Buffers.hpp"
-#include "../../Enfusion/include/common/enf_pointerhash.h"
 
 #if _ARMA3_SIMUL_WEATHER
 #include "../SimulWeather/SimulCommonDX9.hpp"
@@ -2438,10 +2437,7 @@ struct MapClassTraits<D3DBoundShader>: public DefMapClassTraits<D3DBoundShader>
   static unsigned int CalculateHashValue(KeyType key)
   {
     //TODO: use IDs instead
-    return enf::HashPointer(key._vs.GetRef())+
-      enf::HashPointer(key._ps.GetRef())*33+
-      enf::HashPointer(key._vd.GetRef())*33+
-      (int)key._stride*33;
+    return (int)key._vs.GetRef()+(int)key._ps.GetRef()*33+(int)key._vd.GetRef()*33+(int)key._stride*33;
   }
 
   /// compare keys, return negative when k1<k2, positive when k1>k2, zero when equal

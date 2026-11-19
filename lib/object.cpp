@@ -2088,7 +2088,6 @@ void Object::Draw(int cb, int forceLOD, ClipFlags clipFlags, const DrawParameter
       dpTI._useOwnHeatSource = true;
     }
 
-    PROFILE_SCOPE_EX(obLgt,drw);
     LightList work;
     const LightList &lights=GScene->SelectAggLights(worldPosition, this, forceLOD, work);
     
@@ -2121,10 +2120,7 @@ void Object::Draw(int cb, int forceLOD, ClipFlags clipFlags, const DrawParameter
       // make sure texture loading does not evict our vertex buffer (if it exists)
       VertexBufferLock vbLock(sShape);
       
-      {
-        PROFILE_SCOPE_EX(obTxP,drw);
-        PrepareTextures(&animContext, _shape, dist2/scale2, forceLOD, dp._sbIsBeingRendered);
-      }
+      PrepareTextures(&animContext, _shape, dist2/scale2, forceLOD, dp._sbIsBeingRendered);
       
       _shape->OptimizeLevelRendering(forceLOD,false);
       // Preparing of drawing of the shape
@@ -2134,10 +2130,7 @@ void Object::Draw(int cb, int forceLOD, ClipFlags clipFlags, const DrawParameter
       UseDrawMatrices(cb, isSkinned, _shape, forceLOD, oi);
 #endif
 
-      {
-        PROFILE_SCOPE_EX(obShD,drw);
-        sShape->Draw(cb,&animContext, GetConstantColor(), *_shape, lights, clipFlags, special, pos, dist2, dpTI);
-      }
+      sShape->Draw(cb,&animContext, GetConstantColor(), *_shape, lights, clipFlags, special, pos, dist2, dpTI);
 
       // Draw craters (omit DB and z-prime passes), when predicating, predication will take care of omitting it
       if (!dp._zprimeIsBeingRendered || Glob.config._predication)
@@ -2167,10 +2160,7 @@ void Object::Draw(int cb, int forceLOD, ClipFlags clipFlags, const DrawParameter
       // when rendering shadow buffer, rendering what is on surface has no sense
       if (!dp._sbIsBeingRendered)
       {
-        {
-          PROFILE_SCOPE_EX(obTxP,drw);
-          PrepareTextures(&animContext, _shape, dist2/scale2, forceLOD, dp._sbIsBeingRendered);
-        }
+        PrepareTextures(&animContext, _shape, dist2/scale2, forceLOD, dp._sbIsBeingRendered);
 
 #if _HELISIM_RENDER_TO_TEXTURE
         UseDrawMatrices(cb, false, _shape, forceLOD, oi, drawListId);

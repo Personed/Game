@@ -79,7 +79,7 @@ RString ShaderCacheFileDesc::GetCacheFilename()
 
 bool ShaderCacheFileDesc::PrepareValidTestBlock(const Array<RString> &sources, QOStrStream &testBlock, bool noSources)
 {
-  const char *header="BIShaderCache-id: " CACHE_ID;
+  const char *header="BIShaderCache-id: "CACHE_ID;
   testBlock.write(header,strlen(header)+1);
   bool sourceFilesExist = true;
   for (int i=0;i<sources.Size();i++)
@@ -417,7 +417,7 @@ HRESULT WINAPI D3DXCompileShader_Cached(
       if (endSize)
       {
         strncpy(size,sizeStr,endSize-sizeStr);
-        size[static_cast<int>(endSize-sizeStr)] = 0;
+        size[endSize-sizeStr] = 0;
       }
       else
       {

@@ -124,9 +124,7 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros">
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Static Release|x64'">$(ProjectName)_MT</TargetName>
-  </PropertyGroup>
+  <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SIMUL)/exe/$(Platform)/VC12/$(Configuration)\</OutDir>
@@ -214,7 +212,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_LIB;VISUAL_CPP;UNIT_TEST;NDEBUG;INTEL_COMPATIBLE;SIMUL_CAMERA_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -224,7 +222,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <DisableSpecificWarnings>4324;4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -276,7 +274,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_LIB;VISUAL_CPP;UNIT_TEST;INTEL_COMPATIBLE;SIMUL_EXCEPTIONS;CHECK_LIST_BOUNDS;SIMUL_CAMERA_DLL;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -289,7 +287,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <DisableSpecificWarnings>4324;4201;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -335,7 +333,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_LIB;VISUAL_CPP;UNIT_TEST;INTEL_COMPATIBLE;SIMUL_EXCEPTIONS;CHECK_LIST_BOUNDS;SIMUL_CAMERA_DLL;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -348,7 +346,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <DisableSpecificWarnings>4324;4201;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -401,17 +399,17 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_LIB;VISUAL_CPP;UNIT_TEST;NDEBUG;INTEL_COMPATIBLE;SIMUL_CAMERA_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <DisableSpecificWarnings>4324;4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -420,7 +418,6 @@
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)$(SafeParentName)_MD.lib</OutputFile>
-      <OutputFile>$(OutDir)$(TargetName).lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>

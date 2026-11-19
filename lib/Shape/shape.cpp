@@ -5901,19 +5901,12 @@ void TexAreaIndex::Clear()
 
 void Shape::BuildTexAreaIndex(TexAreaIndex &tgt) const
 {
-  tgt.Clear();
   for (int i=0; i<NSections(); i++)
   {
     const ShapeSection &sec = GetSection(i);
     if (sec.GetTexture())
     {
-      float aot = sec.GetAreaOverTex(0);
-      if (!_finite(aot) || aot<0)
-      {
-        tgt.Clear();
-        return;
-      }
-      tgt.AddItem(sec.GetTextureBackPointer(),aot,false);
+      tgt.AddItem(sec.GetTextureBackPointer(),sec.GetAreaOverTex(0),false);
     }
     if (sec.GetMaterialExt())
     {
@@ -5927,11 +5920,6 @@ void Shape::BuildTexAreaIndex(TexAreaIndex &tgt) const
         const RefR<Texture> *tex = &mat->_stage[i]._tex;
         // check how does texgen affect the mipmap selection
         int tg = mat->_stage[i]._texGen;
-        if (tg<0 || tg>=lenof(mat->_texGen))
-        {
-          tgt.Clear();
-          return;
-        }
         UVSource uvs = mat->_texGen[tg]._uvSource;
         float aot = 0;
         switch (uvs)
@@ -5956,13 +5944,6 @@ void Shape::BuildTexAreaIndex(TexAreaIndex &tgt) const
           default:
             Fail("UVSource not implemented");
             break;
-        }
-        // A bad UV scale can produce INF/NaN. Keep the original section walk for
-        // this shape instead of caching invalid mipmap data.
-        if (!_finite(aot) || aot<0)
-        {
-          tgt.Clear();
-          return;
         }
         tgt.AddItem(tex,aot,mat->_stage[i]._tex->Type()==TT_Diffuse && i!=0);
       }
@@ -7757,9 +7738,6 @@ void LODShape::CustomizeShape(Shape *shape, int lod, float resolution, const Mod
 
   // textures loaded - we may adjust them now
   shape->AdjustTextures();
-  // Cache per-texture mipmap hints after all section/material adjustments.
-  // BuildTexAreaIndex leaves the cache invalid if any material has unusable AoT data.
-  shape->BuildTexAreaIndex();
 }
 
 DEF_RSB(visual);

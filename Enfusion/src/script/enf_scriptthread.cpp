@@ -83,7 +83,7 @@ void ScriptThread::Serialize(SerializeOutputAdapter* adapter)
 	//write datastack
 	for(int d = 0; d < m_iDataOff; )
 	{
-		uint enc = static_cast<uint>(m_iData[d++]);
+		uint enc = m_iData[d++];
 		VType vt = (VType)(enc >> 16);
 		uint count = enc & 0xffff;
 
@@ -95,7 +95,7 @@ void ScriptThread::Serialize(SerializeOutputAdapter* adapter)
 			switch(vt)
 			{
 			case VARTYPE_INT:
-				adapter->WriteUInt32(static_cast<uint>(m_iData[d++]));
+				adapter->WriteUInt32(m_iData[d++]);
 				break;
 
 			case VARTYPE_FLOAT:
@@ -103,12 +103,12 @@ void ScriptThread::Serialize(SerializeOutputAdapter* adapter)
 				break;
 
 			case VARTYPE_CLASS:
-				adapter->WriteReference(0, reinterpret_cast<void*>(m_iData[d++]));
+				adapter->WriteReference(0, (void*)m_iData[d++]);
 				break;
 
 			case VARTYPE_CLASSREF:
 				{
-					Variable* var = reinterpret_cast<Variable*>(m_iData[d++]);
+					Variable* var = (Variable*)m_iData[d++];
 					if(var)
 						adapter->WriteString(var->GetName());
 					else
@@ -117,7 +117,7 @@ void ScriptThread::Serialize(SerializeOutputAdapter* adapter)
 				break;
 
 			case VARTYPE_STRING:
-				adapter->WriteString(reinterpret_cast<const char*>(m_iData[d++]));
+				adapter->WriteString((const char*)m_iData[d++]);
 				break;
 
 			case VARTYPE_VECTOR:
@@ -285,7 +285,7 @@ void ScriptThread::Serialize(SerializeInputAdapter* adapter)
 				break;
 
 			case VARTYPE_CLASS:
-				m_iData[d++] = reinterpret_cast<uintptr_t>(adapter->ReadReference(0));
+				m_iData[d++] = (uint)adapter->ReadReference(0);
 				break;
 
 			case VARTYPE_CLASSREF:
@@ -304,15 +304,15 @@ void ScriptThread::Serialize(SerializeInputAdapter* adapter)
 					LogF(LL_DEBUG, "Deserialize stack nullref", var->GetName());
 				}*/
 
-						m_iData[d++] = reinterpret_cast<uintptr_t>(var);
+						m_iData[d++] = (int)var;
 					}
 					else
 						m_iData[d++] = 0;
 				}
 				break;
 			case VARTYPE_STRING:
-				*reinterpret_cast<char**>(&m_iData[d]) = (char*)ScriptContext::m_pDeserializeModule->GetContext()->NullString;
-				ScriptContext::m_pDeserializeModule->GetContext()->CopyString(adapter->ReadString(), reinterpret_cast<char**>(&m_iData[d++]));
+				*((char**)&m_iData[d]) = (char*)ScriptContext::m_pDeserializeModule->GetContext()->NullString;
+				ScriptContext::m_pDeserializeModule->GetContext()->CopyString(adapter->ReadString(), (char**)&m_iData[d++]);
 				break;
 
 			case VARTYPE_VECTOR:
@@ -344,7 +344,7 @@ void ScriptThread::Kill()
 			break;
 
 		case VARTYPE_STRING:
-			data = reinterpret_cast<void*>(m_iData[off++]);
+			data = (void*)m_iData[off++];
 			if(!m_pContext->IsStatic(data))
 				m_pContext->FreeMem(data);
 			break;
@@ -735,7 +735,7 @@ const VMStack* stack = &thread->m_sStack[thread->m_iStackPos];
 		{
 			enf_assert(thread->m_iData[off] == (int)VARTYPE_CLASS);
 			off++;
-			m_vCRegs[c].InstancePtr = reinterpret_cast<Instance*>(thread->m_iData[off++]);
+			m_vCRegs[c].Int = thread->m_iData[off++];
 		}
 		sreg >>= 4;
 
@@ -744,10 +744,10 @@ const VMStack* stack = &thread->m_sStack[thread->m_iStackPos];
 		{
 			enf_assert(thread->m_iData[off] == (int)VARTYPE_STRING);
 			off++;
-			CopyString(reinterpret_cast<const char*>(thread->m_iData[off]), &m_vSRegs[c], &m_vSRegs[c].String);
+			CopyString((const char*)thread->m_iData[off], &m_vSRegs[c], &m_vSRegs[c].String);
 
-			if(!IsStatic(reinterpret_cast<void*>(thread->m_iData[off])))
-				FreeMem(reinterpret_cast<void*>(thread->m_iData[off]));
+			if(!IsStatic((void*)thread->m_iData[off]))
+				FreeMem((void*)thread->m_iData[off]);
 
 			off++;
 		}

@@ -60,7 +60,6 @@
 #include <sys/stat.h>
 #ifdef _WIN32
   #include <io.h>
-  #include <objbase.h>
 #endif
 
 #include <Es/Strings/bString.hpp>
@@ -77,42 +76,6 @@
 #endif
 
 #include "El/Speech/debugVoN.hpp"
-
-#if defined(DAYZ_PRIVATE_SERVER) && defined(_WIN32)
-RString GetUserDirectory();
-
-// Stable private-server identity; authentication and authorization remain server responsibilities.
-static RString GetPrivateServerUID()
-{
-  RString path = GetUserDirectory() + RString("private-server-id.txt");
-  FILE *file = fopen(cc_cast(path), "r");
-  if (file)
-  {
-    char saved[64] = {0};
-    size_t count = fread(saved, 1, sizeof(saved)-1, file);
-    fclose(file);
-    if (count == 36 && saved[8]=='-' && saved[13]=='-' && saved[18]=='-' && saved[23]=='-')
-      return RString(saved);
-  }
-
-  GUID guid;
-  if (CoCreateGuid(&guid) != S_OK) return RString();
-  char id[40];
-  sprintf(id, "%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X",
-    (unsigned long)guid.Data1, (unsigned int)guid.Data2, (unsigned int)guid.Data3,
-    (unsigned int)guid.Data4[0], (unsigned int)guid.Data4[1],
-    (unsigned int)guid.Data4[2], (unsigned int)guid.Data4[3],
-    (unsigned int)guid.Data4[4], (unsigned int)guid.Data4[5],
-    (unsigned int)guid.Data4[6], (unsigned int)guid.Data4[7]);
-  file = fopen(cc_cast(path), "w");
-  if (file)
-  {
-    fwrite(id, 1, 36, file);
-    fclose(file);
-  }
-  return RString(id);
-}
-#endif
 
 #if _PROFILE
 #pragma optimize( "", off )
@@ -2728,7 +2691,7 @@ void DeleteObsoleteFiles(const char *name, const AutoArray<CustomFilePaths> &fil
   sprintf(buffer, "%s\\*.*", name);
 
   _finddata_t info;
-  intptr_t h = X_findfirst(buffer, &info);
+  long h = X_findfirst(buffer, &info);
   if (h != -1)
   {
     do
@@ -2838,7 +2801,7 @@ bool NetworkClient::CreateRemoteObject(NetworkMessageContext &ctx, std::function
 
   if ( !CanReceiveUpdateMessages() ) // client is unable to receive Update messages, mostly due to being in NCSGameFinished state after disconnect
   {
-    RptF("Creation of %d:%" OID_FORMAT" ignored, state %s", id.creator.CreatorInt(), id.id, (const char *)FindEnumName(_clientState));
+    RptF("Creation of %d:%"OID_FORMAT" ignored, state %s", id.creator.CreatorInt(), id.id, (const char *)FindEnumName(_clientState));
     return false; // updates from the last session
   }
 
@@ -2850,7 +2813,7 @@ bool NetworkClient::CreateRemoteObject(NetworkMessageContext &ctx, std::function
   {
     if (NetworkObject *test = GetObject(id))
     {
-      RptF("Object %d:%" OID_FORMAT" (%s) already exists", id.creator.CreatorInt(), id.id, cc_cast(test->GetDebugName()));
+      RptF("Object %d:%"OID_FORMAT" (%s) already exists", id.creator.CreatorInt(), id.id, cc_cast(test->GetDebugName()));
       GetNetworkManager().RptFObjectIdJournal(id);
       return false;
     }
@@ -2860,7 +2823,7 @@ bool NetworkClient::CreateRemoteObject(NetworkMessageContext &ctx, std::function
     obj = create(ctx);
     if (!obj)
     {
-      RptF("Cannot create object %d:%" OID_FORMAT"", id.creator.CreatorInt(), id.id);
+      RptF("Cannot create object %d:%"OID_FORMAT"", id.creator.CreatorInt(), id.id);
       return false;
     }
   }
@@ -2869,7 +2832,7 @@ bool NetworkClient::CreateRemoteObject(NetworkMessageContext &ctx, std::function
     obj = GetObject(id);
     if (!obj) 
     {
-      RptF("Cannot create object %d:%" OID_FORMAT" (static)", id.creator.CreatorInt(), id.id);
+      RptF("Cannot create object %d:%"OID_FORMAT" (static)", id.creator.CreatorInt(), id.id);
       return false;
     }
     ctx.SetClass(NMCCreate);
@@ -2878,7 +2841,7 @@ bool NetworkClient::CreateRemoteObject(NetworkMessageContext &ctx, std::function
   InsertRemoteObject(obj, true);
 
   if (DiagLevel >= 1)
-    DiagLogF("Client: remote object created %d:%" OID_FORMAT"", id.creator.CreatorInt(), id.id);
+    DiagLogF("Client: remote object created %d:%"OID_FORMAT"", id.creator.CreatorInt(), id.id);
 
   // on a client-server all remote objects are potentially local as well
   if (_playerDpid==BOT_CLIENT)
@@ -3231,9 +3194,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
           }
         }
         #endif
-#if defined(DAYZ_PRIVATE_SERVER)
-        identity.id = GetPrivateServerUID();
-#elif BATTLEYE_INTERNAL_ID
+#if BATTLEYE_INTERNAL_ID
 // set BATTLEYE_INTERNAL_ID when you need to test BattlEye using internal DEV666 public keys
         RString fakeID = GetPublicKey();
         identity.id = fakeID.Substring(3,fakeID.GetLength());
@@ -3485,7 +3446,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
           RString name = obj->GetDebugName();
           Vector3 pos = obj->GetCurrentPosition();
 
-          RString answerStr = Format("(%d:%" OID_FORMAT") %s [%.1f,%.1f,%.1f]", ask._creator.CreatorInt(), ask._id, cc_cast(name), pos.X(),pos.Y(),pos.Z());
+          RString answerStr = Format("(%d:%"OID_FORMAT") %s [%.1f,%.1f,%.1f]", ask._creator.CreatorInt(), ask._id, cc_cast(name), pos.X(),pos.Y(),pos.Z());
           if (Entity *entity = dyn_cast<Entity>(obj))
           {
             Entity *parent = entity->GetHierarchyParent();
@@ -3493,7 +3454,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
             {
               name = parent->GetDebugName();
               id = parent->GetNetworkId();
-              answerStr = answerStr + Format(" parent: (%d:%" OID_FORMAT") %s",id.creator.CreatorInt(), id.id, cc_cast(name));
+              answerStr = answerStr + Format(" parent: (%d:%"OID_FORMAT") %s",id.creator.CreatorInt(), id.id, cc_cast(name));
             }
           }
           ClientDiagToServerMessage answer;
@@ -3502,7 +3463,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
         }
         else
         {
-          RString answerStr = Format("(%d:%" OID_FORMAT") not found", ask._creator.CreatorInt(), ask._id);
+          RString answerStr = Format("(%d:%"OID_FORMAT") not found", ask._creator.CreatorInt(), ask._id);
           ClientDiagToServerMessage answer;
           answer._response = answerStr;
           SendMsg(&answer, NMFGuaranteed);
@@ -4179,7 +4140,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
           }
           else
           {
-            LogF("Client: Remote object %d:%" OID_FORMAT" not found", co._creator.CreatorInt(), co._id);
+            LogF("Client: Remote object %d:%"OID_FORMAT" not found", co._creator.CreatorInt(), co._id);
           }
         }
         else
@@ -4217,7 +4178,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
           }
           else
           {
-            RptF("Client: Local object %d:%" OID_FORMAT" not found", co._creator.CreatorInt(), co._id);
+            RptF("Client: Local object %d:%"OID_FORMAT" not found", co._creator.CreatorInt(), co._id);
           }
         }
       }
@@ -4886,7 +4847,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
           auto oInfo = GetRemoteObjectInfo(id);
           if (oInfo && oInfo->object)
           {
-            LogF("Deleted %d:%" OID_FORMAT": %s",id.creator.CreatorInt(),id.id,cc_cast(oInfo->object->GetDebugName()));
+            LogF("Deleted %d:%"OID_FORMAT": %s",id.creator.CreatorInt(),id.id,cc_cast(oInfo->object->GetDebugName()));
           }
         }
 
@@ -4896,7 +4857,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
         {
           if (DebugMeBoy(id))
           {
-            LogF("Deleted %d:%" OID_FORMAT": local object",id.creator.CreatorInt(),id.id);
+            LogF("Deleted %d:%"OID_FORMAT": local object",id.creator.CreatorInt(),id.id);
           }
           // send confirmation the object was deleted
           DeletedObjectMessage reply;
@@ -5020,7 +4981,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
 
         if (_clientState < NCSMissionReceived)
         {
-          LogF("Update of %d:%" OID_FORMAT" ignored, state %s", id.creator.CreatorInt(), id.id, (const char *)FindEnumName(_clientState));
+          LogF("Update of %d:%"OID_FORMAT" ignored, state %s", id.creator.CreatorInt(), id.id, (const char *)FindEnumName(_clientState));
           break; // updates from the last session
         }
 
@@ -5063,7 +5024,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
         {
           RptF
           (
-            "Client: Object %d:%" OID_FORMAT" (type %s) not found.",
+            "Client: Object %d:%"OID_FORMAT" (type %s) not found.",
             id.creator.CreatorInt(), id.id,
             cc_cast(GetMsgTypeName(type))
           );
@@ -5081,7 +5042,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
           {
             RptF
             (
-              "Client: Object (id %d:%" OID_FORMAT", type %s) is local - update is ignored.",
+              "Client: Object (id %d:%"OID_FORMAT", type %s) is local - update is ignored.",
               id.creator.CreatorInt(), id.id,
               cc_cast(GetMsgTypeName(type))
             );
@@ -5113,7 +5074,7 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
           TMSGCHECK(object->TransferMsg(ctx))
         }
         if (DiagLevel >= 4)
-          DiagLogF("Client: object %d:%" OID_FORMAT" updated", id.creator.CreatorInt(), id.id);
+          DiagLogF("Client: object %d:%"OID_FORMAT" updated", id.creator.CreatorInt(), id.id);
 
       }
       break;
@@ -5805,7 +5766,7 @@ void NetworkClient::InsertLocalObject(NetworkObject *object)
   {
     NetworkMessageType type = object->GetNMType();
     NetworkId id = object->GetNetworkId();
-    DiagLogF("Client: local object created %d:%" OID_FORMAT" (type %s)", id.creator.CreatorInt(), id.id, type == NMTNone ? "None" : cc_cast(GetMsgTypeName(type)));
+    DiagLogF("Client: local object created %d:%"OID_FORMAT" (type %s)", id.creator.CreatorInt(), id.id, type == NMTNone ? "None" : cc_cast(GetMsgTypeName(type)));
   }
 
 #if CHECK_MSG
@@ -5937,7 +5898,7 @@ int NetworkClient::UpdateObject(NetworkObject *object, NetworkMessageClass cls, 
 
   if (DebugMeBoy(id))
   {
-    LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} owner client %d updating", id.creator.CreatorInt(), id.id, _playerDpid);
+    LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} owner client %d updating", id.creator.CreatorInt(), id.id, _playerDpid);
     
   }
   PREPARE_TRANSFER(NetworkObject)
@@ -5957,7 +5918,7 @@ int NetworkClient::UpdateObject(NetworkObject *object, NetworkMessageClass cls, 
     NetworkDataTyped<int> *id = static_cast<NetworkDataTyped<int> *>(msg->values[1].GetRef());
     LogF
     (
-      "Message %x (%d:%" OID_FORMAT") assigned to object %x (%d:%" OID_FORMAT")",
+      "Message %x (%d:%"OID_FORMAT") assigned to object %x (%d:%"OID_FORMAT")",
       msg.GetRef(), creator->value, id->value,
       object, object->GetNetworkId().creator.CreatorInt(), object->GetNetworkId().id
     );
@@ -6037,7 +5998,7 @@ void NetworkClient::UpdateObject(NetworkObject *object, NetMsgFlags dwFlags)
     NetworkDataTyped<int> *id = static_cast<NetworkDataTyped<int> *>(msg->values[1].GetRef());
     LogF
     (
-      "Message %x (%d:%" OID_FORMAT") assigned to object %x (%d:%" OID_FORMAT")",
+      "Message %x (%d:%"OID_FORMAT") assigned to object %x (%d:%"OID_FORMAT")",
       msg.GetRef(), creator->value, id->value,
       object, object->GetNetworkId().creator.CreatorInt(), object->GetNetworkId().id
     );
@@ -6097,12 +6058,12 @@ void NetworkClient::DestroyRemoteObject(NetworkId id)
   {
     if (info.object && info.remote && id.creator!=CreatorId(STATIC_OBJECT))
     {
-      if (DiagLevel >= 1) LogF("Client: DestroyRemoteObject %s is_local=%d is_remote=%d %d:%" OID_FORMAT"", info.object->GetDebugName().Data(), info.object->IsLocal(), info.remote, id.creator.CreatorInt(), id.id);
+      if (DiagLevel >= 1) LogF("Client: DestroyRemoteObject %s is_local=%d is_remote=%d %d:%"OID_FORMAT"", info.object->GetDebugName().Data(), info.object->IsLocal(), info.remote, id.creator.CreatorInt(), id.id);
       info.object->DestroyObject();
     }
     else if (info.object && info.object->IsLocal() && info.remote == false)
     {
-      if (DiagLevel >= 1) LogF("Client: DestroyRemoteObject (local) %s is_local=%d is_remote=%d %d:%" OID_FORMAT"", info.object->GetDebugName().Data(), info.object->IsLocal(), info.remote, id.creator.CreatorInt(), id.id);
+      if (DiagLevel >= 1) LogF("Client: DestroyRemoteObject (local) %s is_local=%d is_remote=%d %d:%"OID_FORMAT"", info.object->GetDebugName().Data(), info.object->IsLocal(), info.remote, id.creator.CreatorInt(), id.id);
       info.object->DestroyObject();
     }
   }
@@ -6212,7 +6173,7 @@ void NetworkClient::ProcessSelectPlayer(Person *person, bool respawn, Vector3Par
 {
 LogF
 (
-  "Client: ProcessSelectPlayer %s (%d:%" OID_FORMAT")",
+  "Client: ProcessSelectPlayer %s (%d:%"OID_FORMAT")",
   person ? (const char *)person->GetDebugName() : "<null>",
   person ? person->GetNetworkId().creator.CreatorInt() : 0,
   person ? person->GetNetworkId().id : 0
@@ -8083,16 +8044,16 @@ void NetworkClient::DeleteObject(const NetworkId &id, bool sendMsg)
 
   if (DebugMeBoy(id))
   {
-    LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} NetworkClient::DeleteObject", id.creator.CreatorInt(), id.id, _playerDpid);
+    LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} NetworkClient::DeleteObject", id.creator.CreatorInt(), id.id, _playerDpid);
   }
   if (_localObjects.removeKey(id))
   {
     if (DiagLevel >= 1)
-      DiagLogF("Client: local object destroyed (DeleteObject function) %d:%" OID_FORMAT"", id.creator.CreatorInt(), id.id);
+      DiagLogF("Client: local object destroyed (DeleteObject function) %d:%"OID_FORMAT"", id.creator.CreatorInt(), id.id);
   }
   else
   {
-    LogF("Warning: Client: Object info %d:%" OID_FORMAT" not found.", id.creator.CreatorInt(), id.id);
+    LogF("Warning: Client: Object info %d:%"OID_FORMAT" not found.", id.creator.CreatorInt(), id.id);
   }
 
   // the item can be both in local and remote objects (registered for different types of updates)
@@ -8109,7 +8070,7 @@ void NetworkClient::DeleteObject(const NetworkId &id, bool sendMsg)
     }
     else
     {
-      ServerErrF("Error: Client removing object %d:%" OID_FORMAT" in NetworkClient::DeleteObject", id.creator.CreatorInt(), id.id );
+      ServerErrF("Error: Client removing object %d:%"OID_FORMAT" in NetworkClient::DeleteObject", id.creator.CreatorInt(), id.id );
     }
   }
 
@@ -8249,7 +8210,7 @@ bool NetworkUpdateInfo::CheckReject(NetworkClient *client, NetworkMessageClass c
 {
   if (rejected) return rejected;
   // TODO: sometimes we may want to reject outgoing message (i.e. reject straigt on client)
-  // see https://projects.bistudio.com/dayz/Re_Dayz-client__server-vï¿½e_garantovanï¿½-postup-divnï¿½_chovï¿½nï¿½_batohï¿½.txt
+  // see https://projects.bistudio.com/dayz/Re_Dayz-client__server-vše_garantovanì-postup-divné_chování_batohù.txt
   /*
   bool rejectedMsg = lastSentMsg && obj->RejectMsg(cls,lastSentMsg);
   if (rejectedMsg)
@@ -8317,7 +8278,7 @@ void NetworkClient::CreateObjectsList(AutoArray<UpdateLocalObjectInfo, MemAllocS
           {
             DiagLogF
             (
-              "Object %s %d:%" OID_FORMAT"",
+              "Object %s %d:%"OID_FORMAT"",
               cc_cast(GetMsgTypeName(type)), oInfo.id.creator.CreatorInt(), oInfo.id.id
             );
             DiagLogF
@@ -8477,11 +8438,11 @@ void NetworkClient::SendMessages()
           msg._id = info.id.id;
           SendMsg(&msg, NMFGuaranteed);
           if (DiagLevel >= 1)
-            DiagLogF("Client: local object destroyed (object not found) %d:%" OID_FORMAT"", info.id.creator.CreatorInt(), info.id.id);
+            DiagLogF("Client: local object destroyed (object not found) %d:%"OID_FORMAT"", info.id.creator.CreatorInt(), info.id.id);
         }
         else
         {
-          ServerErrF("Error: Client removing object %d:%" OID_FORMAT" in NetworkClient::SendMessages", info.id.creator.CreatorInt(), info.id.id );
+          ServerErrF("Error: Client removing object %d:%"OID_FORMAT" in NetworkClient::SendMessages", info.id.creator.CreatorInt(), info.id.id );
         }
         _localObjects.removeKey(info.id); // does not invalidate the iterator - value replaced by a zombie
         _remoteObjects.removeKey(info.id);
@@ -8528,7 +8489,7 @@ void NetworkClient::SendMessages()
     {
       float times[NMCUpdateN];
       for (int j=0; j<NMCUpdateN; j++) times[j] = info.updates[j].lastSentMsg ? info.updates[j].lastSentMsg->time.toFloat() : 0;
-      LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} has error %.2f, position in _objects = %d, lastMsgSent: %.02f, %.02f, %.02f", 
+      LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} has error %.2f, position in _objects = %d, lastMsgSent: %.02f, %.02f, %.02f", 
           info.id.creator.CreatorInt(), info.id.id, error, i, times[NMCUpdateGeneric], times[NMCUpdatePosition], times[NMCUpdateDamage]);
     }
   }
@@ -8567,7 +8528,7 @@ void NetworkClient::SendMessages()
       {
         LogF
         (
-          "  Client: Object %d:%" OID_FORMAT" updated - size %d bytes, critical",
+          "  Client: Object %d:%"OID_FORMAT" updated - size %d bytes, critical",
           info.id.creator.CreatorInt(), info.id.id, bytes
         );
       }
@@ -8798,7 +8759,7 @@ void NetworkClient::CleanupPlayer(int dpnid, NetworkId id)
     obj = GetObject(id);
     if (!obj)
     {
-      RptF("Warning: Cleanup player - person %d:%" OID_FORMAT" not found", id.creator.CreatorInt(), id.id);
+      RptF("Warning: Cleanup player - person %d:%"OID_FORMAT" not found", id.creator.CreatorInt(), id.id);
     }
   }
 }

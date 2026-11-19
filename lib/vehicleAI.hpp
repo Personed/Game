@@ -3535,7 +3535,7 @@ struct EntityAIPresentTraits: public DefMapClassTraits< Ref<TargetNormal> >
   /// calculate hash value
   static unsigned int CalculateHashValue(KeyType key)
   {
-    intptr_t pointerInt = (intptr_t)key;
+    intptr_t pointerInt = (int)key;
     // we can assume pointer is DWORD aligned
     return (unsigned int)(pointerInt>>2);
   }

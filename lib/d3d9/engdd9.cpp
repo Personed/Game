@@ -3,7 +3,6 @@
 
 #if !_DISABLE_GUI && !defined _SERVER
 #include "engdd9.hpp"
-#include <dxerr.h>
 #include "postProcess.hpp"
 
 #include <El/Statistics/statistics.hpp>
@@ -1823,11 +1822,11 @@ struct SVertexSpriteInstanced9
 //////////////////////////////////////////////////////////////////////////
 
 #include <El/Debugging/debugTrap.hpp>
-#pragma comment(lib,"DxErr")
+#pragma comment(lib,"dxerr9")
 
 void EngineDD9::DDError9( const char *text, int err )
 {
-  LogF("%s:%s",text,DXGetErrorStringA(err));
+  LogF("%s:%s",text,DXGetErrorString9(err));
   if (GDebugger.IsDebugger())
   {
     //BREAK();
@@ -4143,7 +4142,7 @@ RetryV:
   if (err!=D3D_OK || !data)
   {
     if (GEngineDD->FreeOnDemandSystemMemoryLowLevel(1024*1024)) goto RetryV;
-    ErrF("VB Lock failed, %x,%s",err,DXGetErrorStringA(err));
+    ErrF("VB Lock failed, %x,%s",err,DXGetErrorString9(err));
     ReportMemoryStatusWithVRAM();
     return NULL;
   }
@@ -6261,7 +6260,7 @@ RetryI:
     if (err!=D3D_OK || !data)
     {
     if (GEngineDD->FreeOnDemandSystemMemoryLowLevel(1024*1024)) goto RetryI;
-      ErrF("IB Lock failed, %x:%s",err,DXGetErrorStringA(err));
+      ErrF("IB Lock failed, %x:%s",err,DXGetErrorString9(err));
     ReportMemoryStatusWithVRAM();
     return NULL;
   }
@@ -7037,7 +7036,7 @@ Retry:
   if (err!=D3D_OK || !data)
   {
     if (GEngineDD->FreeOnDemandSystemMemoryLowLevel(1024*1024)) goto Retry;
-    ErrF("VB Lock failed, %x,%s",err,DXGetErrorStringA(err));
+    ErrF("VB Lock failed, %x,%s",err,DXGetErrorString9(err));
     ReportMemoryStatusWithVRAM();
     return -1;
   }
@@ -10175,7 +10174,7 @@ HRESULT EngineDD9::LockDynBuffer(const ComRef<IDirect3DVertexBuffer9> &buf, void
   if (err!=D3D_OK || !data)
   {
     if (CheckMainThread() && FreeOnDemandSystemMemoryLowLevel(1024*1024)) goto Retry;
-    ErrF("VB Lock failed, %x,%s",err,DXGetErrorStringA(err));
+    ErrF("VB Lock failed, %x,%s",err,DXGetErrorString9(err));
     ReportMemoryStatusWithVRAM();
   }
   return err;
@@ -12389,7 +12388,7 @@ void EngineDD9::DrawIndexedPrimitive(int cb, int beg, int end, const Shape &sMes
         }
         else
         {
-          YieldProcessor();
+          __asm nop;
         }
       }
       //LogF("TLEnd");
@@ -22235,8 +22234,8 @@ void EngineDD9::Init3D()
   #if !XBOX_D3D
     #define RESTORE_AFFINITY 1
     // remember current affinity so that we can restore it later
-    DWORD_PTR oldAffinity = ~DWORD_PTR(0);
-    DWORD_PTR sysAffinity = ~DWORD_PTR(0);
+    DWORD oldAffinity = ~0;
+    DWORD sysAffinity = ~0;
     GetProcessAffinityMask(GetCurrentProcess(),&oldAffinity,&sysAffinity);
     #if 1
       // limit us to 2 CPU to fool driver detection and prevent driver using threaded optimizations
@@ -22416,7 +22415,7 @@ void EngineDD9::Init3D()
       SurfaceFormatNameDD9(_rtFormat),
       SurfaceFormatNameDD9(_presentPars.AutoDepthStencilFormat),
       _presentPars.FullScreen_RefreshRateInHz,
-      DXGetErrorStringA(err)
+      DXGetErrorString9(err)
       );
   }
 

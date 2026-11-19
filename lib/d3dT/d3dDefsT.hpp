@@ -8,6 +8,7 @@
 
 #include <Es/common/win.h>
 
+#include <d3d9.h>
 #include <d3d10.h>
 #include <d3d10Misc.h>
 

@@ -2361,7 +2361,7 @@ void ControlObjectContainer::DrawTooltip(UIViewport *vp, float x, float y)
     base::DrawTooltip(vp, x, y);
 }
 
-intptr_t ControlObjectContainer::GetTooltipArea(float x, float y)
+int ControlObjectContainer::GetTooltipArea(float x, float y)
 {
   float xx, yy;
   ControlOnObjectId iFound = FindControl(x, y, xx, yy);
@@ -12607,7 +12607,7 @@ void CControlsGroup::DrawTooltip(UIViewport *vp, float x, float y)
     _controls[iFound]->DrawTooltip(vp, xDraw, yDraw);
 }
 
-intptr_t CControlsGroup::GetTooltipArea(float x, float y)
+int CControlsGroup::GetTooltipArea(float x, float y)
 {
   float xDraw = x, yDraw = y;
   x -= _x; y -= _y;
@@ -13349,7 +13349,7 @@ void CObjectsGroup::DrawTooltip(UIViewport *vp, float x, float y)
     _objects[iFound]->DrawTooltip(vp, xDraw, yDraw);
 }
 
-intptr_t CObjectsGroup::GetTooltipArea(float x, float y)
+int CObjectsGroup::GetTooltipArea(float x, float y)
 {
   float xDraw = x, yDraw = y;
   x -= _x; y -= _y;

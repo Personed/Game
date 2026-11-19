@@ -76,7 +76,7 @@ public:
   XA2Buffer* AudioBuffer(void) const { return _buffRef.GetRef(); }
 
   /// debugging - we want to display NULL buffers
-  int GetDebugInt() const { return _buffRef.NotNull() ? static_cast<int>(reinterpret_cast<uintptr_t>(_buffRef.GetRef())) : 0; }
+  int GetDebugInt() const { return _buffRef.NotNull() ? (int)(UINT32 *)_buffRef.GetRef() : 0; }
   bool IsNull() const { return _buffRef.IsNull(); }
   void Free() { _buffRef.Free(); }
 };

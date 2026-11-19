@@ -169,11 +169,7 @@ public:
 					return;
 				}
 				#ifndef ENF_DUMMYRENDER
-#if defined(_WIN64)
-				m_pTexture->GetD3DTexture()->GenerateMipSubLevels();
-#else
-				D3DXFilterTexture(m_pTexture->GetD3DTexture(), NULL, l - 1, D3DX_FILTER_BOX);
-#endif
+					D3DXFilterTexture(m_pTexture->GetD3DTexture(), NULL, l - 1, D3DX_FILTER_BOX);
 				#endif
 				return;
 			}

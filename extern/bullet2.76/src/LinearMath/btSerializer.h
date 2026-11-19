@@ -244,8 +244,9 @@ protected:
 				cp++;
 			}
 			{
-				const size_t address = reinterpret_cast<size_t>(cp);
-				nr = static_cast<int>((4 - (address & 3)) & 3);
+				nr= (long)cp;
+			//	long mask=3;
+				nr= ((nr+3)&~3)-nr;
 				while (nr--)
 				{
 					cp++;
@@ -278,8 +279,9 @@ protected:
 			}
 
 		{
-				const size_t address = reinterpret_cast<size_t>(cp);
-				nr = static_cast<int>((4 - (address & 3)) & 3);
+				nr= (long)cp;
+			//	long mask=3;
+				nr= ((nr+3)&~3)-nr;
 				while (nr--)
 				{
 					cp++;

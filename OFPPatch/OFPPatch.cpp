@@ -1691,7 +1691,7 @@ static bool IncrementalPatchApply(EnumApplyContext &context,const bool byCrc = f
 
     // preserve source filename case
     _finddata_t data;
-    intptr_t h = _findfirst(source,&data);
+    long h = _findfirst(source,&data);
     if (h!=-1)
     {
       strcpy(GetFilenameExt(source),data.name);
@@ -2219,7 +2219,7 @@ static void DeleteDirectoryStructure(const char *name, bool deleteDir = true)
   sprintf(buffer, "%s\\*.*", name);
 
   _finddata_t info;
-  intptr_t h = _findfirst(buffer, &info);
+  long h = _findfirst(buffer, &info);
   if (h != -1)
   {
     do
@@ -3403,7 +3403,7 @@ int PatchingThreadFunctionPatch(HINSTANCE hInstance, HINSTANCE hPrevInstance, LP
     strcat(vdf, targetDir);
     MakeLongDirStr(vdf,vdf);
     strcat(vdf, "*.vdf");
-    intptr_t h = _findfirst(vdf,&data);
+    long h = _findfirst(vdf,&data);
     if (h!=-1)  
     {
       MessageBox(NULL,"This patch will not work with Steam version of the game.","Patch error",MB_OK|MB_ICONERROR);

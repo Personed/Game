@@ -274,7 +274,7 @@ void FileBankManager::ScanDir(RString dir, RString rel)
   #else
   _finddata_t fInfo;
   RString wild=RString(dir)+RString("\\*");
-  intptr_t hFile=X_findfirst(wild,&fInfo);
+  long hFile=X_findfirst(wild,&fInfo);
   if( hFile!=-1 )
   {
     do

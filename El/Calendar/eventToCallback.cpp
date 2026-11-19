@@ -25,9 +25,9 @@ Copyright &copy; 2003 by BIStudio (www.bistudio.com)
 //-------------------------------------------------------------------------
 //  Support:
 
-INT_PTR eventToHandle (const EventInfo &id)
+int eventToHandle (const EventInfo &id)
 {
-  return (INT_PTR)id.object;
+  return (int)id.object;
 }
 
 EventInfo ImplicitMapTraits<EventInfo>::null   = {
@@ -94,7 +94,7 @@ THREAD_PROC_RETURN THREAD_PROC_MODE waitingRoutine ( void *param )
 #if defined(NET_LOG_ETC_VERBOSE) || DEBUG_VON
       unsigned64 now = getSystemTime();
 #endif
-      if ( etc->eventArray.get((INT_PTR)ev,info) &&
+      if ( etc->eventArray.get((int)ev,info) &&
         info.enabled && info.routine ) { // correct & enabled event -> trigger its call-back
           (*info.routine)(ev,info.data);
       }
@@ -135,7 +135,7 @@ THREAD_PROC_RETURN THREAD_PROC_MODE waitingRoutine ( void *param )
 #if  DEBUG_VON && 1
         unsigned64 now = getSystemTime();
 #endif
-        if ( etc->eventArray.get((INT_PTR)ev,info) &&
+        if ( etc->eventArray.get((int)ev,info) &&
           info.enabled && info.routine ) { // correct & enabled event -> trigger its call-back
             (*info.routine)(ev,info.data);
         }
@@ -237,7 +237,7 @@ void EventToCallback::addEvent ( HANDLE event, EventCallback *routine, void *dat
   enter();
   ReleaseSemaphore(control,1L,NULL);        // get out from Multiple-wait
   handleLock.enter();                       // handleArray exclusivity
-  if ( (info = eventArray.get((INT_PTR)event)) ) { // exists => rewrite
+  if ( (info = eventArray.get((int)event)) ) { // exists => rewrite
     info->routine = routine;
     info->data    = data;
     info->enabled = enabled;
@@ -259,12 +259,12 @@ void EventToCallback::removeEvent ( HANDLE event )
   NetLog("EventToCallback::removeEvent(%u)",(unsigned)event);
 #endif
   enter();
-  if ( eventArray.presentKey((INT_PTR)event) ) {
+  if ( eventArray.presentKey((int)event) ) {
     // remove it:
     ReleaseSemaphore(control,1L,NULL);      // get out from Multiple-wait
     handleLock.enter();                     // handleArray exclusivity
     handleArray.Delete(event);
-    eventArray.removeKey((INT_PTR)event);
+    eventArray.removeKey((int)event);
     handleLock.leave();                     // can use handleArray again..
     ReleaseSemaphore(control,1L,NULL);      // recover
   }
@@ -280,7 +280,7 @@ void EventToCallback::enableEvent ( HANDLE event, bool enabled )
   EventInfo *info;
   enter();
   // don't need to lock handleArray..
-  if ( (info = eventArray.get((INT_PTR)event)) )
+  if ( (info = eventArray.get((int)event)) )
     info->enabled = enabled;
   leave();
 }

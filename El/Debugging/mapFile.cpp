@@ -78,7 +78,7 @@ static int CmpMaps( const MapInfo *f0, const MapInfo *f1 )
 {
   int d = f0->section-f1->section;
   if (d) return d;
-  return f0->physAddress<f1->physAddress ? -1 : f0->physAddress>f1->physAddress ? 1 : 0;
+  return f0->physAddress-f1->physAddress;
 }
 
 /*
@@ -258,13 +258,13 @@ void MapFile::ParseMapFile(const char *name)
       }
       
       while( *c==':' || isspace(*c) ) c++;
-      uintptr_t logAddress=(uintptr_t)strtoull(c,(char **)&c,16);
+      int logAddress=strtoul(c,(char **)&c,16);
       while( isspace(*c) ) c++;
       char *d=name;
       while( !isspace(*c) && *c ) *d++=*c++; // get name
       *d=0;
       while( isspace(*c) ) c++;
-      uintptr_t physAddress=(uintptr_t)strtoull(c,(char **)&c,16);
+      int physAddress=strtoul(c,(char **)&c,16);
       if( *name==0 ) continue; // no name
       MapInfo info;
       // if extended mapinfo is required, parse it
@@ -337,7 +337,7 @@ void MapFile::ParseMapFile(const char *name)
 #endif
 }
 
-void MapFile::OffsetPhysicalAddress(intptr_t offset)
+void MapFile::OffsetPhysicalAddress(int offset)
 {
   if (!offset) return;
   for (int i=0; i<_map.Size(); i++)
@@ -347,7 +347,7 @@ void MapFile::OffsetPhysicalAddress(intptr_t offset)
   }
 }
 
-uintptr_t MapFile::FunctionStart( uintptr_t address, MapAddressId id) const
+int MapFile::FunctionStart( int address, MapAddressId id) const
 {
   for( int i=0; i<_map.Size(); i++ )
   {
@@ -360,7 +360,7 @@ uintptr_t MapFile::FunctionStart( uintptr_t address, MapAddressId id) const
   return 0;
 }
 
-const char *MapFile::MapRawName( uintptr_t address, int section, MapAddressId id, uintptr_t *lower ) const
+const char *MapFile::MapRawName( int address, int section, MapAddressId id, int *lower ) const
 {
   for( int i=0; i<_map.Size(); i++ )
   {
@@ -480,7 +480,7 @@ const char *GetClassName(BString<256> &clsName, const char *name)
     if (eName)
     {
       strcpy(clsName,name+2);
-      clsName[static_cast<int>(eName-name-2)] = 0;
+      clsName[eName-name-2] = 0;
       name = eName+1;
       strcat(clsName,"<");
       bool first = true;
@@ -523,7 +523,7 @@ const char *GetClassName(BString<256> &clsName, const char *name)
     const char *eName = strstr(name,"@");
     if (eName)
     {
-      clsName[static_cast<int>(eName-name)] = 0;
+      clsName[eName-name] = 0;
       name = eName+1;
     }
     else
@@ -768,7 +768,7 @@ const char *MapInfo::ReadableName() const
 }
 
 
-const MapInfo *MapFile::FindByPhysical( uintptr_t fAddress ) const
+const MapInfo *MapFile::FindByPhysical( int fAddress ) const
 {
   if (_map.Size()<1) return NULL;
   // check first
@@ -791,11 +791,11 @@ const MapInfo *MapFile::FindByPhysical( uintptr_t fAddress ) const
     
     Assert( _map[hi].physAddress>fAddress );
     // estimate where could the result be
-    uintptr_t hiAddr = _map[hi].physAddress;
-    uintptr_t loAddr = _map[lo].physAddress;
+    int hiAddr = _map[hi].physAddress;
+    int loAddr = _map[lo].physAddress;
 
     if (_map[lo+1].physAddress>fAddress) {hi=lo;break;}
-    double approxIndex = double(fAddress-loAddr)/double(hiAddr-loAddr)*(hi-lo)+lo;
+    float approxIndex = (fAddress-loAddr)/float(hiAddr-loAddr)*(hi-lo)+lo;
     int approxI = toInt(approxIndex);
     if (approxI>=hi) approxI = hi-1;
     if (approxI<=lo) approxI = lo+1;
@@ -814,7 +814,7 @@ const MapInfo *MapFile::FindByPhysical( uintptr_t fAddress ) const
 commonly used - optimized for best speed
 */
 
-const char *MapFile::MapNameFromPhysical( uintptr_t fAddress, uintptr_t *lower) const
+const char *MapFile::MapNameFromPhysical( int fAddress, int *lower) const
 {
   const MapInfo *info = FindByPhysical(fAddress);
   if (!info)
@@ -832,7 +832,7 @@ commonly used - optimized for best speed
 
 void *MapFile::FunctionStartFromPhysical(void *pAddress) const
 {
-  const MapInfo *info = FindByPhysical((uintptr_t)pAddress);
+  const MapInfo *info = FindByPhysical((int)pAddress);
   if (!info)
   {
     return 0;
@@ -840,7 +840,7 @@ void *MapFile::FunctionStartFromPhysical(void *pAddress) const
   return (void *)info->physAddress;
 }
 
-const char *MapFile::MapName( uintptr_t address, MapAddressId id, uintptr_t *lower ) const
+const char *MapFile::MapName( int address, MapAddressId id, int *lower ) const
 {
   for( int i=0; i<_map.Size(); i++ )
   {
@@ -856,19 +856,19 @@ const char *MapFile::MapName( uintptr_t address, MapAddressId id, uintptr_t *low
   return "???";
 }
 
-uintptr_t MapFile::MinAddress( MapAddressId id ) const
+int MapFile::MinAddress( MapAddressId id ) const
 {
   if( _map.Size()<=0 ) return 0;
   return _map[0].*id;
 }
 
-uintptr_t MapFile::MaxAddress( MapAddressId id, int section ) const 
+int MapFile::MaxAddress( MapAddressId id, int section ) const 
 {
-  if( _map.Size()<=0 ) return UINTPTR_MAX;
+  if( _map.Size()<=0 ) return 0x7fffffff;
   return _map[_sectionEnd[section]-1].*id;
 }
 
-uintptr_t MapFile::Address( const char *name, MapAddressId id ) const 
+int MapFile::Address( const char *name, MapAddressId id ) const 
 {
   for( int i=0; i<_map.Size(); i++ )
   {
@@ -877,7 +877,7 @@ uintptr_t MapFile::Address( const char *name, MapAddressId id ) const
   return 0;
 }
 
-uintptr_t MapFile::AddressBySubstring(const char *name, MapAddressId id) const 
+int MapFile::AddressBySubstring(const char *name, MapAddressId id) const 
 {
   for( int i=0; i<_map.Size(); i++ )
   {

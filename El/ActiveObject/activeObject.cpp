@@ -105,14 +105,15 @@ const int EventRecyclingPool::_maxPoolSize = 256;
 EventRecyclingPool::EventRecyclingPool()
 :_used(0)
 {
-  _pool = new HANDLE[_maxPoolSize];
-  for (int i=0; i<_maxPoolSize; i++) _pool[i] = NULL;
+  DoAssert(sizeof(HANDLE)==sizeof(AtomicInt));
+  _pool = new AtomicInt[_maxPoolSize];
+  for (int i=0; i<_maxPoolSize; i++) _pool[i] = AtomicInt(0);
 }
 EventRecyclingPool::~EventRecyclingPool()
 {
   for (int i=0; i<_used; i++)
     if (_pool[i])
-      CloseHandle(_pool[i]);
+      CloseHandle((HANDLE)(int)_pool[i]);
   delete [] _pool;
 }
 
@@ -121,7 +122,7 @@ void EventRecyclingPool::Recycle(HANDLE handle)
 {
   for (int i=0; i<_maxPoolSize; i++)
   {
-    if (InterlockedCompareExchangePointer((PVOID volatile *)&_pool[i],handle,NULL)==NULL)
+    if (_pool[i].CompareSwap(0,(int)handle)==0)
     {
       // make sure _used contains i
       #if 1
@@ -150,13 +151,13 @@ HANDLE EventRecyclingPool::Use()
   int used = _used;
   for (int i=0; i<used; i++)
   {
-    HANDLE ret = (HANDLE)InterlockedExchangePointer((PVOID volatile *)&_pool[i],NULL);
-    if (ret)
+    if (int ret = _pool[i].Swap(0))
     {
       // if we have used the last item, remove it from _used
       _used.CompareSwap(i+1,i);
-      ResetEvent(ret);
-      return ret;
+      HANDLE handle = (HANDLE)ret;
+      ResetEvent(handle);
+      return handle;
     }
   }
   // events use manual reset object

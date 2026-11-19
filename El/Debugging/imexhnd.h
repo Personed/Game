@@ -14,7 +14,6 @@
 //-----------------------------------------------------------------------
 
 #include <Es/Common/win.h>
-#include <stdint.h>
 #include <El/Interfaces/iAppInfo.hpp>
 
 class MapFile;
@@ -155,7 +154,7 @@ private:
 
   void IntelStackSave( PCONTEXT pContext, char *fileExt=NULL );
 
-  void IntelPCPrint( class MapFile &map, uintptr_t pc, bool doEol=true );
+  void IntelPCPrint( class MapFile &map, int pc, bool doEol=true );
   int CCALL _tprintf(const TCHAR * format, ...);
   int CCALL _tlprintf(const TCHAR * format, ...);
 };

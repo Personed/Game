@@ -1,4 +1,0 @@
-activateAddons [
-];
-
-activateAddons [];

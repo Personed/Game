@@ -6,7 +6,6 @@
 #define _SIMUL_WEATHER_PRECOMP_MAIN_H
 
 #include <crtdefs.h>
-#include <algorithm>
 //==================================================
 // platform specific
 //==================================================
@@ -88,4 +87,3 @@ inline void CCALL operator delete[] ( void *ptr, const char *file, int line )
 
 
 #endif //_SIMUL_WEATHER_BASE_PRECOMP_H
-

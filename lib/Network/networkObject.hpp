@@ -584,7 +584,7 @@ RString NetObjToNetId(NetworkObject *obj);
 
 inline RString NetworkIdToNetId(const NetworkId &id)
 {
-  return Format("%d:%" OID_FORMAT, id.creator.CreatorInt(), id.id);
+  return Format("%d:%"OID_FORMAT"", id.creator.CreatorInt(), id.id);
 }
 
 // Data structure for transfer of the list of variables

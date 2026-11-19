@@ -275,7 +275,7 @@ namespace DLCTools
 
     RString wildName = currentDir + "\\" + dlcDir;
     _finddata_t find;
-    intptr_t hf = X_findfirst(wildName + "\\*",&find);  
+    long hf = X_findfirst(wildName + "\\*",&find);  
     if (hf!=-1)
     {
       do

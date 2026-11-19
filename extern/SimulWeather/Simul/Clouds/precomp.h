@@ -6,8 +6,5 @@
 #define _SIMUL_WEATHER_CLOUDS_PRECOMP_H
 
 #include "../Base/precompMain.h"
-#include <algorithm>
 
 #endif //_SIMUL_WEATHER_CLOUDS_PRECOMP_H
-
-

@@ -275,7 +275,7 @@ public:
 	{
 		if((intptr_t)a >= MAX_REFS)
 			return (Variable*)a;
-		return __GetVariable(static_cast<uint>(reinterpret_cast<uint64>(a)));
+		return __GetVariable((uint)a);
 	}
 
 	ENF_INLINE IVariable* _GetVariable2(const void* a, Variable*& var) const
@@ -286,7 +286,7 @@ public:
 			return (IVariable*)a;
 		}
 		Instance** iptr;
-		return __GetVariable2(static_cast<uint>(reinterpret_cast<uint64>(a)), var, iptr);
+		return __GetVariable2((uint)a, var, iptr);
 	}
 
 	ENF_INLINE IVariable* _GetVariable3(const void* a, Variable*& var, Instance**& iptr) const
@@ -297,7 +297,7 @@ public:
 			var = (Variable*)a;
 			return (IVariable*)a;
 		}
-		return __GetVariable2(static_cast<uint>(reinterpret_cast<uint64>(a)), var, iptr);
+		return __GetVariable2((uint)a, var, iptr);
 	}
 
 /** \name Types methods

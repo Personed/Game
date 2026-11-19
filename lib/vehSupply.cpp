@@ -7,10 +7,6 @@
 #include "move_actions.hpp"
 #include "landscape.hpp"
 
-float EntityAI::GetFuelCargo() const { return SUPPLY(this, GetFuelCargo, ()); }
-float EntityAI::GetRepairCargo() const { return SUPPLY(this, GetRepairCargo, ()); }
-float EntityAI::GetAmmoCargo() const { return SUPPLY(this, GetAmmoCargo, ()); }
-
 // config identifiers
 #define TitleTxt 0 // down fades text
 #define TitleTxtDown 1 // down fades text

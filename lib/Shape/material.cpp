@@ -1841,17 +1841,7 @@ static int SomeDataNeededForStage[]=
   0,  // SimulWeather clouds with lightning and CPU distance fading  
   StagesNeeded<7>::Value, // SuperExt
   StagesNeeded<7>::Value,  // SuperAToC
-	0, // PSNonTLHeatHaze
-	0, // InterpolationAlpha
-	0, // VolCloud
-	0, // VolCloudSimple
-	0, // UnderwaterOcclusion
-	StagesNeeded<7>::Value, // SuperHair
-	StagesNeeded<7>::Value, // SuperHairAtoC
-	0, // Caustics
-	0, // Refract
-	0, // SpriteRefract
-	0, // SpriteRefractSimple
+	0 //PSNonTLHeatHaze 
 };
 
 

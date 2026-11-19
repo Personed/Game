@@ -17,7 +17,7 @@
 
 #pragma warning(disable:4035)               // re-enable below
 
-#if defined(_MSC_VER) && defined(_M_IX86)
+#ifdef _MSC_VER
 
 inline int fixed_mul( int a, int d )
 {

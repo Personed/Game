@@ -554,7 +554,7 @@ static RString ExportFSM(RString name)
   RString path;
   for (int i=0; i<100000; i++)
   {
-    path = Format("%s%s %d.fsm", dir, DayZAppName, i);
+    path = Format("%s%s %d.fsm", dir, AppName, i);
     if (!QIFileFunctions::FileExists(path)) break;
   }
 

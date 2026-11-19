@@ -276,7 +276,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_M_AMD64;_DEBUG;_LIB;SIMUL_META_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -288,7 +288,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles>Simul/UseDLLs.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
@@ -348,7 +348,7 @@
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_M_AMD64;NDEBUG;_LIB;SIMUL_META_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -356,7 +356,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ForcedIncludeFiles>Simul/UseDLLs.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <ForcedUsingFiles>Simul/UseDLLs.h;%(ForcedUsingFiles)</ForcedUsingFiles>
@@ -413,7 +413,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_M_AMD64;_DEBUG;_LIB;SIMUL_META_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -425,7 +425,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ForcedIncludeFiles>Simul/UseStaticLibs.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
     </ClCompile>
@@ -487,7 +487,7 @@
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/../;$(SIMUL)/External/boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_M_AMD64;NDEBUG;_LIB;SIMUL_META_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -496,7 +496,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ForcedIncludeFiles>Simul/UseStaticLibs.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <ForcedUsingFiles>%(ForcedUsingFiles)</ForcedUsingFiles>

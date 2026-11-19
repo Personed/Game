@@ -884,7 +884,7 @@ void BinarizeFolder(
   
   // traverse directories first
   _finddata_t fd; 
-  intptr_t fh = _findfirst(wilddirname,&fd);
+  long fh = _findfirst(wilddirname,&fd);
   if (fh!=-1)
   {
     // we perform a scan first - this helps disc cache
@@ -1229,7 +1229,7 @@ static void AddDirToTHDManager(const BinarizeFolderContext& ctx, TextureHeaderMa
   static const RString DIR_STR("\\");
   _finddata_t fInfo;
   RString wild = dir + DIR_STR + RString("*");
-  intptr_t hFile=_findfirst(wild,&fInfo);
+  long hFile=_findfirst(wild,&fInfo);
   if( hFile!=-1 )
   {
     do

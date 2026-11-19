@@ -7,7 +7,6 @@
 //-----------------------------------------------------------------------------
 
 //#include "precomp.h"
-#include <stdint.h>
 #include "system/enf_timer.h"
 #include "system/enf_ifilesystem.h"
 #include "system/enf_thread.h"
@@ -32,14 +31,14 @@ public:
 
 	FileError GetLastError()
 	{
-		FileError err = static_cast<FileError>(reinterpret_cast<intptr_t>(TlsGetValue(m_TLS)));
-		TlsSetValue(m_TLS, reinterpret_cast<LPVOID>(static_cast<intptr_t>(FILEERR_OK)));
+		FileError err = (FileError)((DWORD)TlsGetValue(m_TLS));
+		TlsSetValue(m_TLS, (LPVOID)FILEERR_OK);
 		return err;
 	}
 
 	void SetLastError(FileError err)
 	{
-		TlsSetValue(m_TLS, reinterpret_cast<LPVOID>(static_cast<intptr_t>(err)));
+		TlsSetValue(m_TLS, (LPVOID)err);
 	}
 
 	~IFileSystemRV()

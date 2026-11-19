@@ -383,12 +383,6 @@ public:
 template <class Type,class Base,class CounterType>
 void TListBidir<Type,Base,CounterType>::Move( TListBidir &src )
 {
-	if (!Base::next || !Base::prev || !src.Base::next || !src.Base::prev)
-	{
-		RptF("TListBidir::Move invalid links: dst=%p dst.prev=%p dst.next=%p src=%p src.prev=%p src.next=%p",
-			this,Base::prev,Base::next,&src,src.Base::prev,src.Base::next);
-		return;
-	}
 	// take whole list src and move it into this
 	// result: this contains merged list, src is empty
 	// take first and last members of src

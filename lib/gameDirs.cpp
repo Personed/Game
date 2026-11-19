@@ -208,7 +208,7 @@ bool GetLocalSettingsDir(char *dir)
     return false;
   }
   TerminateBy(dir, '\\');
-  strcat(dir, DayZAppName);
+  strcat(dir, AppName);
   return true;
 }
 
@@ -230,7 +230,7 @@ bool GetLocalSettingsDir(wchar_t *dir)
 
   
   wchar_t appNameW[256];
-  mbstowcs(appNameW, DayZAppName, sizeof(appNameW));
+  mbstowcs(appNameW, AppName, sizeof(appNameW));
 
   wcscat(dir, appNameW);
   return true;
@@ -285,7 +285,7 @@ bool ForEachUser(ForEachUserCallback func, void *context)
   }
 
   _finddata_t info;
-  intptr_t h = _findfirst(dir + RString("\\*.*"), &info);
+  long h = _findfirst(dir + RString("\\*.*"), &info);
   if (h != -1)
   {
     do

@@ -3766,26 +3766,7 @@ void IRenderer::SetCursorPos(uint x, uint y)
 //-----------------------------------------------------------------------
 #if !defined(ENF_DUMMYRENDER)
 
-#if defined(_WIN64)
-// D3DPERF markers are optional profiling instrumentation.  The DX11 client
-// does not load the D3D9 runtime just to emit them.
-void _D3DPERF_BeginEvent(uint color, const char* name, ...)
-{
-}
-
-void _D3DPERF_BeginEvent(uint color, const wchar_t* name)
-{
-}
-
-void _D3DPERF_SetMarker(uint color, const char* name, ...)
-{
-}
-
-void _D3DPERF_EndEvent()
-{
-}
-
-#elif defined(ENF_DX9) 
+#if defined(ENF_DX9) 
 void _D3DPERF_BeginEvent(uint color, const char* name, ...)
 {
 	if(D3DPERF_GetStatus() == 0)

@@ -191,8 +191,8 @@ void MemoryInfo::Report() const
 		// report callstack
 		for (int i=0; i<_calls; i++)
 		{
-			uintptr_t eip = (uintptr_t)_callstack[i];
-			uintptr_t lower;
+			int eip = (int)_callstack[i];
+			int lower;
 			const char *name = GMapFile.MapNameFromPhysical(eip,&lower);
 			LogF("  %8x: %8x + %s",eip,eip-lower,name);
 			//LogF("  %8x",eip);

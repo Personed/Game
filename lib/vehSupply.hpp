@@ -146,6 +146,10 @@ CALL_ARGS(ResourceSupply,EntityAI,GetSupply())
 #define SUPPLY_DEF(veh,x,arg,def) CALLARGS_DEF(veh,ResourceSupply,x,arg,def)
 
 
+inline float EntityAI::GetFuelCargo() const {return SUPPLY(this,GetFuelCargo, ());}
+inline float EntityAI::GetRepairCargo() const {return SUPPLY(this,GetRepairCargo, ());}
+inline float EntityAI::GetAmmoCargo() const {return SUPPLY(this,GetAmmoCargo, ());}
+
 inline bool EntityAI::ForEachItemCargo(const std::function<bool(InventoryItem *item)> &func, bool recursive) {return GetSupply()->ForEachItemCargo(func, recursive);}
 inline bool EntityAI::ForEachItemCargo(const std::function<bool(const InventoryItem *item)> &func, bool recursive) const {return GetSupply()->ForEachItemCargo(func, recursive);}
 inline bool EntityAI::FindItemCargo(const InventoryItem *item) const {return GetSupply() ? GetSupply()->FindItemCargo(item) : false;}
@@ -174,4 +178,3 @@ inline bool EntityAI::AddMagazineCargoCount(const MagazineType *type, int count)
 }
 
 #endif
-

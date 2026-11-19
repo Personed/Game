@@ -7,7 +7,6 @@
 #include "../ThreadHook.h"
 #include <typeinfo.h>
 #include <stdio.h>
-#include <stdint.h>
 
 #if !_DEBUG
 #include "Es/Framework/debugLog.hpp"
@@ -84,7 +83,7 @@ static void SetThreadName( DWORD dwThreadID, LPCSTR szThreadName)
   }
   __try
   {
-    RaiseException( 0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info );
+    RaiseException( 0x406D1388, 0, sizeof(info)/sizeof(DWORD), (DWORD*)&info );
   }
   __except (EXCEPTION_CONTINUE_EXECUTION)
   {
@@ -156,12 +155,12 @@ bool ThreadBase::Start(bool suspended, void *securityDescriptor)
   {
     if (IS().hThread) CloseHandle(IS().hThread);
 
-    uintptr_t hndl;
+    unsigned long hndl;
     unsigned int id;
     
     
     hndl=_beginthreadex(securityDescriptor,(unsigned int)_initStack,StartThread,this,CREATE_SUSPENDED,&id);
-    if (hndl!=0)
+    if (hndl!=(unsigned long)-1) 
     {
       IS().hThread=(HANDLE)hndl;
       IS().threadId=id;

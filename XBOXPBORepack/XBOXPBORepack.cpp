@@ -189,7 +189,7 @@ bool PBORepack::ScanDir(const RString& dir, const RString& rel, int level)
 {
   _finddata_t fInfo;
   RString wild = dir + RString("\\*");
-  intptr_t hFile=_findfirst(wild,&fInfo);
+  long hFile=_findfirst(wild,&fInfo);
   if( hFile!=-1 )
   {
     do

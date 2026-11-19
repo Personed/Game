@@ -4559,11 +4559,7 @@ protected:
 #else
     void PlayerGUIDReceived(int player);
 #endif
-#if _ENABLE_STEAM_OWNERSHIP
     void PlayerGUIDIsValid(int player, const CSteamID &ownerId);
-#else
-    void PlayerGUIDIsValid(int player);
-#endif
 
     #define BE_WRAP_CALLBACK(Name, ...) bool __cdecl Name##Callback(int player, __VA_ARGS__);
     BE_CALLBACKS(BE_WRAP_CALLBACK)
@@ -5061,19 +5057,7 @@ public:
 
   void SpawnForPlayer(int dpnid, GameDataCode *code, const GameValue &args);
 
-#if _ENABLE_STEAM_OWNERSHIP
-  void PlayerGUIDIsValid(int player, const CSteamID &ownerId) {
-#if _USE_BATTL_EYE_SERVER
-    _beIntegration.PlayerGUIDIsValid(player, ownerId);
-#endif
-  };
-#else
-  void PlayerGUIDIsValid(int player) {
-#if _USE_BATTL_EYE_SERVER
-    _beIntegration.PlayerGUIDIsValid(player);
-#endif
-  };
-#endif
+  void PlayerGUIDIsValid(int player, const CSteamID &ownerId) { _beIntegration.PlayerGUIDIsValid(player, ownerId); };
 
   //! The output format is "creator:id friendlyName"
   RString NetworkIdToNetIdFriendly(const NetworkId &id);
@@ -5723,9 +5707,7 @@ public:
   void CustomFilesProgressGet(int &max, int &pos);
   DWORD GetServerTime();
   DWORD GetEstimatedEndServerTime();
-#if _ENABLE_STEAM_OWNERSHIP
   void PlayerGUIDIsValid(int player, const CSteamID &ownerId) override;
-#endif
 
 
 #if _GAMES_FOR_WINDOWS

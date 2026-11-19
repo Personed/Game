@@ -1054,11 +1054,7 @@ int ExceptionHandler(unsigned int code, void* _ep)
 			}
 		#endif
 
-		#ifdef _WIN64
-		_ShowError("Crash info", "Unhandled exception", exceptionType.cstr(), (void*)ep->ContextRecord->Rbp, (void*)ep->ContextRecord->Rip);
-		#else
 		_ShowError("Crash info", "Unhandled exception", exceptionType.cstr(), (void*)ep->ContextRecord->Ebp, (void*)ep->ContextRecord->Eip);
-		#endif
 	#endif
 
 	return 0;

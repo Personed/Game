@@ -48,7 +48,7 @@ public:
 
 private:
   // Callback function used with the waveform-audio input device. Address of this function can be specified in the callback-address parameter of the waveInOpen function.
-  static void CALLBACK waveInProc(HWAVEIN hwi, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2);
+  static void CALLBACK waveInProc(HWAVEIN hwi, UINT uMsg, DWORD dwInstance, DWORD dwParam1, DWORD dwParam2);
   // Capturing buffers initialization.
   bool PrepareBuffers();
   // Release of buffers.

@@ -276,7 +276,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_M_AMD64;_LIB;VISUAL_CPP;UNIT_TEST;NDEBUG;INTEL_COMPATIBLE;SIMUL_GEOMETRY_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -286,7 +286,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <DisableSpecificWarnings>4324;4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -359,7 +359,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_M_AMD64;_LIB;VISUAL_CPP;UNIT_TEST;INTEL_COMPATIBLE;SIMUL_EXCEPTIONS;CHECK_LIST_BOUNDS;_DEBUG;SIMUL_GEOMETRY_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -372,7 +372,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <DisableSpecificWarnings>4324;4201;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -438,7 +438,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_M_AMD64;_LIB;VISUAL_CPP;UNIT_TEST;INTEL_COMPATIBLE;SIMUL_EXCEPTIONS;CHECK_LIST_BOUNDS;_DEBUG;SIMUL_GEOMETRY_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -451,7 +451,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <DisableSpecificWarnings>4324;4201;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -523,7 +523,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\boost;D:\SOURCEDAYZS!!\DayZ-0.45.124252\extern\SimulWeather;;$(MSBuildThisFileDirectory)..\..;$(SIMUL)/..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SIMUL)/..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_M_AMD64;_LIB;VISUAL_CPP;UNIT_TEST;NDEBUG;INTEL_COMPATIBLE;SIMUL_GEOMETRY_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -533,7 +533,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <ForcedIncludeFiles>Simul/UseStaticLibs.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>

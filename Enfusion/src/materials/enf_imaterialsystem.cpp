@@ -15,7 +15,6 @@
 #include "pipeline/enf_pipeline.h"
 #include "tinyxml/tinyxml.h"
 #include "common/enf_diag.h"
-#include "common/enf_pointerhash.h"
 #include "common/enf_quicksort.h"
 #include "render/enf_supershader.h"
 //#include "script/enf_scriptapi.h"
@@ -88,7 +87,7 @@ uint ISuperShader::GetHashValue() const
 	hash += Name.GetHashValue();
 	for(uint n = 0; n < Options.GetCardinality(); n++)
 	{
-		hash += HashPointer(Options[n].Name);
+		hash += (uint)Options[n].Name;
 	}
 
 	hash += Defines.GetHashValue();

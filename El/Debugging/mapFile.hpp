@@ -7,7 +7,6 @@
 
 #include <Es/Strings/bString.hpp>
 #include <Es/Containers/array.hpp>
-#include <stdint.h>
 
 #ifdef MAPINFO_EXTENDED
 #define MapInfo MapIntoExt
@@ -18,8 +17,8 @@ struct MapInfo
 {
   BString<512> name;
 	int section;
-	uintptr_t physAddress; // symbol value / absolute virtual address
-	uintptr_t logAddress; // logical address
+	int physAddress; // symbol value
+	int logAddress; // logical address
 
 #ifdef MAPINFO_EXTENDED
   BString<128> module;
@@ -29,7 +28,7 @@ struct MapInfo
 	const char *ReadableName() const;
 };
 
-typedef uintptr_t MapInfo::*MapAddressId;
+typedef int MapInfo::*MapAddressId;
 
 TypeIsSimpleZeroed(MapInfo);
 
@@ -66,56 +65,42 @@ class MapFile
 
 	void ParseMapFile(const char *name=NULL);
 	// add given offset to all physical addresses
-	void OffsetPhysicalAddress(intptr_t offset);
+	void OffsetPhysicalAddress(int offset);
 	void Clear();
 
 	const char *GetName() const {return _name;}
-	const char *MapName( uintptr_t address, MapAddressId id, uintptr_t *lower=NULL ) const;
-  const char *MapRawName( uintptr_t address, int section, MapAddressId id, uintptr_t *lower=NULL ) const;
-	uintptr_t FunctionStart( uintptr_t address, MapAddressId id) const;
-	const char *MapNameFromLogical( uintptr_t lAddress, uintptr_t *lower=NULL ) const
+	const char *MapName( int address, MapAddressId id, int *lower=NULL ) const;
+  const char *MapRawName( int address, int section, MapAddressId id, int *lower=NULL ) const;
+	int FunctionStart( int address, MapAddressId id) const;
+	const char *MapNameFromLogical( int lAddress, int *lower=NULL ) const
 	{
 		return MapName(lAddress,&MapInfo::logAddress,lower);
 	}
-	const char *MapNameFromLogical( uintptr_t lAddress, int *lower ) const
-	{
-		uintptr_t lowerWide = 0;
-		const char *name = MapName(lAddress,&MapInfo::logAddress,lower ? &lowerWide : NULL);
-		if (lower) *lower = (int)lowerWide;
-		return name;
-	}
-	uintptr_t FunctionStartFromLogical(uintptr_t lAddress) const
+	int FunctionStartFromLogical(int lAddress) const
 	{
 		return FunctionStart(lAddress,&MapInfo::logAddress);
 	}
 
-	const MapInfo *FindByPhysical( uintptr_t fAddress ) const;
+	const MapInfo *FindByPhysical( int fAddress ) const;
 
-	const char *MapNameFromPhysical( uintptr_t fAddress, uintptr_t *lower=NULL ) const;
-	const char *MapNameFromPhysical( uintptr_t fAddress, int *lower ) const
-	{
-		uintptr_t lowerWide = 0;
-		const char *name = MapNameFromPhysical(fAddress,lower ? &lowerWide : NULL);
-		if (lower) *lower = (int)lowerWide;
-		return name;
-	}
+	const char *MapNameFromPhysical( int fAddress, int *lower=NULL ) const;
 	void *FunctionStartFromPhysical(void *pAddress) const;
 
-	uintptr_t Address( const char *name, MapAddressId id ) const ;
-	uintptr_t AddressBySubstring( const char *name, MapAddressId id ) const;
-	uintptr_t MinAddress( MapAddressId id ) const ;
-	uintptr_t MaxAddress( MapAddressId id, int section=1 ) const ;
+	int Address( const char *name, MapAddressId id ) const ;
+	int AddressBySubstring( const char *name, MapAddressId id ) const;
+	int MinAddress( MapAddressId id ) const ;
+	int MaxAddress( MapAddressId id, int section=1 ) const ;
 
-	uintptr_t PhysicalAddress( const char *name ) const {return Address(name,&MapInfo::physAddress);}
-	uintptr_t LogicalAddress( const char *name ) const {return Address(name,&MapInfo::logAddress);}
+	int PhysicalAddress( const char *name ) const {return Address(name,&MapInfo::physAddress);}
+	int LogicalAddress( const char *name ) const {return Address(name,&MapInfo::logAddress);}
 
-	uintptr_t PhysicalAddressBySubstring( const char *name ) const {return AddressBySubstring(name,&MapInfo::physAddress);}
-	uintptr_t LogicalAddressBySubstring( const char *name ) const {return AddressBySubstring(name,&MapInfo::logAddress);}
+	int PhysicalAddressBySubstring( const char *name ) const {return AddressBySubstring(name,&MapInfo::physAddress);}
+	int LogicalAddressBySubstring( const char *name ) const {return AddressBySubstring(name,&MapInfo::logAddress);}
 
-	uintptr_t MinPhysicalAddress() const {return MinAddress(&MapInfo::physAddress);}
-	uintptr_t MaxPhysicalAddress() const {return MaxAddress(&MapInfo::physAddress);}
-	uintptr_t MinLogicalAddress() const {return MinAddress(&MapInfo::logAddress);}
-	uintptr_t MaxLogicalAddress() const {return MaxAddress(&MapInfo::logAddress);}
+	int MinPhysicalAddress() const {return MinAddress(&MapInfo::physAddress);}
+	int MaxPhysicalAddress() const {return MaxAddress(&MapInfo::physAddress);}
+	int MinLogicalAddress() const {return MinAddress(&MapInfo::logAddress);}
+	int MaxLogicalAddress() const {return MaxAddress(&MapInfo::logAddress);}
 
 	bool Empty() const {return _map.Size()<=0;}
 	bool Parsed() const {return _parseDone;}

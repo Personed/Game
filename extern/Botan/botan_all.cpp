@@ -637,7 +637,6 @@ class Noop_Mutex_Factory : public Mutex_Factory
   #error BOTAN_MP_WORD_BITS must be 8, 16, 32, or 64
 #endif
 
-#if !defined(_M_X64) && !defined(_M_AMD64)
 namespace Botan {
 
 extern "C" {
@@ -665,7 +664,6 @@ inline word word_madd3(word a, word b, word c, word* d)
 }
 
 }
-#endif
 
 
 namespace Botan {
@@ -1145,9 +1143,6 @@ void bigint_sqr(word z[], size_t z_size, word workspace[],
 }
 
 
-#if defined(_M_X64) || defined(_M_AMD64)
-#include "src/math/mp/mp_generic/mp_asmi.h"
-#else
 namespace Botan {
 
 extern "C" {
@@ -1676,7 +1671,6 @@ inline void word3_muladd_2(word* w2, word* w1, word* w0, word a, word b)
 
 }
 
-#endif
 /*
 * OctetString
 * (C) 1999-2007 Jack Lloyd

@@ -106,8 +106,9 @@
 //----------------------------------------------------------------------
 //  ftol.h:
 
-#if defined(_MSC_VER) && !defined(_M_X64) && !defined(_M_AMD64)
-__inline int openlpc_round ( float flt )
+#ifdef _MSC_VER
+
+__inline int round ( float flt )
 {
   int intgr;
   
@@ -120,9 +121,6 @@ __inline int openlpc_round ( float flt )
   return intgr;
 }
 
-#elif defined(_MSC_VER)
-#include <math.h>
-static inline int openlpc_round(float flt) { return (int)lrintf(flt); }
 #else   // !_MSC_VER
 
 #ifdef __GNUC__
@@ -132,7 +130,7 @@ static inline int openlpc_round(float flt) { return (int)lrintf(flt); }
 #define __USE_ISOC9X
 #define __USE_ISOC99
 #include <math.h>
-#define openlpc_round(x)    lrintf(x)
+#define round(x)    lrintf(x)
 
 #else   // !__GNUC__
 
@@ -681,7 +679,7 @@ VoNResult OpenLPCCodec::encode ( CircularBufferPointers &ptr, unsigned &encoded,
       else
         u += (0.4f * q);                    /* highly empirical! */
   
-      iu = openlpc_round(u) ;
+      iu = round(u) ;
       iu = iu & 0xff;                       /* keep only 8 bits */
   
         // make room at the left of parm array shifting left
@@ -970,9 +968,9 @@ VoNResult OpenLPCCodec::decode ( CircularBufferPointers &ptr, unsigned &decoded,
           }
 
         if ( m_bps == 8 )
-          ptr.write8( (int8)openlpc_round(u * 127.0f) );
+          ptr.write8( (int8)round(u * 127.0f) );
         else
-          ptr.write16( (int16)openlpc_round(u * 32767.0f) );
+          ptr.write16( (int16)round(u * 32767.0f) );
 
         Newper += perinc;
         NewG += Ginc;

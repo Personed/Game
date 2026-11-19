@@ -160,7 +160,7 @@ static void DeleteDirectoryStructure(const char *name, bool deleteDir =true)
   sprintf(buffer, "%s\\*.*", name);
 
   _finddata_t info;
-  intptr_t h = _findfirst(buffer, &info);
+  long h = _findfirst(buffer, &info);
   if (h != -1)
   {
     do

@@ -7,7 +7,6 @@
 //-----------------------------------------------------------------------------
 
 //#include "precomp.h"
-#include <stdint.h>
 #include "system/enf_timer.h"
 #include "enf_main.h"
 #include "common/enf_mathlib.h"
@@ -448,14 +447,14 @@ const Variable* ScriptContext::GetParmDef(uint p) const
 {
 	const Variable* v = m_pParms[p];
 
-	if(reinterpret_cast<uintptr_t>(v) < 0x10000)
+	if((int)v < 0x10000)
 	{
 		//we are looking into module of calling function, thus -1
 		const VMStack* stack = m_psCurrent->GetStack(m_psCurrent->GetStackPos());
 		if((stack->m_pfFunc->Flags & FN_SCRIPT) == 0)
 			stack = m_psCurrent->GetStack(m_psCurrent->GetStackPos() - 1);
 
-		ScriptContext::IRef& ref = stack->m_pfFunc->Module->m_Refs[static_cast<int>(reinterpret_cast<uintptr_t>(v))];
+		ScriptContext::IRef& ref = stack->m_pfFunc->Module->m_Refs[(int)v];
 		Instance **inst = ref.m_pInst;
 		v = (const Variable*)(*inst)->GetClass()->GetVariable(ref.m_pVar->Pos);
 	}

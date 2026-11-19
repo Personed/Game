@@ -1999,7 +1999,7 @@ void NetworkMessageContext::LogMessage(NetworkMessageFormatBase *format, int lev
 #else
         DiagLogF
         (
-          "%s%s(0x%x) = %d:%" OID_FORMAT"", (const char *)indent,
+          "%s%s(0x%x) = %d:%"OID_FORMAT"", (const char *)indent,
           (const char *)item.name, item.offset,
           value.creator.CreatorInt(), value.id
         );
@@ -2026,7 +2026,7 @@ void NetworkMessageContext::LogMessage(NetworkMessageFormatBase *format, int lev
 #else
           DiagLogF
           (
-            "%s\tItem %d = %d:%" OID_FORMAT"", (const char *)indent,
+            "%s\tItem %d = %d:%"OID_FORMAT"", (const char *)indent,
             j, array[j].creator.CreatorInt(), array[j].id
           );
 #endif
@@ -2082,7 +2082,7 @@ void NetworkMessageContext::LogMessage(NetworkMessageFormatBase *format, int lev
         Variables &value = *(Variables *)ptr;
         DiagLogF
         (
-          "%s%s(for object %d:%" OID_FORMAT")", (const char *)indent,
+          "%s%s(for object %d:%"OID_FORMAT")", (const char *)indent,
           (const char *)item.name, value._object.creator.CreatorInt(), value._object.id
         );
       }

@@ -535,7 +535,7 @@ NetStatus serverReceive ( NetMessage *msgPtr, NetStatus event, void *data )
         _server->enterUsr();                // due to 'channelToPlayer()'
         int player = _server->channelToPlayer(msg->getChannel());
         if ( player < 0 )
-          RptF("No player found for channel %p - MAGIC_DESTROY_PLAYER message ignored",msg->getChannel());
+          RptF("No player found for channel %u - MAGIC_DESTROY_PLAYER message ignored",(unsigned)msg->getChannel());
         else
           _server->finishDestroyPlayer(player);
         _server->leaveUsr();
@@ -2130,7 +2130,7 @@ NetStatus destroyPlayerCallback ( NetMessage *msg, NetStatus event, void *data )
 {
   poolLock.enter();
   if ( _server )
-    _server->finishDestroyPlayer(static_cast<int>(reinterpret_cast<intptr_t>(data)));
+    _server->finishDestroyPlayer((int)data);
   poolLock.leave();
   return nsNoMoreCallbacks;
 }
@@ -2162,7 +2162,7 @@ void NetServer::destroyPlayer ( NetChannel *ch, NetTerminationReason reason, con
   out->setFlags(MSG_ALL_FLAGS,MSG_MAGIC_FLAG);
   out->setData((unsigned8*)buf,msgLen);
   //RptF("NetServer::destroyPlayer: player=%d",channelToPlayer(ch));
-  out->setCallback(destroyPlayerCallback,nsOutputSent,reinterpret_cast<void*>(static_cast<intptr_t>(channelToPlayer(ch))));
+  out->setCallback(destroyPlayerCallback,nsOutputSent,(void*)channelToPlayer(ch));
   out->send(true);
 }
 
@@ -2597,7 +2597,7 @@ void NetServer::ProcessUserMessages ( UserMessageServerCallback *callback, void 
     leaveUsr();
     leaveRcv();
     if ( player == -1 )
-      RptF("No player found for channel %p - message ignored",msg->getChannel());
+      RptF("No player found for channel %u - message ignored",(unsigned)msg->getChannel());
     else
       (*callback)(player,(char*)msg->getData(),msg->getLength(),context);
     enterRcv();

@@ -7,9 +7,6 @@
 #include "vertex.hpp"
 #include "specLods.hpp"
 #include <El/Common/perfProf.hpp>
-#ifdef _WIN64
-#include <intrin.h>
-#endif
 
 #if !_RELEASE
   // it seems in VS 2005 applies /Oy for this file (Omit frame pointers) - reason unknown
@@ -483,69 +480,13 @@ void VertexTable::Compact()
   }
 }
 
-#ifdef _WIN64
-namespace
-{
-  typedef __int64 VertexBufferPairWord;
-
-  void LoadVertexBufferPair(const VertexTable::RefVertexBufferLocked *buffer, VertexBufferPairWord pair[2])
-  {
-    pair[0] = 0;
-    pair[1] = 0;
-    // A zero/zero compare-exchange is an atomic 128-bit load. On failure,
-    // the intrinsic writes the observed pair into pair; on success it was zero.
-    _InterlockedCompareExchange128(
-      reinterpret_cast<volatile VertexBufferPairWord *>(const_cast<VertexTable::RefVertexBufferLocked *>(buffer)),
-      0, 0, pair);
-  }
-
-  bool CompareExchangeVertexBufferPair(
-    VertexTable::RefVertexBufferLocked *buffer,
-    VertexBufferPairWord desiredHigh, VertexBufferPairWord desiredLow,
-    VertexBufferPairWord expected[2])
-  {
-    return _InterlockedCompareExchange128(
-      reinterpret_cast<volatile VertexBufferPairWord *>(buffer),
-      desiredHigh, desiredLow, expected) != 0;
-  }
-
-  int VertexBufferPairFrame(VertexBufferPairWord high)
-  {
-    return static_cast<int>(static_cast<unsigned int>(high));
-  }
-
-  VertexBuffer *VertexBufferPairPointer(VertexBufferPairWord low)
-  {
-    return reinterpret_cast<VertexBuffer *>(static_cast<unsigned __int64>(low));
-  }
-}
-#endif
-
 void VertexTable::RefVertexBufferLocked::Lock()
 {
   int now = FreeOnDemandFrameID();
-#ifdef _WIN64
-  VertexBufferPairWord observed[2];
-  LoadVertexBufferPair(this, observed);
-  for (;;)
-  {
-    // Keep the modular frame comparison used by the original 32-bit code.
-    if (VertexBufferPairFrame(observed[1])-now>=0) return;
-    VertexBufferPairWord expected[2] = {observed[0], observed[1]};
-    if (CompareExchangeVertexBufferPair(this, static_cast<unsigned int>(now), observed[0], expected))
-    {
-      MemorySubscribe();
-      return;
-    }
-    observed[0] = expected[0];
-    observed[1] = expected[1];
-  }
-#else
   // prevent memory barrier unless necessary
   if (_frameId-now>=0) return; // compare difference to handle value looping smoothly
   _frameId = now;
   MemorySubscribe();
-#endif
   // if we have locked a buffer which is not present, it did no harm at all
   // nobody will discard it anyway
 }
@@ -553,96 +494,32 @@ void VertexTable::RefVertexBufferLocked::Lock()
 bool VertexTable::RefVertexBufferLocked::ReleaseIfNotLocked()
 {
   int now = FreeOnDemandFrameID();
-#ifdef _WIN64
-  VertexBufferPairWord observed[2];
-  LoadVertexBufferPair(this, observed);
-  if (VertexBufferPairFrame(observed[1])-now>=0) return false;
-  VertexBuffer *vb = VertexBufferPairPointer(observed[0]);
-  if (vb==NULL) return true;
-
-  // Atomically clear the full pointer/frame pair. The old implementation
-  // packed the pointer into 32 bits, which truncated every x64 VertexBuffer.
-  VertexBufferPairWord expected[2] = {observed[0], observed[1]};
-  if (CompareExchangeVertexBufferPair(this, static_cast<unsigned int>(VertexBufferPairFrame(observed[1])), 0, expected))
-  {
-    vb->Release();
-    return true;
-  }
-  // A concurrent Lock or pointer update won the compare-exchange; leave it alone.
-  return false;
-#else
-  // On x86 the pointer and frame id fit in the original 64-bit atomic word.
+  //STATIC_ASSERT(sizeof(*this)==sizeof(long long)); // works only on 32b platforms
   long long original = *(long long *)this;
+  // lower DWORD: VB pointer
+  // upper DWORD: frame id
   int originalFrameId = int(original>>32);
   VertexBuffer *vb = (VertexBuffer *)(int)original;
   if (originalFrameId-now>=0) return false;
   if (vb==NULL) return true;
+  // caution: on x64 128b operation is needed
 #ifdef _WIN32
   if (_InterlockedCompareExchange64((long long volatile *)this,0,original)==original)
 #else
-  long long volatile *cmpVal = (long long volatile *)this;
-  if (*(long long *)this==original) unconst_cast(this) = NULL;
-  if (*cmpVal==original)
+    //enterAtomicInt(); 
+    long long volatile *cmpVal = (long long volatile *)this;
+    if (*(long long *)this==original) unconst_cast(this) = NULL;
+    //leaveAtomicInt();
+    if (*cmpVal==original)
 #endif
   {
     vb->Release();
     return true;
   }
+  // if comparison failed, it must be because somebody has locked the VB (upper DWORD changed)
+  // or released it (lower DWORD changed). In either case we no longer want to release it
   return false;
-#endif
 }
-
-void VertexTable::RefVertexBufferLocked::SetBuffer(VertexBuffer *buffer)
-{
-#ifdef _WIN64
-  if (buffer) buffer->AddRef();
-  VertexBufferPairWord observed[2];
-  LoadVertexBufferPair(this, observed);
-  for (;;)
-  {
-    VertexBuffer *old = VertexBufferPairPointer(observed[0]);
-    VertexBufferPairWord expected[2] = {observed[0], observed[1]};
-    if (CompareExchangeVertexBufferPair(this, static_cast<unsigned int>(VertexBufferPairFrame(observed[1])),
-                                        reinterpret_cast<VertexBufferPairWord>(buffer), expected))
-    {
-      if (old) old->Release();
-      return;
-    }
-    observed[0] = expected[0];
-    observed[1] = expected[1];
-  }
-#else
-  Ref<VertexBuffer>::operator=(buffer);
-#endif
-}
-
-#ifdef _WIN64
-VertexBuffer *VertexTable::RefVertexBufferLocked::GetRef() const
-{
-  VertexBufferPairWord observed[2];
-  LoadVertexBufferPair(this, observed);
-  return VertexBufferPairPointer(observed[0]);
-}
-
-void VertexTable::RefVertexBufferLocked::Free()
-{
-  VertexBufferPairWord observed[2];
-  LoadVertexBufferPair(this, observed);
-  for (;;)
-  {
-    VertexBuffer *old = VertexBufferPairPointer(observed[0]);
-    if (!old) return;
-    VertexBufferPairWord expected[2] = {observed[0], observed[1]};
-    if (CompareExchangeVertexBufferPair(this, static_cast<unsigned int>(VertexBufferPairFrame(observed[1])), 0, expected))
-    {
-      old->Release();
-      return;
-    }
-    observed[0] = expected[0];
-    observed[1] = expected[1];
-  }
-}
-#endif
 
 void VertexBuffer::Lock(const VertexTable *owner) const
 {

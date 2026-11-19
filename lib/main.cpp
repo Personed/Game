@@ -94,14 +94,7 @@ Basic win32 framework, application init and message handling.
 #include <Steamworks/steam_api.h>
 
 #include "system/enf_timer.h"
-#if !defined(_WIN64)
-  #include "d3d9/engdd9.hpp"
-#else
-  #include "textbank.hpp"
-  #include <Es/ReportStack/reportStack.hpp>
-  #include <El/FreeOnDemand/memFreeReq.hpp>
-  #include "../Enfusion/include/common/enf_pointerhash.h"
-#endif
+#include "d3d9/engdd9.hpp"
 
 #if _ENABLE_STEAM
 //# pragma comment(lib, "steam_api")
@@ -762,9 +755,7 @@ static bool LoadAddons = true;
 static bool NoSplash=false;
 static bool GenerateShaders=false;
 bool DisableShaderGeneration=false;
-#if !defined(_WIN64)
 static bool ForceDX9=false;
-#endif
 bool EnableSM3=true;
 static bool DoPause=false;
 static bool DoRestore=false;
@@ -785,9 +776,7 @@ static bool CanRender; // everything is initialized
 extern bool LandEditor;
 static bool NoSplash=false;
 static bool GenerateShaders=false;
-#if !defined(_WIN64)
 static bool ForceDX9=false;
-#endif
 static bool DoCreateServer=true;
 static bool LoadAddons = true;
 static bool UseOpenAL = false;
@@ -4155,9 +4144,7 @@ static void SingleArgument( const char *beg, const char *end )
     static const char noSplashStr[]="nosplash";
     static const char generateShadersStr[]="generateshaders";
     static const char disableShaderGenerationStr[]="disableShaderGeneration";
-#if !defined(_WIN64)
     static const char forceDX9Str[]="forceDX9";
-#endif
     static const char enableSM3Str[]="sm3";
     static const char forceSM2Str[]="sm2";
     static const char noLimitTreeLODsStr[]="noLimitTreeLODs";
@@ -4363,9 +4350,7 @@ static void SingleArgument( const char *beg, const char *end )
     }
 #ifdef _WIN32
     else if (IsOption(beg,end,disableShaderGenerationStr)) DisableShaderGeneration=true;
-#if !defined(_WIN64)
     else if (IsOption(beg,end,forceDX9Str)) ForceDX9=true;
-#endif
     else if (IsOption(beg,end,enableSM3Str)) EnableSM3=true;
     else if (IsOption(beg,end,forceSM2Str)) EnableSM3=false;
 #endif
@@ -6006,16 +5991,12 @@ bool AppIdle()
   //    timeValid=false;
   bool enableDraw=GetEnableDraw();
 
-#if _ENABLE_STEAM
   if (SteamOverlayClosed)
   {
     EnableMouseMovement(MouseCanMove, SteamOverlayClosed); //reestablish the old value
     SteamOverlayClosed = false;
   }
   else EnableMouseMovement(!GAppActive || !GEngine || GEngine->IsCursorShown());
-#else
-  EnableMouseMovement(!GAppActive || !GEngine || GEngine->IsCursorShown());
-#endif
 
   static DWORD lastTime;
   DWORD actTime=::GlobalTickCount();
@@ -6126,9 +6107,7 @@ bool AppIdle()
 
   //if( ( focused || ForceRender && LandEditor ) && CanRender )
 
-#if _ENABLE_STEAM
   SteamAPI_RunCallbacks();
-#endif
 
   ProcessPipeCommands();
   if( CanRender )
@@ -6670,9 +6649,7 @@ void DDTerm()
   XLiveUnInitialize();
 #endif
 
-#if _ENABLE_STEAM
   SteamAPI_Shutdown();
-#endif
   #if ENABLE_KEYMOUSE
   if (dInput) dInput->Release(), dInput = NULL;
   if (UseWindow) ClipCursor(NULL);
@@ -7894,7 +7871,6 @@ static void ReloadMaterialFromObjektiv(HANDLE mutex, HANDLE shared)
 */
 
 #if defined (_WIN32)
-#include <stdint.h>
 
 unsigned int CalculateExeCRC(int offset, int size)
 {
@@ -7912,12 +7888,8 @@ unsigned int CalculateExeCRC(int offset, int size)
   // From the DOS header, find the NT (PE) header
   PIMAGE_NT_HEADERS pNtHdr = (PIMAGE_NT_HEADERS)((char *)hMod + pDosHdr->e_lfanew);
 
-  if (offset < 0 || size <= 0) return 0;
-  const uintptr_t imageBase = reinterpret_cast<uintptr_t>(hMod);
-  uintptr_t checkStart = imageBase + static_cast<uintptr_t>(offset);
-  uintptr_t checkEnd = checkStart + static_cast<uintptr_t>(size);
-  const uintptr_t imageEnd = imageBase + pNtHdr->OptionalHeader.SizeOfImage;
-  if (checkEnd < checkStart || checkEnd > imageEnd) checkEnd = imageEnd;
+  int checkStart = offset;
+  int checkEnd = offset + size;
 
   PIMAGE_SECTION_HEADER pSection = IMAGE_FIRST_SECTION(pNtHdr);
   for (WORD i=0; i<pNtHdr->FileHeader.NumberOfSections; i++)
@@ -7925,24 +7897,19 @@ unsigned int CalculateExeCRC(int offset, int size)
     if ((pSection->Characteristics & (IMAGE_SCN_CNT_CODE | IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_CNT_UNINITIALIZED_DATA)) != 0)
     {
       // section containing code or data
-      uintptr_t sectionStart = imageBase + pSection->VirtualAddress;
-      uintptr_t sectionSize = pSection->SizeOfRawData;
-      uintptr_t sectionEnd = sectionStart + sectionSize;
-      if (sectionEnd < sectionStart || sectionEnd > imageEnd) sectionEnd = imageEnd;
-      if (sectionStart >= sectionEnd) { pSection++; continue; }
-      sectionSize = sectionEnd - sectionStart;
+      int sectionStart = (int)hMod + pSection->PointerToRawData;
+      int sectionSize = pSection->SizeOfRawData;
+      int sectionEnd = sectionStart + sectionSize;
       if (checkStart < sectionEnd && checkEnd > sectionStart)
       {
         // non-empty intersection - calculate the CRC from this segment
-        uintptr_t crcStart = checkStart > sectionStart ? checkStart : sectionStart;
-        uintptr_t crcEnd = checkEnd < sectionEnd ? checkEnd : sectionEnd;
+        saturate(checkStart, sectionStart, sectionEnd);
+        saturate(checkEnd, sectionStart, sectionEnd);
 
-        LogF("%p:%u, testing %p:%u", reinterpret_cast<void*>(sectionStart),
-          static_cast<unsigned int>(sectionSize), reinterpret_cast<void*>(crcStart),
-          static_cast<unsigned int>(crcEnd - crcStart));
+        LogF("%x:%x, testing %x:%x", sectionStart, sectionSize, checkStart, checkEnd - checkStart);
         CRCCalculator crc;
         crc.Reset();
-        crc.Add(reinterpret_cast<void*>(crcStart), static_cast<unsigned int>(crcEnd - crcStart));
+        crc.Add((void *)checkStart,checkEnd-checkStart);
         return crc.GetResult();
       }
     }
@@ -7951,17 +7918,13 @@ unsigned int CalculateExeCRC(int offset, int size)
 
   // segment containing the given block not found, calculate the CRC from the whole first segment
   pSection = IMAGE_FIRST_SECTION(pNtHdr);
-  uintptr_t sectionStart = imageBase + pSection->VirtualAddress;
-  uintptr_t sectionSize = pSection->SizeOfRawData;
-  const uintptr_t firstSectionEnd = sectionStart + sectionSize;
-  if (firstSectionEnd < sectionStart || firstSectionEnd > imageEnd) sectionSize = imageEnd - sectionStart;
+  int sectionStart = (int)hMod + pSection->PointerToRawData;
+  int sectionSize = pSection->SizeOfRawData;
 
-  LogF("%p:%u, testing %p:%u", reinterpret_cast<void*>(sectionStart),
-    static_cast<unsigned int>(sectionSize), reinterpret_cast<void*>(sectionStart),
-    static_cast<unsigned int>(sectionSize));
+  LogF("%x:%x, testing %x:%x",sectionStart,sectionSize,sectionStart,sectionSize);
   CRCCalculator crc;
   crc.Reset();
-  crc.Add(reinterpret_cast<void*>(sectionStart), static_cast<unsigned int>(sectionSize));
+  crc.Add((void *)sectionStart, sectionSize);
   return crc.GetResult();
 //))EXE_CRC_CHECK
 }
@@ -10401,6 +10364,7 @@ bool InitSteam()
 {
 #if _ENABLE_STEAM
   if (!UseSteam) return false;
+#endif
 
   // initialize Steam API
   if (!SteamAPI_Init())
@@ -10422,13 +10386,12 @@ bool InitSteam()
 #endif
   if (SteamUtils()) SteamUtils()->SetWarningMessageHook(&SteamAPIDebugTextHook);
 
+#if _ENABLE_STEAM
   // register Steam callbacks
   GInput.RegisterCallbacks();
+#endif
 
   return true;
-#else
-  return false;
-#endif
 }
 
 /// scan a subclass of ArmA2.par file for arguments
@@ -11161,7 +11124,7 @@ void ReadExpansionsFromRegistry(ModInfos &regMods)
 #include "UI/displayUI.hpp"
 
 // 1. Loads the GModInfosRegistry from registry ConfigApp\\Expansions key
-//          ie. "Software\\Bohemia Interactive Studio\\" DayZAppName "\\Expansions"
+//          ie. "Software\\Bohemia Interactive Studio\\" AppName "\\Expansions"
 // 2. Loads the GModInfosProfile from flashpoint cfg.
 void LoadModList()
 {
@@ -11471,7 +11434,7 @@ static void InitPlayerName()
   Glob.header.SetPlayerName(GetLoginName()); // MUST be set before ParseUserParams is called, or profile would not be found otherwise
   ParseUserParams(cfg, &globals);
   ConstParamEntryPtr entry = cfg.FindEntry("playerName");
-  if (entry && !entry->GetValue().IsEmpty()) Glob.header.SetPlayerName(entry->GetValue());
+  if (entry && !RString(*entry).IsEmpty()) Glob.header.SetPlayerName(*entry);
 #endif
     }
 #else
@@ -12071,7 +12034,6 @@ it sometimes caused false warnings and premature server termination.
 #endif
     )
     {
-#if _ENABLE_STEAM
       if (!SteamUtils() && !InitSteam())
       {
         // if there is a debugger, try it once more
@@ -12081,7 +12043,6 @@ it sometimes caused false warnings and premature server termination.
           exit(1);
         }
       }
-#endif
     }
 
     // after processing -cpuCount
@@ -12255,19 +12216,18 @@ it sometimes caused false warnings and premature server termination.
 
       avoidUserInput = AUITrue;
 
-#if defined(_WIN64)
-      // The x64 client uses the native D3D11 backend directly.
-      GEngine=CreateEngineD3D11(pars);
-#else
-      #if _ENABLE_DX10
-        if (ForceDX9)
-          GEngine=CreateEngineD3D9(pars);
-        else
-          GEngine=CreateEngineD3DT(pars);
-      #else
+    #if _ENABLE_DX10
+      if (ForceDX9)
+      {
         GEngine=CreateEngineD3D9(pars);
-      #endif
-#endif
+      }
+      else
+      {
+      GEngine=CreateEngineD3DT(pars);
+      }
+    #else
+      GEngine=CreateEngineD3D9(pars);
+    #endif
         if (GenerateShaders)
         {
     #if defined(_WIN32) 
@@ -12279,11 +12239,7 @@ it sometimes caused false warnings and premature server termination.
 
         if (!GEngine)
         {
-#if defined(_WIN64)
-          ErrorMessage("Error creating Direct3D 11 Graphical engine");
-#else
           ErrorMessage("Error creating Direct3D 9 Graphical engine");
-#endif
           exit(1);
         }
   
@@ -12299,11 +12255,7 @@ it sometimes caused false warnings and premature server termination.
 								
 				enf::CStr profileName = "";
 
-#if defined(_WIN64)
-				if (!enf::GetEngine()->Create((HWND)GEngine->GetWindowHandle(), cfgFile.cstr(), profileName.cstr()))
-#else
 				if (!enf::GetEngine()->Create(GEngineDD->GetHWND(), cfgFile.cstr(), profileName.cstr()))
-#endif
 					return -1;
 			#endif
 			
@@ -13010,13 +12962,9 @@ RString GetPublicKey()
   if (!forcePublicKey.IsEmpty()) return forcePublicKey;
   if(customUID > 0) return Format("%d",customUID);
   // use SteamID as a player identification
-#if _ENABLE_STEAM
   if (!SteamUser()) return "ERROR";
   CSteamID id = SteamUser()->GetSteamID();
   return Format("%llu", id.ConvertToUint64());
-#else
-  return "";
-#endif
 #endif
 }
 
@@ -13138,7 +13086,7 @@ void OFPFrameFunctions::ErrorMessage(const char *format, va_list argptr)
 #endif
   DDTermError();
   // kill main application window
-  //MessageBox(hwndApp,buf,DayZAppName,MB_OK);
+  //MessageBox(hwndApp,buf,AppName,MB_OK);
   //WinDestroy();
   // show message
 #ifdef _WIN32
@@ -13152,10 +13100,10 @@ void OFPFrameFunctions::ErrorMessage(const char *format, va_list argptr)
   wBuffer[len - 1] = 0; // make sure result is always null terminated
 
   // convert application name from UTF-8 to Unicode
-  len = MultiByteToWideChar(CP_UTF8, 0, DayZAppName, -1, NULL, 0);
+  len = MultiByteToWideChar(CP_UTF8, 0, AppName, -1, NULL, 0);
   AUTO_STATIC_ARRAY(wchar_t, wAppName, 1024);
   wAppName.Resize(len);
-  MultiByteToWideChar(CP_UTF8, 0, DayZAppName, -1, wAppName.Data(), len);
+  MultiByteToWideChar(CP_UTF8, 0, AppName, -1, wAppName.Data(), len);
   wAppName[len - 1] = 0; // make sure result is always null terminated
 
   if (!Silent) //when autotest is running, we want no error messages
@@ -13257,10 +13205,10 @@ void WarningMessageLevel( ErrorMessageLevel level, const char *format, va_list a
     wBuffer[len - 1] = 0; // make sure result is always null terminated
 
     // convert application name from UTF-8 to Unicode
-    len = MultiByteToWideChar(CP_UTF8, 0, DayZAppName, -1, NULL, 0);
+    len = MultiByteToWideChar(CP_UTF8, 0, AppName, -1, NULL, 0);
     AUTO_STATIC_ARRAY(wchar_t, wAppName, 1024);
     wAppName.Resize(len);
-    MultiByteToWideChar(CP_UTF8, 0, DayZAppName, -1, wAppName.Data(), len);
+    MultiByteToWideChar(CP_UTF8, 0, AppName, -1, wAppName.Data(), len);
     wAppName[len - 1] = 0; // make sure result is always null terminated
 
     if (!Silent) //when autotest is running, we want no error messages

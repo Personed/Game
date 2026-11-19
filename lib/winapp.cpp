@@ -104,7 +104,7 @@ static RWString WAppName;
 
 void InitWindowAppName()
 {
-  const char *appName = DayZAppName;
+  const char *appName = AppName;
 	if( LandEditor )
 	{
     appName = "Operation Flashpoint"; // hardcoded in Oxygen
@@ -347,15 +347,15 @@ void InitWindow( HINSTANCE hInst, HWND hwnd, bool withCommandLine, const char *a
     }
     else
     {
-      RString title = RString(DayZAppName) + appendix;
+      RString title = RString(AppName) + appendix;
       RString commandLine = GetCommandLineA();
       if (withCommandLine && !commandLine.IsEmpty()) title = title + " " +commandLine;
-		  SetWindowTextA(hwnd, DayZAppName);
+		  SetWindowTextA(hwnd, AppName);
 	  }
 	}
 	// set our own icon
 	HICON icon=LoadIcon(hInst,"APPICON");
-	SetClassLongPtr(hwnd,GCLP_HICON,(LONG_PTR)icon);
+	SetClassLong(hwnd,GCL_HICON,(LONG)icon);
 }
 
 #endif //_WIN32

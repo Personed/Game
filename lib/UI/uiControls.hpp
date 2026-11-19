@@ -2,7 +2,6 @@
 #ifdef _MSC_VER
 #pragma once
 #endif
-#include <stdint.h>
 
 #ifndef _UI_CONTROLS_HPP
 #define _UI_CONTROLS_HPP
@@ -504,7 +503,7 @@ public:
   */
   virtual void DrawTooltip(UIViewport *vp, float x, float y);
   /// Check the tooltip area to decide if to hide tooltip
-  virtual intptr_t GetTooltipArea(float x, float y) {return 1;} // anything different than 0 is good
+  virtual int GetTooltipArea(float x, float y) {return 1;} // anything different than 0 is good
 
   //! return hint to joystick button function
   virtual RString GetKeyHint(int button, bool &structured) const;
@@ -1050,7 +1049,7 @@ public:
   
   void OnDraw(float alpha);
   virtual void DrawTooltip(UIViewport *vp, float x, float y) override;
-  virtual intptr_t GetTooltipArea(float x, float y) override;
+  virtual int GetTooltipArea(float x, float y) override;
 
 protected:
   //! creates owned controls
@@ -4391,7 +4390,7 @@ public:
   virtual bool OnIMEComposition(unsigned nChar, unsigned nFlags);
 
   virtual void DrawTooltip(UIViewport *vp, float x, float y);
-  virtual intptr_t GetTooltipArea(float x, float y) override;
+  virtual int GetTooltipArea(float x, float y) override;
 
   virtual void OnDraw(UIViewport *vp, float alpha);
 
@@ -4494,7 +4493,7 @@ public:
   virtual bool OnIMEComposition(unsigned nChar, unsigned nFlags);
 
   virtual void DrawTooltip(UIViewport *vp, float x, float y);
-  virtual intptr_t GetTooltipArea(float x, float y) override;
+  virtual int GetTooltipArea(float x, float y) override;
   virtual void OnDrawBackGround(UIViewport *vp, float alpha);
   virtual void OnDraw(float alpha);
 
@@ -4759,7 +4758,7 @@ protected:
 
   // Tooltip control
   UITime _tooltipTime;
-  intptr_t _tooltipArea;
+  int _tooltipArea;
   float _tooltipX;
   float _tooltipY;
 

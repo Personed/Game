@@ -161,7 +161,7 @@ float InvSqrt( float x )
 static const float c3pt0 = 3.0f;
 static const float c0pt5 = 0.5f;
 
-#if defined(_M_IX86)
+#if 1
 // this is hand optimized version of the function below
 float __declspec(naked) InvSqrt( float x )
 {

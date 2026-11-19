@@ -26,9 +26,6 @@ whether to generate shader combinations for offline compiling
 #if defined(ENF_DX9) 
 	#ifdef ENF_SHADER_COMPILER
 		#include <d3dx9shader.h>
-		#if defined(_WIN64)
-			#include "../../../lib/d3d11/Dx11LegacyCompat.hpp"
-		#endif
 	#endif
 #elif defined(ENF_OGL)
 	#include <cg/cgGL.h>
@@ -490,27 +487,6 @@ public:
 	HRESULT _stdcall Open(D3DXINCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID * ppData, UINT * pBytes);
 };
 
-#if defined(_WIN64)
-// Adapt Enfusion's legacy include callback to D3DCompile's equivalent
-// interface.  Both callbacks share the same data lifetime contract.
-class D3D11IncludeAdapter
-{
-private:
-	DXInclude &_include;
-
-public:
-	D3D11IncludeAdapter(DXInclude &include): _include(include) {}
-	virtual HRESULT __stdcall Open(UINT type, LPCSTR fileName, LPCVOID parentData, LPCVOID *data, UINT *bytes)
-	{
-		return _include.Open((D3DXINCLUDE_TYPE)type, fileName, parentData, data, bytes);
-	}
-	virtual HRESULT __stdcall Close(LPCVOID data)
-	{
-		return _include.Close(data);
-	}
-};
-#endif
-
 //-----------------------------------------------------------------------
 HRESULT DXInclude::Close(LPCVOID pData)
 {
@@ -892,26 +868,6 @@ bool IRenderer::LoadShader(RenderShader* sh, const ShaderDef& def)
 			
 			if (correctlyLoaded)
 			{
-				#if defined(_WIN64)
-					UINT dxCompileFlags = 0;
-					if (flags & D3DXSHADER_DEBUG)
-						dxCompileFlags |= DX11_COMPAT_COMPILE_DEBUG;
-					if (flags & D3DXSHADER_SKIPOPTIMIZATION)
-						dxCompileFlags |= DX11_COMPAT_COMPILE_SKIP_OPTIMIZATION;
-					D3D11IncludeAdapter includeAdapter(include);
-					hr = CompileShaderD3D11Compat(
-						(LPCSTR)ptr,
-						len,
-						fullname.cstr(),
-						macros.GetArray(),
-						&includeAdapter,
-						"main",
-					profilenames[def.GetProfile()],
-						dxCompileFlags,
-						0,
-						reinterpret_cast<void**>(pShader.Init()),
-						reinterpret_cast<void**>(pErrors.Init()));
-				#else
 				hr = D3DXCompileShader(
 					(LPCSTR)ptr,
 					len,
@@ -924,7 +880,6 @@ bool IRenderer::LoadShader(RenderShader* sh, const ShaderDef& def)
 					pErrors.Init(),
 					NULL //LPD3DXCONSTANTTABLE * ppConstantTable
 					);
-				#endif
 			}
 
 			//warnings are not taken as errors but we need to know the combination of macros

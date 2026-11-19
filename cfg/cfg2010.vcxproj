@@ -4,9 +4,6 @@
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
-    </ProjectConfiguration><ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Xbox 360">
       <Configuration>Release</Configuration>
@@ -25,17 +22,13 @@
     </SccLocalPath>
     <SccProvider>
     </SccProvider>
-  <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion></PropertyGroup>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup><PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  <PlatformToolset>v141</PlatformToolset></PropertyGroup>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseOfAtl>false</UseOfAtl>
@@ -47,9 +40,6 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
-  </ImportGroup><ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -58,47 +48,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\bin\</OutDir><OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)build\port-x64\cfg\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Platform)\$(Configuration)\</IntDir><IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)build\port-x64\obj\cfg\</IntDir>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental><LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
-    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</GenerateManifest><GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GenerateManifest>
-    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</EmbedManifest><EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</EmbedManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\bin\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</GenerateManifest>
+    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</EmbedManifest>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">o:\arma2_expansion\bin\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Midl>
-      <TypeLibraryName>.\..\Config/cfg.tlb</TypeLibraryName>
-    </Midl>
-    <ClCompile>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessToFile>true</PreprocessToFile>
-      <PreprocessSuppressLineNumbers>true</PreprocessSuppressLineNumbers>
-      <StringPooling>true</StringPooling>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <PrecompiledHeaderOutputFile>.\..\Config/cfg.pch</PrecompiledHeaderOutputFile>
-      <AssemblerListingLocation>.\..\Config/</AssemblerListingLocation>
-      <ObjectFileName>.\..\Config/</ObjectFileName>
-      <ProgramDataBaseFileName>.\..\Config/</ProgramDataBaseFileName>
-      <WarningLevel>Level3</WarningLevel>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
-    </ClCompile>
-    <ResourceCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <Culture>0x0409</Culture>
-    </ResourceCompile>
-    <Link>
-      <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>.\..\Config/cfg.exe</OutputFile>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
-      <SubSystem>Console</SubSystem>
-    </Link>
-  </ItemDefinitionGroup><ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
       <TypeLibraryName>.\..\Config/cfg.tlb</TypeLibraryName>
     </Midl>
@@ -151,418 +109,380 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CustomBuild Include="Bin\cfgCoreData.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgFont.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgFormations.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgInventory.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgKB.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgLight.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgMaterials.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgMoves.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgSkill.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgUI.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgVehicles.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgVoice.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgWeapons.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgWorlds.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgXbox.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\civiliannames.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\commonDefs.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\czechnames.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\englishnames.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\resource.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\rscCommon.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\rscDialog.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\rscIGUI.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\rscMenu.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\rscMP.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\rscScreen.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\rscWizard.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\rscXbox.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\russiannames.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\sp_sentences.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\userActionGroups.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\wounds.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\woundsFace.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="..\lib\dikCodes.h">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="..\lib\languages.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="manActions.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="..\lib\UI\resincl.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\cfgVideoOptions.hpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
@@ -571,11 +491,10 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Bin\config.cpp">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
-</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copying %(FullPath)</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Xbox 360'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"
 </Command>
@@ -584,54 +503,54 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Bin\marker.cpp">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Bin\postfix.cpp">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\prefix.cpp">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Bin\intel.cpp">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Bin\unit.cpp">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="Bin\vehicle.cpp">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Bin\script.cpp">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Bin\item.cpp">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command><Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message><Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(FullPath)</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs><Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copy "%(FullPath)"  "$(OutDir)%(Filename)%(Extension)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(FullPath)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)%(Extension);%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

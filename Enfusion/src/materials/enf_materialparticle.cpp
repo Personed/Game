@@ -685,7 +685,7 @@ MCLASS_PASS(MatParticleSprite)
 	SetInstanceData(mesh->m_pUserData);
 
 	//render
-	uint instanceoffs = static_cast<uint>(reinterpret_cast<uint64>(mesh->m_pVB[1]));
+	uint instanceoffs = (uint) mesh->m_pVB[1];
 
 	g_pRender->SetStreamSource(0, m_pSpriteVB, 0, sizeof(uint));
 	g_pRender->SetStreamSource(1, mesh->m_pVB[0], instanceoffs, mesh->m_iStride[0]);
@@ -986,7 +986,7 @@ MCLASS_PASS(MatParticleStreak)
 	SetInstanceData(mesh->m_pUserData);
 
 	//render
-	uint instanceoffs = static_cast<uint>(reinterpret_cast<uint64>(mesh->m_pVB[1]));
+	uint instanceoffs = (uint) mesh->m_pVB[1];
 
 	g_pRender->SetStreamSource(0, m_pStreakVB, 0, sizeof(uint));
 	g_pRender->SetStreamSource(1, mesh->m_pVB[0], instanceoffs, mesh->m_iStride[0]);

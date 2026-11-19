@@ -1461,7 +1461,6 @@ public:
   {
     return _loadedSections ? _sections[i] : shape->_face._sections[i];
   }
-  __forceinline bool HasChangedSections() const {return _loadedSections;}
   // load the context if needed
   __forceinline PolyProperties &SetSection(const Shape *shape, int i)
   {
@@ -3131,7 +3130,6 @@ private:
 
   /// list of all shapes which have geometry loaded, but it can be released
   FramedMemoryControlledList<Shape> _geometryLoaded;
-
 
   FramedMemoryControlledList<LODShape> _lodShapeCache;
     

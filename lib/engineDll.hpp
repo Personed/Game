@@ -24,12 +24,7 @@ extern bool HideCursor;
 void EnableDesktopCursor(bool enable);
 
 // import configuration dependent functions
-#if !defined(_WIN64)
   Engine *CreateEngineD3D9(CreateEnginePars &pars);
-#endif
-#if defined(_WIN64)
-  Engine *CreateEngineD3D11(CreateEnginePars &pars);
-#endif
   #if _ENABLE_DX10
     Engine *CreateEngineD3DT(CreateEnginePars &pars);
   #endif

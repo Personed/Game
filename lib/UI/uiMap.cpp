@@ -9731,9 +9731,9 @@ void CItemBase::DrawTooltip(UIViewport *vp, float x, float y)
   }
 }
 
-intptr_t CItemBase::GetTooltipArea(float x, float y)
+int CItemBase::GetTooltipArea(float x, float y)
 {
-  return reinterpret_cast<intptr_t>(GetItemInfo(x, y)._item);
+  return (int)(GetItemInfo(x, y)._item);
 }
 
 bool IsInventoryOpened()

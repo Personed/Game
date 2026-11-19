@@ -4443,7 +4443,7 @@ int dpnid = killerUnit->GetPerson()->GetRemotePlayer();
 const PlayerIdentity *identity = GetNetworkManager().FindIdentity(dpnid);
 RptF
 (
-  "*** Player kill: %s (%d:%" OID_FORMAT") killed by %s (%d:%" OID_FORMAT") - player %d, identity %s",
+  "*** Player kill: %s (%d:%"OID_FORMAT") killed by %s (%d:%"OID_FORMAT") - player %d, identity %s",
   (const char *)_brain->GetPerson()->GetPersonName(), _brain->GetPerson()->GetNetworkId().creator.CreatorInt(), _brain->GetPerson()->GetNetworkId().id,
   (const char *)killerUnit->GetPerson()->GetPersonName(), killerUnit->GetPerson()->GetNetworkId().creator.CreatorInt(), killerUnit->GetPerson()->GetNetworkId().id,
   dpnid, identity ? (const char *)identity->name : "NOT FOUND"
@@ -6355,7 +6355,7 @@ bool Man::CreatePotentialStateFreeFall(ManVisualState & moveTrans, Vector3& fric
   return true;
 }
 
-const float SlideSlopeThreshold = 2.0f; //atan(sqrt(2))=cca=55ï¿½
+const float SlideSlopeThreshold = 2.0f; //atan(sqrt(2))=cca=55°
 inline float SlideSpeedWanted(float gradFwd, float gradAside, float forceStand)
 {
   if (forceStand) return 0;
@@ -6368,7 +6368,7 @@ inline float SlideSpeedWanted(float gradFwd, float gradAside, float forceStand)
   else
     return slope - 2*SlideSlopeThreshold; //brake is more efficient
 }
-const float StandSlopeThreshold = 0.6f; //atan(sqrt(2))=cca=38ï¿½
+const float StandSlopeThreshold = 0.6f; //atan(sqrt(2))=cca=38°
 inline bool ShouldStand(float gradFwd, float gradAside, bool forceStand)
 {
   //if (forceStand) return true; //NO! unable to prone on the road after such setting!
@@ -17648,7 +17648,7 @@ inline bool IsLaunchDown(int pos)
   return pos==ManPosWeapon;
 }
 
-bool Man::IsDown(const VisualState &vs) const
+inline bool Man::IsDown(const VisualState &vs) const
 {
   return ::IsDown(GetActUpDegree(vs));
 }
@@ -24113,5 +24113,4 @@ ActionContextBase * ActionContextBase::CreateObject(ParamArchive &ar)
   ErrF("Unknown action context type: %s", cc_cast(type));
   return NULL;
 }
-
 

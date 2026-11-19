@@ -1,4 +1,4 @@
-#include "../wpch.hpp"
+﻿#include "../wpch.hpp"
 #include "networkImpl.hpp"
 #include "../global.hpp"
 //#include "strIncl.hpp"
@@ -337,7 +337,7 @@ void NetworkObjectInfo::NullPlayerObjectInfo(PlayerIndex player, int pid)
 
 RString NetworkObjectInfo::GetDebugName() const
 {
-  if (object.IsNull()) return Format("id=%d:%" OID_FORMAT,id.creator,id.id);
+  if (object.IsNull()) return Format("id=%d:%"OID_FORMAT,id.creator,id.id);
   return object->GetDebugName();
 }
 
@@ -789,7 +789,6 @@ void NetworkServer::BattlEye::PlayerGUIDReceived(int player)
 }
 #endif
 
-#if _ENABLE_STEAM_OWNERSHIP
 void NetworkServer::BattlEye::PlayerGUIDIsValid(int player, const CSteamID &ownerId)
 {
   if (_callbacks._playerGUIDIsValid)
@@ -798,11 +797,6 @@ void NetworkServer::BattlEye::PlayerGUIDIsValid(int player, const CSteamID &owne
     (*_callbacks._playerGUIDIsValid)(player, &ownerSteamId, sizeof(ownerSteamId));
   }
 };
-#else
-void NetworkServer::BattlEye::PlayerGUIDIsValid(int player)
-{
-}
-#endif
 
 bool NetworkServer::BattlEye::UpdatePositionCallback(int player, const char *netId, float x, float y, float z,
   float dirX, float dirY, float dirZ, float upX, float upY, float upZ, float asideX, float asideY, float asideZ)
@@ -4782,7 +4776,7 @@ void NetworkServer::OnSimulate()
       BString<1024> text;
       sprintf
       (
-        text, "%s %d:%" OID_FORMAT" - owner %s (%x)",
+        text, "%s %d:%"OID_FORMAT" - owner %s (%x)",
         (const char *)typeName, id.creator.CreatorInt(), id.id,
         (const char *)name, owner
       );
@@ -6230,7 +6224,7 @@ void NetworkServer::RptFObjectNotFound(const NetworkId &id, const char *msg, int
   if (_serverState==NSSLoadingGame || _serverState==NSSPlaying)
   {
 //    RString fromTxt = from>=0 ? Format(" from=%d",from) : RString();
-//    RptF("Server: Object %d:%" OID_FORMAT" not found (message %s)%s", id.creator.CreatorInt(), id.id, msg, cc_cast(fromTxt));
+//    RptF("Server: Object %d:%"OID_FORMAT" not found (message %s)%s", id.creator.CreatorInt(), id.id, msg, cc_cast(fromTxt));
     RptFObjectIdJournal(id);
 #if DIAG_MP_OBJECT_LIFE
     DiagObjectInfoAskMessage ask;
@@ -7044,7 +7038,7 @@ sendToAllPlayers:
         NetworkId playerPerson = GetPlayerPerson(from);
         if (playerPerson!=msgAction->_person)
         {
-          RptF("AskForPlayerAction ignored for player %d, person different %d:%" OID_FORMAT "!=%d:%" OID_FORMAT,from, playerPerson.creator.CreatorInt(),playerPerson.id,msgAction->_person.creator.CreatorInt(),msgAction->_person.id);
+          RptF("AskForPlayerAction ignored for player %d, person different %d:%"OID_FORMAT "!=%d:%"OID_FORMAT,from, playerPerson.creator.CreatorInt(),playerPerson.id,msgAction->_person.creator.CreatorInt(),msgAction->_person.id);
         }
 
       }
@@ -7255,7 +7249,7 @@ sendToAllPlayers:
         GObjLifeJournal.Add(id, Format("(%.3f) Delete: from=%d",Glob.time.toFloat(), from));
 #endif
         OnObjectDestroy(id, from);
-        // RptF("Server: Object %d:%" OID_FORMAT" deleted", id.creator.CreatorInt(), id.id);
+        // RptF("Server: Object %d:%"OID_FORMAT" deleted", id.creator.CreatorInt(), id.id);
       }
       break;
     case NMTDeletedObject:
@@ -7313,7 +7307,7 @@ sendToAllPlayers:
         CopyMsg(copy, msg, format);
         NetworkObjectInfo *oInfo = OnObjectCreate(id, from, copy, type);
         if (!oInfo) break;
-// RptF("Server: Object %d:%" OID_FORMAT" created, type %s", id.creator.CreatorInt(), id.id, cc_cast(GetMsgTypeName(type)));
+// RptF("Server: Object %d:%"OID_FORMAT" created, type %s", id.creator.CreatorInt(), id.id, cc_cast(GetMsgTypeName(type)));
 
         auto sendToClient = [this,id,oInfo,from] (int i)
         {
@@ -7357,7 +7351,7 @@ sendToAllPlayers:
           if (dpid==BOT_CLIENT) continue;
           if (DebugMeBoy(oInfo->id))
           {
-            LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} Create message for %d dist %g", oInfo->id.creator.CreatorInt(), oInfo->id.id, dpid, maxDist);
+            LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} Create message for %d dist %g", oInfo->id.creator.CreatorInt(), oInfo->id.id, dpid, maxDist);
           }
           if (maxDist>=FLT_MAX) sendToClient(i);
         }
@@ -7506,7 +7500,7 @@ sendToAllPlayers:
             {
               if (DebugMeBoy(id))
               {
-                LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} init update sent to %d", id.creator.CreatorInt(), id.id, pInfo.dpid);
+                LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} init update sent to %d", id.creator.CreatorInt(), id.id, pInfo.dpid);
               }
               UpdateObject(&pInfo, oInfo, ctx.GetClass(), NMFGuaranteed);
             }
@@ -8543,7 +8537,7 @@ sendToAllPlayers:
         {
           OwnerChangedMessage ackMsg;
           ackMsg.TransferMsg(ctx);
-          LogF("Owner of %d:%" OID_FORMAT" changed", ackMsg._creator, ackMsg._id);
+          LogF("Owner of %d:%"OID_FORMAT" changed", ackMsg._creator, ackMsg._id);
           NetworkId id(ackMsg._creator, ackMsg._id);
           NetworkObjectInfo *oInfo = GetObjectInfo(id);
           if (!oInfo)
@@ -8640,7 +8634,7 @@ void NetworkServer::ChangeOwnerFinal( NetworkObjectInfo * oInfo, int from, Netwo
 #endif
     if (DebugMeBoy(id))
     {
-      LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} Owner changed from %d to %d", oInfo->id.creator.CreatorInt(), oInfo->id.id, oInfo->owner, oInfo->pendingOwner);
+      LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} Owner changed from %d to %d", oInfo->id.creator.CreatorInt(), oInfo->id.id, oInfo->owner, oInfo->pendingOwner);
     }
 
     oInfo->owner = oInfo->pendingOwner;
@@ -8648,7 +8642,7 @@ void NetworkServer::ChangeOwnerFinal( NetworkObjectInfo * oInfo, int from, Netwo
   }
   else
   {
-    RptF("Server: OwnerChanged of %d:%" OID_FORMAT" arrived from non owner %d", id.creator.CreatorInt(), id.id, from);
+    RptF("Server: OwnerChanged of %d:%"OID_FORMAT" arrived from non owner %d", id.creator.CreatorInt(), id.id, from);
   }
 }
 
@@ -8804,7 +8798,7 @@ int NetworkServer::FindOwner(const NetworkId &id)
     return dInfo->owner;
   }
 
-  LogF("Owner of %d:%" OID_FORMAT" not known - searching player",id.creator,id.id);
+  LogF("Owner of %d:%"OID_FORMAT" not known - searching player",id.creator,id.id);
   for (int i=0; i<_players.Size(); i++)
   {
     NetworkPlayerInfo &pInfo = *_players[i];
@@ -9741,7 +9735,7 @@ NetworkObjectInfo *NetworkServer::OnObjectUpdate(NetworkId &id, int from, Networ
     }
     if (!allowNonOwner)
     {
-      RptF("Server: Update of object %d:%" OID_FORMAT" arrived from nonowner", id.creator.CreatorInt(), id.id);
+      RptF("Server: Update of object %d:%"OID_FORMAT" arrived from nonowner", id.creator.CreatorInt(), id.id);
       return NULL;
     }
   }
@@ -9749,7 +9743,7 @@ NetworkObjectInfo *NetworkServer::OnObjectUpdate(NetworkId &id, int from, Networ
   bool rejectedFromClient = from!=BOT_CLIENT && oInfo->rejected[cls];
   if (rejectedFromClient)
   {
-    LogF("Received rejected %d for %" OID_FORMAT"",cls,oInfo->id.id);
+    LogF("Received rejected %d for %"OID_FORMAT"",cls,oInfo->id.id);
   }
 
   NetworkCurrentInfo &info = rejectedFromClient ? oInfo->currentRejected[cls] : oInfo->currentUpdate[cls];
@@ -9765,7 +9759,7 @@ NetworkObjectInfo *NetworkServer::OnObjectUpdate(NetworkId &id, int from, Networ
   {
     if (info.from!=from)
     {
-      LogF("Discarded different owner message for %" OID_FORMAT"(%d) because of time. %d!=%d",oInfo->id.id,rejectedFromClient,info.from,from);
+      LogF("Discarded different owner message for %"OID_FORMAT"(%d) because of time. %d!=%d",oInfo->id.id,rejectedFromClient,info.from,from);
     }
 
     // do not update
@@ -9776,12 +9770,12 @@ NetworkObjectInfo *NetworkServer::OnObjectUpdate(NetworkId &id, int from, Networ
 
   if (info.message && info.message->time > msg->time)
   {
-    LogF("Passed old time for %" OID_FORMAT"(%d). %d!=%d",oInfo->id.id,rejectedFromClient,info.from,from);
+    LogF("Passed old time for %"OID_FORMAT"(%d). %d!=%d",oInfo->id.id,rejectedFromClient,info.from,from);
   }
   
   if (info.from!=from && info.message.NotNull())
   {
-    LogF("Changing from %d(%d) for %" OID_FORMAT" %d to %d",cls,rejectedFromClient,oInfo->id.id,info.from,from);
+    LogF("Changing from %d(%d) for %"OID_FORMAT" %d to %d",cls,rejectedFromClient,oInfo->id.id,info.from,from);
   }
 
 
@@ -9800,7 +9794,7 @@ NetworkObjectInfo *NetworkServer::OnObjectUpdate(NetworkId &id, int from, Networ
   }
 
   if (DiagLevel >= 4)
-    DiagLogF("Server: object %d:%" OID_FORMAT" updated", id.creator.CreatorInt(), id.id);
+    DiagLogF("Server: object %d:%"OID_FORMAT" updated", id.creator.CreatorInt(), id.id);
 
   return oInfo;
 }
@@ -9863,7 +9857,7 @@ void NetworkServer::OnRejectChanged(const NetworkId &id, NetworkMessageClass cls
   NetworkObjectInfo *oInfo = GetObjectInfo(id);
   if (oInfo)
   {
-    LogF("Reject update %d %d for %" OID_FORMAT" to BOT_CLIENT",reject,cls,id.id);
+    LogF("Reject update %d %d for %"OID_FORMAT" to BOT_CLIENT",reject,cls,id.id);
     oInfo->rejected[cls] = reject;
     // the update from client ("currentRejected") was accepted by a bot-client, use it as a main object state
     if (!reject)
@@ -9889,7 +9883,7 @@ int NetworkServer::PerformObjectDestroy(const NetworkId &id)
     owner = info->owner;
 
     RemoveInitObjectDeleted(id);
-    //LogF("Performing Object Destroy for (%d:%" OID_FORMAT")", _objects[i]->id.creator.CreatorInt(), _objects[i]->id.id);
+    //LogF("Performing Object Destroy for (%d:%"OID_FORMAT")", _objects[i]->id.creator.CreatorInt(), _objects[i]->id.id);
     for (int i=0; i<_players.Size(); i++)
     {
       NetworkPlayerInfo &pInfo = *_players[i];
@@ -9959,7 +9953,7 @@ int NetworkServer::UpdateObject(NetworkPlayerInfo *pInfo, NetworkObjectInfo *oIn
 
   if (DebugMeBoy(oInfo->id))
   {
-    LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} UpdateObject to %d", oInfo->id.creator.CreatorInt(), oInfo->id.id, to);
+    LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} UpdateObject to %d", oInfo->id.creator.CreatorInt(), oInfo->id.id, to);
   }
 
 
@@ -10556,7 +10550,7 @@ void NetworkServer::ChangeOwner(const NetworkId &id, int from, int to)
 
   if (DebugMeBoy(id))
   {
-    LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} ChangeOwner from %d to %d", oInfo->id.creator.CreatorInt(), oInfo->id.id, from, to);
+    LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} ChangeOwner from %d to %d", oInfo->id.creator.CreatorInt(), oInfo->id.id, from, to);
 
   }
 }
@@ -11402,7 +11396,7 @@ void NetworkServer::OnClientStateChanged(int dpnid, NetworkClientState state)
           SendCreateMessage(dpnid,*info, poInfo);
           poInfo->updating = true;
           pInfo->markAsUpdating(poInfo);
-          //RptF("  %s: %d:%" OID_FORMAT"", cc_cast(GetMsgTypeName(type)), info->id.creator.CreatorInt(), info->id.id);
+          //RptF("  %s: %d:%"OID_FORMAT"", cc_cast(GetMsgTypeName(type)), info->id.creator.CreatorInt(), info->id.id);
         });
 
         //RptF("*** World state sent ***");
@@ -12021,7 +12015,7 @@ void NetworkServer::SendCreateMessage( int dpnid, NetworkObjectInfo &info, Netwo
 {
   if (DebugMeBoy(info.id))
   {
-    LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} Create for %d", info.id.creator.CreatorInt(), info.id.id, dpnid);
+    LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} Create for %d", info.id.creator.CreatorInt(), info.id.id, dpnid);
   }
   SendMsg(dpnid, info.create.message, info.create.type, NMFGuaranteed, poInfo);
 }
@@ -12191,7 +12185,7 @@ void NetworkServer::CreateObjectsList(AutoArray<UpdateObjectInfo, MemAllocSA> &o
     {
       if (DebugMeBoy(oInfo.id))
       {
-        LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} Updating for %d state %d", oInfo.id.creator.CreatorInt(), oInfo.id.id, pInfo.dpid, needsUpdate);
+        LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} Updating for %d state %d", oInfo.id.creator.CreatorInt(), oInfo.id.id, pInfo.dpid, needsUpdate);
       }
       if (needsUpdate)
       {
@@ -12251,7 +12245,7 @@ void NetworkServer::CreateObjectsList(AutoArray<UpdateObjectInfo, MemAllocSA> &o
         errorNoCoef = info.message->CalculateErrorInitial();
         error = errCoef * errorNoCoef;
 #if LOG_ERRORS
-        DiagLogF("Initial error for %s %d:%" OID_FORMAT" to %d", NetworkMessageTypeNames[info.type], oInfo.id.creator.CreatorInt(), oInfo.id.id, pInfo.dpid);
+        DiagLogF("Initial error for %s %d:%"OID_FORMAT" to %d", NetworkMessageTypeNames[info.type], oInfo.id.creator.CreatorInt(), oInfo.id.id, pInfo.dpid);
         DiagLogF("  - error %.3f * %.3f = %.3f", errCoef, errorNoCoef, error);
 #endif
       }
@@ -12284,7 +12278,7 @@ void NetworkServer::CreateObjectsList(AutoArray<UpdateObjectInfo, MemAllocSA> &o
         {
           DiagLogF
           (
-            "Object %s %d:%" OID_FORMAT" - update to %d",
+            "Object %s %d:%"OID_FORMAT" - update to %d",
             NetworkMessageTypeNames[info.type], oInfo.id.creator.CreatorInt(), oInfo.id.id,
             pInfo.dpid
           );
@@ -12311,7 +12305,7 @@ void NetworkServer::CreateObjectsList(AutoArray<UpdateObjectInfo, MemAllocSA> &o
       if (DebugMeBoy(oInfo.id) && error>0)
       {
         float msgTime = update.lastSentMsg ? update.lastSentMsg->time.toFloat() : 0; 
-        LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"}, Error: %.2f, lastMsgTime: %.3f", oInfo.id.creator.CreatorInt(), oInfo.id.id, error, msgTime);
+        LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"}, Error: %.2f, lastMsgTime: %.3f", oInfo.id.creator.CreatorInt(), oInfo.id.id, error, msgTime);
       }
 #endif
 
@@ -12961,7 +12955,7 @@ void NetworkServer::SendMessages()
           float times[NMCUpdateN];
           NetworkPlayerObjectInfo *poInfo = oInfo->GetPlayerObjectInfo(playerIndex,pInfo.dpid);
           for (int j=0; j<NMCUpdateN; j++) times[j] = poInfo->updates[j].lastSentMsg ? poInfo->updates[j].lastSentMsg->time.toFloat() : 0;
-          LogF("*** DebugMeBoy: {%d:%" OID_FORMAT"} has error %.2f, position in _objects = %d, lastMsgSent: %.02f, %.02f, %.02f", 
+          LogF("*** DebugMeBoy: {%d:%"OID_FORMAT"} has error %.2f, position in _objects = %d, lastMsgSent: %.02f, %.02f, %.02f", 
             oInfo->id.creator.CreatorInt(), oInfo->id.id, error, i, times[NMCUpdateGeneric], times[NMCUpdatePosition], times[NMCUpdateDamage]);
         }
 #endif
@@ -12994,7 +12988,7 @@ void NetworkServer::SendMessages()
         {
           LogF
           (
-            "  Server to %s: Object %d:%" OID_FORMAT" updated - size %d bytes, critical",
+            "  Server to %s: Object %d:%"OID_FORMAT" updated - size %d bytes, critical",
             (const char *)pInfo.name, info.oInfo->id.creator.CreatorInt(), info.oInfo->id.id, bytes
           );
         }

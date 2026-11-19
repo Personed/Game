@@ -4797,7 +4797,7 @@ void ParticleSystem::RenderBatch(Pipeline* pipeline, uint from, uint to, uint ty
 			}
 			enf_assert(endptr - ptr == 0);
 			
-			mi->m_pVB[1] = reinterpret_cast<VertexBuffer*>(static_cast<uint64>(m_pNewSpriteVB[m_iVB]->EndAlloc()));
+			mi->m_pVB[1] = (VertexBuffer*) m_pNewSpriteVB[m_iVB]->EndAlloc();
 
 			mi->m_pVB[0] = m_pNewSpriteVB[m_iVB];
 			mi->m_iStride[0] = sizeof(SpriteVert);
@@ -4818,7 +4818,7 @@ void ParticleSystem::RenderBatch(Pipeline* pipeline, uint from, uint to, uint ty
 			}
 			enf_assert(endptr - ptr == 0);
 
-			mi->m_pVB[1] = reinterpret_cast<VertexBuffer*>(static_cast<uint64>(m_pNewStreakVB[m_iVB]->EndAlloc()));
+			mi->m_pVB[1] = (VertexBuffer*) m_pNewStreakVB[m_iVB]->EndAlloc();
 
 			mi->m_iFirstVertex = 0;
 			mi->m_pVB[0] = m_pNewStreakVB[m_iVB];

@@ -33,7 +33,7 @@ namespace MultiThread
     if (SMiniMutex==0)
     {
       HANDLE evObj=CreateMutex(0,FALSE,0);
-      if (InterlockedCompareExchangePointer((PVOID volatile *)&SMiniMutex,evObj,NULL)!=NULL)
+      if (MTCompareExchange((long *)&SMiniMutex,(long)evObj,0)!=0)
       {
         CloseHandle(evObj); //somebody was faster, okay, drop the object
       }
@@ -117,8 +117,10 @@ namespace MultiThread
       {
         HANDLE blocker=(void *)CreateEvent(NULL,FALSE,TRUE,NULL);  //create the blocker
         //we created signaled blocker to prevent deadlock on first request
+        long lblk=(long)blocker;
+        long *tblk=(long *)&_blocker;
         //try to save new blocker
-        if (InterlockedCompareExchangePointer((PVOID volatile *)&_blocker,blocker,NULL)!=NULL)
+        if (MTCompareExchange(tblk,lblk,0)!=0)
           CloseHandle(blocker); //save failed, somebody already created the blocker - destroy it
       }   
 

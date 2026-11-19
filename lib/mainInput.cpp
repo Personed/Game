@@ -461,10 +461,8 @@ float Input::FreeTrackAxisThresholdLow = 0.2;
 const int Input::_defFilterMouse = 30;
 
 Input::Input()
-#if _ENABLE_STEAM
   : _callbackServerChangeRequested(this, &Input::OnServerChangeRequested),
     _callbackPersonaStateChanged(this, &Input::OnPersonaStateChanged)
-#endif
 {
 #if _ENABLE_CHEATS
   cheat12enabled=true;
@@ -4435,15 +4433,6 @@ void Config::CPUCountChanged()
   #else
   // even with single core we want emulated threading, so that we can use predication
   _renderThread = GetCPUCount()>1 ? ThreadingReal : ThreadingEmulated;
-  #endif
-  #if defined(_WIN64)
-  // The DX11 client crashes inside the AMD driver's packet dispatch (C0000005 at
-  // atidxx64) whenever the render thread runs the frame; the emulated path is
-  // stable in E2E 2/2. -dx11mt opts the render thread back in for profiling.
-  if (strstr(GetCommandLineA(), "-dx11mt"))
-    _renderThread = GetCPUCount()>1 ? ThreadingReal : ThreadingEmulated;
-  else
-    _renderThread = ThreadingEmulated;
   #endif
 }
 

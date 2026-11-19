@@ -14,8 +14,8 @@ void ForceCPUCount(int count)
   // therefore we set affinity mask so that no more CPUs are used
   // in Retail builds we use it only to override CPU count detection to determine optimum threading patterns,
   // but we still allow the system to run more threads when possible
-  DWORD_PTR processAffinityMask = 0;
-  DWORD_PTR systemAffinityMask = 0;
+  DWORD processAffinityMask = 0;
+  DWORD systemAffinityMask = 0;
   if (GetProcessAffinityMask(GetCurrentProcess(), &processAffinityMask, &systemAffinityMask))
   {
     int left = count;
@@ -43,8 +43,8 @@ int GetCPUCount()
   return 1;
 #elif defined _WIN32
   int count = 0;
-  DWORD_PTR processAffinityMask = 0;
-  DWORD_PTR systemAffinityMask = 0;
+  DWORD processAffinityMask = 0;
+  DWORD systemAffinityMask = 0;
   if (GetProcessAffinityMask(GetCurrentProcess(), &processAffinityMask, &systemAffinityMask))
   {
     while (processAffinityMask != 0)

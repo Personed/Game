@@ -133,7 +133,7 @@ void RemoveDirectoryRecursive(const char *path)
 	char subpath[1024];
 	sprintf(subpath,"%s\\*",path);
 	_finddata_t data;
-	intptr_t h = _findfirst(subpath,&data);
+	long h = _findfirst(subpath,&data);
 	if (h!=-1)
 	{
 		do
@@ -812,7 +812,7 @@ int consoleMain(int argc, const char *argv[])
 			strcat(path,ext1);
 
 			_finddata_t info;
-			intptr_t h = _findfirst(path, &info);
+			long h = _findfirst(path, &info);
 			if (h != -1)
 			{
 				do
@@ -917,7 +917,7 @@ int consoleMain(int argc, const char *argv[])
 
 
 		_finddata_t info;
-		intptr_t h = _findfirst(path,&info);
+		long h = _findfirst(path,&info);
 		if (h!=-1)
 		{
 			do 
@@ -953,7 +953,7 @@ int consoleMain(int argc, const char *argv[])
 		strcpy(GetFilenameExt(path),"*");
 
 		_finddata_t info;
-		intptr_t h = _findfirst(path, &info);
+		long h = _findfirst(path, &info);
 		if (h != -1)
 		{
 			do 

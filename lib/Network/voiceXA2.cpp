@@ -1383,7 +1383,7 @@ void WaveCapture::Stop()
   }
 }
 
-void CALLBACK WaveCapture::waveInProc(HWAVEIN hwi, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
+void CALLBACK WaveCapture::waveInProc(HWAVEIN hwi, UINT uMsg, DWORD dwInstance, DWORD dwParam1, DWORD dwParam2)
 {
   switch(uMsg)
   {
@@ -1392,8 +1392,8 @@ void CALLBACK WaveCapture::waveInProc(HWAVEIN hwi, UINT uMsg, DWORD_PTR dwInstan
 
   case WIM_DATA:
     {
-      WaveCapture *ptrWWC = reinterpret_cast<WaveCapture *>(dwInstance);
-      ptrWWC->ProcessData(reinterpret_cast<WAVEHDR *>(dwParam1));
+      WaveCapture *ptrWWC = (WaveCapture *) dwInstance;
+      ptrWWC->ProcessData((WAVEHDR *) dwParam1);
     }
     break;
 

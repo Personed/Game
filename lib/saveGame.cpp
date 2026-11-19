@@ -31,7 +31,7 @@ static void FlushReadHandles(const char *dir)
   sprintf(buffer, "%s\\*.*", dir);
 
   _finddata_t info;
-  intptr_t h = _findfirst(buffer, &info);
+  long h = _findfirst(buffer, &info);
   if (h != -1)
   {
     do
@@ -3139,7 +3139,7 @@ bool DeleteSave(RString dir, RString name)
   // remove all files
   bool ok = true;
   _finddata_t info;
-  intptr_t h = _findfirst(dir + RString("*.*"), &info); // no save on d: drive
+  long h = _findfirst(dir + RString("*.*"), &info); // no save on d: drive
   if (h != -1)
   {
     do

@@ -15,8 +15,6 @@
 #ifndef _NETMESSAGE_H
 #define _NETMESSAGE_H
 
-#include <stdint.h>
-
 #define SAFE_HEAP_STAT
 
 //------------------------------------------------------------
@@ -318,11 +316,10 @@ public:
 
 extern unsigned netMessageToUnsigned (const RefD<NetMessage> &msg);
 
-extern uintptr_t netMessageAddressToUnsigned (const RefD<NetMessage> &msg);
+extern unsigned netMessageAddressToUnsigned (const RefD<NetMessage> &msg);
 
 #ifdef _WIN32
 template ImplicitMap<unsigned,RefD<NetMessage>,netMessageToUnsigned,true,MemAllocSafe>;
-template ImplicitMap<uintptr_t,RefD<NetMessage>,netMessageAddressToUnsigned,true,MemAllocSafe>;
 #endif
 
 template <>
@@ -393,7 +390,7 @@ protected:
     ImplicitMap<unsigned,RefD<NetMessage>,netMessageToUnsigned,true,MemAllocSafe> recycled;
 
     /// Container for used message instances.
-    ImplicitMap<uintptr_t,RefD<NetMessage>,netMessageAddressToUnsigned,true,MemAllocSafe> used;
+    ImplicitMap<unsigned,RefD<NetMessage>,netMessageAddressToUnsigned,true,MemAllocSafe> used;
 
     /// Counter for automatic garbage-collection of messages.
     int garbageCounter;

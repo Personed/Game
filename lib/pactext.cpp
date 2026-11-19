@@ -12,7 +12,6 @@
 #include <El/PerlinNoise/perlinNoise.hpp>
 #include <El/FileServer/fileServerMT.hpp>
 
-
 #include "jpgImport.hpp"
 #include "serializeBinExt.hpp"
 
@@ -1614,27 +1613,6 @@ int PacLevelMem::LoadPaaBin16( QIStream &in, void *mem, const PacPalette *pal ) 
         *data++=Convert1555To8888(*sdata++);
       } 
     }
-    else if (_sFormat == PacARGB4444)
-    {
-      // D3D11's common RGBA path uses 32-bit pixels. Expand PAA's packed
-      // A4R4G4B4 channels instead of rejecting every 4444 world texture.
-      while( --n>=0 )
-      {
-        const unsigned packed = *sdata++;
-        const unsigned a = ((packed >> 12) & 0x0f) * 17;
-        const unsigned r = ((packed >> 8) & 0x0f) * 17;
-        const unsigned g = ((packed >> 4) & 0x0f) * 17;
-        const unsigned b = (packed & 0x0f) * 17;
-        *data++ = (a << 24) | (r << 16) | (g << 8) | b;
-      }
-    }
-    else if (_sFormat == PacRGB565)
-    {
-      while( --n>=0 )
-      {
-        *data++ = Convert565To8888(*sdata++);
-      }
-    }
     else
     {
       Fail("Error: Unsupported source format");
@@ -2907,17 +2885,6 @@ bool TextureSourcePacBase::InitFromHeaderMng(PacLevelMem *mips, int maxMips)
 
 bool TextureSourcePacBase::Init(PacLevelMem *mips, int maxMips)
 {
-  static volatile LONG initDiagnostics = 0;
-  LONG initDiagnostic = InterlockedIncrement(&initDiagnostics);
-  if (initDiagnostic <= 128)
-    RptF("TextureSourcePacBase::Init: n=%d source=%p mips=%p max=%d name=%s",
-      (int)initDiagnostic,this,mips,maxMips,(const char *)_name);
-  if (!mips || maxMips <= 0 || maxMips > 16)
-  {
-    RptF("TextureSourcePacBase::Init: rejecting invalid mip array mips=%p max=%d name=%s",
-      mips,maxMips,(const char *)_name);
-    return false;
-  }
 #if _ENABLE_TEXTURE_HEADERS
   if (GUseTextureHeaders)
   {
@@ -2984,9 +2951,6 @@ bool TextureSourcePacBase::Init(PacLevelMem *mips, int maxMips)
   int mipI;
   for (mipI=0; mipI<maxMips; )
   {
-    if (initDiagnostic <= 128)
-      RptF("TextureSourcePacBase::Init: source=%p mip=%d record=%p offsets=%d,%d",
-        this,mipI,&mips[mipI],offsets[mipI],mipI+1<maxOffsets ? offsets[mipI+1] : -1);
     Assert(mipI < 12);
     PacLevelMem &mip=mips[mipI];
 
@@ -3401,11 +3365,6 @@ TextureSourceSimple::~TextureSourceSimple()
 
 bool TextureSourceSimple::Init(PacLevelMem *mips, int maxMips)
 {
-  static volatile LONG initDiagnostics = 0;
-  LONG initDiagnostic = InterlockedIncrement(&initDiagnostics);
-  if (initDiagnostic <= 64)
-    RptF("TextureSourceSimple::Init: n=%d source=%p mips=%p max=%d dims=%dx%d levels=%d format=%d",
-      (int)initDiagnostic,this,mips,maxMips,_w,_h,_nMipmaps,(int)_format);
   int i;
   if (maxMips>_nMipmaps) maxMips = _nMipmaps;
   for (i=0; i<maxMips; )

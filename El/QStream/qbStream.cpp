@@ -1054,7 +1054,7 @@ void QFBank::ScanPatchFiles(RString prefix, RString subdir)
 
   strcat(wildname,"*.*");
   _finddata_t find;
-  intptr_t hf = X_findfirst(wildname,&find);  // not used on Xbox
+  long hf = X_findfirst(wildname,&find);  // not used on Xbox
   if (hf!=-1)
   {
     do
@@ -1636,17 +1636,8 @@ bool QFBank::GetHash(Temp<char> &hash) const
 
 #ifdef _WIN32
 
-#include <stdint.h>
-
-struct FindBankInfoX64
-{
-  _finddata_t info;
-  intptr_t handle;
-};
-
 FindBank::FindBank()
 {
-  _info = NULL;
   _handle = -1;
 }
 
@@ -1657,43 +1648,41 @@ FindBank::~FindBank()
 
 bool FindBank::First(const char *path)
 {
-  Close();
   strcpy(_wild,path);
 #if _VBS2
   strcat(_wild,"\\*.*bo");
 #else
   strcat(_wild,"\\*.pbo");
 #endif
-  FindBankInfoX64 *info = new FindBankInfoX64;
-  _info = info;
-  info->handle = _findfirst(_wild, &info->info);
-  _handle = info->handle == -1 ? -1 : 0;
+  _info = new _finddata_t;
+  _handle = _findfirst(_wild, (_finddata_t *)_info);
   return _handle != -1;
 }
 
 bool FindBank::Next()
 {
   if (!_info || _handle==-1) return false;
-  FindBankInfoX64 *info = (FindBankInfoX64 *)_info;
-  return _findnext(info->handle, &info->info)==0;
+  return _findnext(_handle, (_finddata_t *)_info)==0;
 }
 
 void FindBank::Close()
 {
   if (_info)
   {
-    FindBankInfoX64 *info = (FindBankInfoX64 *)_info;
-    if (info->handle != -1) _findclose(info->handle);
-    delete info;
+    delete (_finddata_t *)_info;
     _info = NULL;
   }
-  _handle = -1;
+  if (_handle!=-1)
+  {
+    _findclose(_handle);
+    _handle = -1;
+  }
 }
 
 const char *FindBank::GetName() const
 {
   if (!_info) return "";
-  return ((FindBankInfoX64 *)_info)->info.name;
+  return ((_finddata_t *)_info)->name;
 }
 
 #else

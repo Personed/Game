@@ -78,8 +78,8 @@
 
 extern void unixPath ( char *path );
 
-#if _MSC_VER < 1900
 #define snprintf  _snprintf
+#if _MSC_VER < 13
 #define vsnprintf _vsnprintf
 #endif
 #define strDup    _strdup

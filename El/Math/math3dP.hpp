@@ -530,19 +530,6 @@ class Matrix3P
   __forceinline Coord &Set( int i, int j ) {return (&_aside)[j][i];}
   
   public:
-  __forceinline Matrix3P(const Matrix3P &other)
-  {
-    for (int j=0; j<3; ++j)
-      for (int i=0; i<3; ++i)
-        Set(i,j)=other.Get(i,j);
-  }
-  __forceinline Matrix3P &operator=(const Matrix3P &other)
-  {
-    for (int j=0; j<3; ++j)
-      for (int i=0; i<3; ++i)
-        Set(i,j)=other.Get(i,j);
-    return *this;
-  }
   // functions that load matrix with data
   // used internally in constructors, but may be useful also to other purpose
   void SetIdentity(); 

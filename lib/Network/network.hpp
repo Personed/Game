@@ -24,9 +24,6 @@
 #include <El/Stringtable/stringtable.hpp>
 #include "../vehicleAI.hpp"
 #include "../global.hpp"
-#if !_ENABLE_STEAM_MATCHMAKING
-class CSteamID;
-#endif
 #if _ENABLE_STEAM_MATCHMAKING
 # include <steamworks/steam_api.h>
 # include <steamworks/steam_gameserver.h>
@@ -462,9 +459,7 @@ public:
   //! Server time of estimated End of MP game
   virtual DWORD GetEstimatedEndServerTime() = 0;
   //! get battleye to know about Steam GUID validation
-#if _ENABLE_STEAM_OWNERSHIP
   virtual void PlayerGUIDIsValid(int player, const CSteamID &ownerId) = 0;
-#endif
 
 #if _ENABLE_CHEATS
   virtual void VoNSay(int dpnid, int channel, int frequency, int seconds) = 0;

@@ -2170,9 +2170,6 @@ gsi_bool gsXmlReadChildAsDateTimeElement    (GSXmlStreamReader stream, const cha
 	GSIXmlElement * searchValueElem = NULL;
 	int i=0;	
 	struct tm timePtr;
-#if !defined(_PS3) && !defined(_PSP) && !defined(_NITRO) && !defined(_REVOLUTION)
-	long timezoneValue = 0;
-#endif
 
 
 	// Do we have a valid value position already?
@@ -2226,8 +2223,7 @@ gsi_bool gsXmlReadChildAsDateTimeElement    (GSXmlStreamReader stream, const cha
 				*valueOut += timezone + (timePtr.tm_isdst == 1 ? 3600 : 0);
 #elif !defined(_NITRO) && !defined(_REVOLUTION)
 				// timezone returned by windows time.h function is difference FROM UTC (i.e UTC - PST = +8)
-				_get_timezone(&timezoneValue);
-				*valueOut -= timezoneValue + (timePtr.tm_isdst == 1 ? 3600 : 0);  // adjusts BACK to UTC time which is stored on server
+				*valueOut -= timezone + (timePtr.tm_isdst == 1 ? 3600 : 0);  // adjusts BACK to UTC time which is stored on server
 #endif
 				return gsi_true;
 			}

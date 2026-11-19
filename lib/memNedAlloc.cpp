@@ -1,6 +1,5 @@
 // global redefinition of new, delete operators
 #include "wpch.hpp"
-#include <intrin.h>
 
 #if defined _WIN32 && !defined MALLOC_WIN_TEST
 
@@ -195,7 +194,7 @@ static struct SelectMallocImpl
           {
             const char *valBeg = beg+strlen(malloc);
             strncpy(ctx.dllName,valBeg,end-valBeg);
-            if (end-valBeg<256) ctx.dllName[static_cast<int>(end-valBeg)]=0;
+            if (end-valBeg<256) ctx.dllName[end-valBeg]=0;
           }
         }
         return false;
@@ -487,7 +486,7 @@ static void MFSafetyBroken()
     {
       void *idcs = ids[i];
       // translate id to text representation
-      const char *txt = GMapFile.MapNameFromPhysical((uintptr_t)idcs);
+      const char *txt = GMapFile.MapNameFromPhysical((int)idcs);
       LogF("%32s: CS %6d",txt,count);
     }
     //sprintf(buf,"%32s: %6d\r\n",_data[i].name,_data[i].count/_factor);
@@ -501,12 +500,12 @@ static void MFSafetyBroken()
     // convert call stack to text 
     // report only big allocations
     BString<1024> callPair;
-    uintptr_t id1Start;
+    int id1Start;
     const char *name1 = GMapFile.MapNameFromPhysical(id._id1,&id1Start);
     sprintf(callPair,"%X:%s",id._id1,name1);
     if (id._id2)
     {
-      uintptr_t id2Start;
+      int id2Start;
       const char *name2 = GMapFile.MapNameFromPhysical(id._id2,&id2Start);
       strcat(callPair," <- ");
       sprintf(callPair+strlen(callPair),"%X:%s",id._id2,name2);
@@ -2502,32 +2501,9 @@ void *MemTableFunctions::New(size_t size, const char *file, int line)
   return ret;
 }
 
-static void ReportSuspiciousDelete(void *mem)
-{
-  // Low addresses are only suspicious in a 64-bit process.
-#if defined(_WIN64)
-  if ((size_t)mem >= 0x100000000ULL) return;
-  RptF("Suspicious allocator delete: pointer=%p caller=%p",mem,_ReturnAddress());
-
-  typedef USHORT (WINAPI *CaptureStackBackTraceFn)(ULONG,ULONG,PVOID *,PULONG);
-  HMODULE kernel = GetModuleHandleA("kernel32.dll");
-  CaptureStackBackTraceFn capture = kernel
-    ? (CaptureStackBackTraceFn)GetProcAddress(kernel,"RtlCaptureStackBackTrace")
-    : NULL;
-  if (!capture) return;
-  PVOID frames[12];
-  USHORT frameCount = capture(0,lenof(frames),frames,NULL);
-  for (USHORT i=0; i<frameCount; ++i)
-    RptF("  suspicious delete frame %u: %p",(unsigned)i,frames[i]);
-#else
-  (void)mem;
-#endif
-}
-
 void MemTableFunctions::Delete(void *mem)
 {
   if( !mem ) return;
-  ReportSuspiciousDelete(mem);
   #if MEM_CHECK
     mem=PrepareFree(mem);
   #endif
@@ -2537,7 +2513,6 @@ void MemTableFunctions::Delete(void *mem)
 void MemTableFunctions::Delete(void *mem, const char *file, int line)
 {
   if( !mem ) return;
-  ReportSuspiciousDelete(mem);
   #if MEM_CHECK
     mem=PrepareFree(mem);
   #endif
@@ -2704,11 +2679,7 @@ void NTAPI on_tls_callback(PVOID DllHandle, DWORD dwReason, PVOID Reserved)
 PIMAGE_TLS_CALLBACK p_thread_callback = on_tls_callback;
 #pragma data_seg(pop, old_seg)
 
-#if defined(_M_IX86)
-#pragma comment(linker, "/INCLUDE:__tls_used")
-#else
-#pragma comment(linker, "/INCLUDE:_tls_used")
-#endif
+#pragma comment(linker, "/INCLUDE:__tls_used") // 
 
 void MemTableFunctions::OnThreadExit()
 {

@@ -388,7 +388,6 @@ BattlEyeLicenceMsgBox::BattlEyeLicenceMsgBox(ControlsContainer *parent, RString 
 
 }
 
-#if _ENABLE_STEAM
 static void SteamOpenWebBrowser(const RString &url, bool relativeToAppPath)
 {
   RString filePath = url;
@@ -415,7 +414,6 @@ static void SteamOpenWebBrowser(const RString &url, bool relativeToAppPath)
   if (SteamFriends())
     SteamFriends()->ActivateGameOverlayToWebPage(cc_cast(filePath));
 }
-#endif
 
 void BattlEyeLicenceMsgBox::OnButtonClicked(int idc)
 {
@@ -439,7 +437,7 @@ void BattlEyeLicenceMsgBox::OnButtonClicked(int idc)
         SteamOpenWebBrowser(url, true);
     }
 #else
-    // Steam's overlay is unavailable in this build; keep the button inert.
+    ASSERT_RLS(false, "Missing UI for showing BattlEye licence.");
 #endif
 #endif
     break;
@@ -557,7 +555,7 @@ bool DeleteDirectoryStructure(const char *name, bool deleteDir =true)
   sprintf(buffer, "%s\\*.*", name);
 
   _finddata_t info;
-  intptr_t h = X_findfirst(buffer, &info);
+  long h = X_findfirst(buffer, &info);
   if (h != -1)
   {
     do
@@ -624,7 +622,7 @@ void CopyDirectoryStructure(const char *dst, const char *src)
   sprintf(buffer, "%s\\*.*", src);
 
   _finddata_t info;
-  intptr_t h = X_findfirst(buffer, &info);
+  long h = X_findfirst(buffer, &info);
   if (h != -1)
   {
     do
@@ -7542,7 +7540,6 @@ void DisplayMultiplayer::OnSimulateBackground(EntityAI *vehicle)
 
 void DisplayMultiplayer::OnSimulate(EntityAI *vehicle)
 {
-#if _ENABLE_STEAM
   if (!GInput.changeServer.IsEmpty())
   {
     if (!GetNetworkManager().IsServer() && !GetNetworkManager().IsClient())
@@ -7552,7 +7549,6 @@ void DisplayMultiplayer::OnSimulate(EntityAI *vehicle)
     }
     else GInput.changeServer = RString();
   }
-#endif
 
   OnSimulateBasic();
   Display::OnSimulate(vehicle);
@@ -7851,9 +7847,7 @@ void DisplayMultiplayer::UpdateFilter()
       text->SetText(Format("<%d", _filter.maxPing));
     else
       text->SetText(RString());
-#if _ENABLE_STEAM_MATCHMAKING
   _steamServerBrowser->SetFilter(_filter);
-#endif
 }
 
 void DisplayMultiplayer::SetProgress(float progress)
@@ -20840,7 +20834,7 @@ static RString CreateWebsiteButtonURLFile(RString url)
   RString path;
   for (int i=0; i<100000; i++)
   {
-    path = Format("%s%s %d.url", dir, DayZAppName, i);
+    path = Format("%s%s %d.url", dir, AppName, i);
     if (!QIFileFunctions::FileExists(path)) break;
   }
 
@@ -22279,7 +22273,7 @@ bool DisplayNewUser::CanDestroy()
     {
       _finddata_t info;
       RString dir = GetUserRootDir(name);
-      intptr_t check = X_findfirst(dir, &info);
+      long check = X_findfirst(dir, &info);
       if (check != -1)
       {
         // player already exist

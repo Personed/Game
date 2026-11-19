@@ -8,7 +8,6 @@
 //#include "precomp.h"
 #include "enf_main.h"
 #include "common/enf_serialize.h"
-#include <stdint.h>
 #include "common/enf_streams.h"
 #include "common/enf_mathlib.h"
 #include "common/enf_mathlib2D.h"
@@ -197,8 +196,7 @@ SerializedIdentifier SerializeOutputAdapter::AddObjectReference(uint type, const
 		{
 			index = m_TOC.Insert(TOCItem(type, ptr));
 			m_ItemsSet.Insert(TOCItemElement(ptr, index));
-			m_TOC[index].m_iIdentifier = index + 1;
-			return m_TOC[index].m_iIdentifier;
+			return (SerializedIdentifier)ptr;
 		}
 		else
 		{
@@ -214,11 +212,10 @@ SerializedIdentifier SerializeOutputAdapter::AddObjectReference(uint type, const
 					enf_assert(m_TOC[m_ItemsSet[index].Data].m_iType == type);
 				}
 			}
-			return m_TOC[m_ItemsSet[index].Data].m_iIdentifier;
 		}
 	}
 
-	return 0;
+	return (SerializedIdentifier)ptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -264,7 +261,7 @@ SerializedIdentifier SerializeOutputAdapter::BeginObject(uint type, CStr classna
 	//just for validation
 	WriteUInt32(BE_INT(type));
 #endif
-	return titem->m_iIdentifier;
+	return (SerializedIdentifier)ptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -423,7 +420,7 @@ void SerializeOutputAdapter::WritePointer(const void* value)
 	WriteValidator(DT_POINTER);
 #endif	
 	//FIXME: not correct. What about 64bit platforms?
-	WriteUInt32(static_cast<uint>(reinterpret_cast<uintptr_t>(value)));
+	WriteUInt32((uint)value);
 }
 
 //-----------------------------------------------------------------------------
@@ -595,7 +592,7 @@ void SerializeOutputAdapter::Close()
 
 		WriteUInt32(BE_INT(titem->m_iType));
 		WriteUInt32(titem->m_iClass);
-		WritePointer(reinterpret_cast<const void*>(static_cast<uintptr_t>(titem->m_iIdentifier)));
+		WritePointer(titem->m_pPointer);
 		WriteUInt32(titem->m_iOffset);
 		WriteUInt32(titem->m_iSize);
 	}
@@ -848,7 +845,7 @@ void* SerializeInputAdapter::ReadPointer()
 	ReadValidator(DT_POINTER); 
 #endif
 	//FIXME: not correct. What about 64bit platforms?
-	return reinterpret_cast<void*>(static_cast<uintptr_t>(ReadUInt32()));
+	return (void*)ReadUInt32();
 }
 
 //-----------------------------------------------------------------------------
@@ -1004,7 +1001,7 @@ void* SerializeInputAdapter::GetInstancePointer(const void* identifier)
 	if(ident == 0)
 		return NULL;
 
-	uint index = FindTOCItemIndex(reinterpret_cast<const void*>(static_cast<uintptr_t>(ident)));
+	uint index = FindTOCItemIndex((const void*)ident);
 
 	if(index == INDEX_NOT_FOUND)
 	{
@@ -1026,7 +1023,7 @@ void* SerializeInputAdapter::ReadReference(uint type)
 	if(ident == 0)
 		return NULL;
 
-	uint index = FindTOCItemIndex(reinterpret_cast<const void*>(static_cast<uintptr_t>(ident)));
+	uint index = FindTOCItemIndex((const void*)ident);
 
 	//strange, it's NOT in TOC???
 	if(index == INDEX_NOT_FOUND)
@@ -1150,7 +1147,6 @@ SerializeInputAdapter::SerializeInputAdapter(uint id, int ver, int subver, CInpu
 		m_TOC[n].m_iType = BE_INT(ReadUInt32());
 		m_TOC[n].m_iClass = ReadUInt32();
 		m_TOC[n].m_pPointer = ReadPointer();
-		m_TOC[n].m_iIdentifier = static_cast<SerializedIdentifier>(reinterpret_cast<uintptr_t>(m_TOC[n].m_pPointer));
 		m_TOC[n].m_iOffset = ReadUInt32();
 		if(m_TOC[n].m_iOffset >= size)
 			return;

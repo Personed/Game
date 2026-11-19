@@ -11835,7 +11835,7 @@ void World::Simulate(float deltaT, bool &enableSceneDraw, bool &enableHUDDraw)
   for (int i=0; i<debugPl.Size(); i++)
   {
     NetworkId nid = debugPl[i]->GetNetworkId();
-    plinfo = Format("%s (%d:%" OID_FORMAT") ", cc_cast(plinfo), nid.creator.CreatorInt(), nid.id);
+    plinfo = Format("%s (%d:%"OID_FORMAT") ", cc_cast(plinfo), nid.creator.CreatorInt(), nid.id);
   }
   DIAG_MESSAGE(1000, plinfo);
 #endif
@@ -17898,7 +17898,7 @@ _nearbyItemTransmittersChanged(false)
     _camTypeNewFactor = 1;
   }
   #if _PIII
-    Assert( (reinterpret_cast<uintptr_t>(this)&0xf)==0 );
+    Assert( ((int)this&0xf)==0 );
   #endif
 
   _radio = new RadioChannel(CCGlobal, Pars >> "RadioChannels" >> "GlobalChannel");

@@ -1044,7 +1044,7 @@ bool CopyDirectoryStructure(const char *dst, const char *src, vector<string> &sk
   string buffer = Format("%s\\*.*", src);
 
   _finddata_t info;
-  intptr_t h = _findfirst(buffer.c_str(), &info);
+  long h = _findfirst(buffer.c_str(), &info);
   if (h != -1)
   {
     do
