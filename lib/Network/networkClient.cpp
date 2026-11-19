@@ -2027,7 +2027,7 @@ void NetworkClient::SetClientState(NetworkClientState state)
 
   if (state <= NCSMissionAsked || state == NCSGameFinished)
     _initScriptRun = false;
-  if (state == NCSNone || state == NCSGameFinished)
+  if (state <= NCSLoggedIn || state == NCSGameFinished)
     _delayedSpawns.Clear();
 
 #if _GAMES_FOR_WINDOWS
