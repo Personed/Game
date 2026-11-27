@@ -5790,6 +5790,18 @@ TMError Entity::TransferMsg(NetworkMessageContext &ctx)
         {
           _remoteState.Free();
         }
+        else if (positionValid && !IsInLandscape() && AcceptPositionOutsideLandscape())
+        {
+          // The object is not in the landscape on this client yet. This
+          // happens when an item is dropped: the server sends the new
+          // transform while the client may still have the item stored in an
+          // inventory slot. Store the transform now, so ItemMoveIn() puts the
+          // item at the position chosen by the server instead of leaving it
+          // at the old inventory transform.
+          _remoteState.Free();
+          Matrix4 trans = GetTransformFromRemoteState(remoteState.orient,remoteState.pos,FutureVisualState());
+          SetTransform(trans);
+        }
         else if (positionValid && IsInLandscape()) // positionValid is IsInLandscape() on the sender side
         {
           VisualState &vs = FutureVisualState();

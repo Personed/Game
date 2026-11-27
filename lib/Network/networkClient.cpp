@@ -4510,6 +4510,16 @@ void NetworkClient::OnMessage(int from, NetworkMessage *msg, NetworkMessageType 
           Vector3Val pos = owner->FutureVisualState().Position();
           Vector3Val dir = owner->FutureVisualState().Direction();
           item->ItemDrop(owner, pos, dir);
+
+          // The item is now a world object. Remote clients need both:
+          // - a generic update, which carries the inLandscape flag and makes
+          //   the client call ItemMoveIn() (add the item to the landscape);
+          // - a position update, because the generic item update does NOT
+          //   carry the transform. Without it the client keeps the item at
+          //   its old inventory position and it looks like it disappeared.
+          UpdateObject(item, NMCUpdateGeneric, NMFGuaranteed);
+          UpdateObject(item, NMCUpdatePosition, NMFGuaranteed);
+          if (owner) UpdateObject(owner, NMCUpdateGeneric, NMFGuaranteed);
         }
       }
       break;

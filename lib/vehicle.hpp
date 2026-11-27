@@ -1727,6 +1727,14 @@ public:
   virtual Vector3 WorldSpeed() const;
   virtual bool IsInLandscape() const;
 
+  //! Accept a valid position update even when this object is not in the landscape yet.
+  /*!
+    Used by items that can be moved between an inventory and the world. A
+    dropped item may receive the position update before the update which adds
+    it to the landscape, and the transform must not be lost in that case.
+  */
+  virtual bool AcceptPositionOutsideLandscape() const {return false;}
+
   void ResetDelete() {_delete = false;}
   void ResetMoveOut();
   

@@ -211,6 +211,10 @@ public:
 
   virtual float UpdateDistance() const override;
 
+  //! Items can be dropped from an inventory, so keep a valid position update
+  //! even when the item is not in the landscape on this client yet.
+  virtual bool AcceptPositionOutsideLandscape() const override {return true;}
+
   virtual bool QIsManual() const override {return false;}
   virtual AnimationStyle IsAnimated(int level) const override;
 

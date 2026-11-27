@@ -2443,6 +2443,7 @@ Matrix3 Man::HeadBobOrientation(const VisualStateAge vsa, CameraType camType, bo
   int animCount = headBlend._list.Size();
   int gestCount = headBlend._masked.Size();
   bool cutSceneMode = false;
+  float headBobWeight = 0.0f;
   for (int i = 0; i < animCount + gestCount; i++)
   {
     const AnimBlendInfo &animInfo = (i < animCount) ? headBlend._list.Get(i) : headBlend._masked.Get(i - animCount);
@@ -2516,8 +2517,14 @@ Matrix3 Man::HeadBobOrientation(const VisualStateAge vsa, CameraType camType, bo
       partMatrix = partMatrix * headBobStrength + zeroStrengthMatrix * (1.0 - headBobStrength);
     }
     headBobMatrix += partMatrix * animFactor;
+    headBobWeight += fabs(animFactor);
   }
-  headBobMatrix.Orthogonalize();
+  // Animation transitions can briefly have no weighted pose. Orthogonalizing
+  // a zero matrix produces an unstable view orientation in those frames.
+  if (headBobWeight > 1e-6f)
+    headBobMatrix.Orthogonalize();
+  else
+    headBobMatrix = MIdentity;
 
   // final camera transformation
   Matrix3 pilotOrient;
@@ -6472,7 +6479,7 @@ bool Man::CreatePotentialStateFreeFall(ManVisualState & moveTrans, Vector3& fric
   return true;
 }
 
-const float SlideSlopeThreshold = 2.0f; //atan(sqrt(2))=cca=55ï¿½
+const float SlideSlopeThreshold = 2.0f; //atan(sqrt(2))=cca=55�
 inline float SlideSpeedWanted(float gradFwd, float gradAside, float forceStand)
 {
   if (forceStand) return 0;
@@ -6485,7 +6492,7 @@ inline float SlideSpeedWanted(float gradFwd, float gradAside, float forceStand)
   else
     return slope - 2*SlideSlopeThreshold; //brake is more efficient
 }
-const float StandSlopeThreshold = 0.6f; //atan(sqrt(2))=cca=38ï¿½
+const float StandSlopeThreshold = 0.6f; //atan(sqrt(2))=cca=38�
 inline bool ShouldStand(float gradFwd, float gradAside, bool forceStand)
 {
   //if (forceStand) return true; //NO! unable to prone on the road after such setting!
@@ -6566,7 +6573,14 @@ bool Man::CreatePotentialState(ManVisualState & moveTrans, float& turn, float de
   if (QIsManual())
   {
     //if (IsDead()) LandSlope(_forceStand, _landGradFwd, _landGradAside);
-    float slideSpeedWanted = SlideSpeedWanted(_landGradFwd, _landGradAside, _forceStand);
+    // The player's animation already supplies the requested displacement.
+    // Adding slope slide on top of a running step makes ground contact and the
+    // attached camera bounce as the terrain correction changes each frame.
+    // Keep automatic sliding only when there is no locomotion input.
+    bool playerMoving = fabs(_walkSpeedWantedX) > 0.1f || fabs(_walkSpeedWantedZ) > 0.1f;
+    if (playerMoving)
+      _slideSpeed = 0;
+    float slideSpeedWanted = playerMoving ? 0 : SlideSpeedWanted(_landGradFwd, _landGradAside, _forceStand);
     if (slideSpeedWanted>0 || _slideSpeed>0) //slide or brake slide
     {
       const float timeToReachTheSpeed = 2.0f; //from zero speed 2 seconds needed to reach the speed
@@ -15627,11 +15641,20 @@ void Soldier::KeyboardPilot(float deltaT, SimulationImportance prec)
     {
       float lookX = input->GetActionWithCurveExclusive(InputInterface::CurveFovMouse, UAAimHeadRight, UAAimHeadLeft);
       float lookY = input->GetActionWithCurveExclusive(InputInterface::CurveFovMouse, UAAimHeadUp, UAAimHeadDown);
-      // Some 0.45 input profiles only bind the horizontal mouse to UAAimRight/
-      // UAAimLeft. Preserve free-look yaw in those profiles when the dedicated
-      // head-yaw pair has no binding or was already consumed by another view.
-      if (fabs(lookX) < 1e-6f)
-        lookX = input->GetActionWithCurve(InputInterface::CurveFovMouse, UAAimRight, UAAimLeft);
+      // Older profiles may bind horizontal mouse movement only to body aim.
+      // Select that fallback from the bindings, never from a zero input sample:
+      // zero samples also occur between mouse events and while sprinting, and
+      // switching input sources on those frames makes the camera stutter.
+      if (QIsManual() &&
+          GInput.GetActionKeys("AimHeadRight").Size() == 0 &&
+          GInput.GetActionKeys("AimHeadLeft").Size() == 0)
+        lookX = input->GetActionWithCurveExclusive(InputInterface::CurveFovMouse, UAAimRight, UAAimLeft);
+
+      // Mouse look must follow the current input. The head smoothing above is
+      // for automatic recentering and discrete look actions; leaving it active
+      // while walking makes horizontal camera motion trail and oscillate.
+      if (QIsManual() && (fabs(lookX) > 1e-6f || fabs(lookY) > 1e-6f))
+        _headSmoothMove = false;
 
       float rotXWanted = (ironSight ? _gunXRotWanted : _lookXRotWanted) + lookY*deltaT;
       float rotYWanted = (ironSight ? _gunYRotWanted : _lookYRotWanted) - lookX*deltaT;
@@ -15682,6 +15705,8 @@ void Soldier::KeyboardPilot(float deltaT, SimulationImportance prec)
 
       float aimX = input->GetActionWithCurve(InputInterface::CurveFovMouse,UAAimRight,UAAimLeft);
       float aimY = input->GetActionWithCurve(InputInterface::CurveFovMouse,UAAimUp,UAAimDown);
+      if (QIsManual() && (fabs(aimX) > 1e-6f || fabs(aimY) > 1e-6f))
+        _headSmoothMove = false;
 
       bool useAimingDeadzone = IsAimingDeadzoneEnabled();
 
@@ -15977,10 +16002,14 @@ void Soldier::KeyboardPilot(float deltaT, SimulationImportance prec)
     else
     {
       //GlobalShowMessage(100, "Slope %.2f",slope);
-      if (!_canMoveFast || !CanSprint(_landGradFwd, _landGradAside, dirFwd, dirAside))
+      // Terrain gradients can jump between adjacent samples on a steep hill.
+      // For the local player, changing the gait every frame makes the running
+      // animation (and its camera transform) oscillate. Preserve the chosen
+      // gait while the regular stamina and movement limits still apply.
+      if (!_canMoveFast || (!QIsManual() && !CanSprint(_landGradFwd, _landGradAside, dirFwd, dirAside)))
         fastFlag = 0;
       fastFlag++;
-      if (wantSlow && fastFlag==1 || !CanRun(_landGradFwd, _landGradAside, dirFwd, dirAside))
+      if (wantSlow && fastFlag==1 || (!QIsManual() && !CanRun(_landGradFwd, _landGradAside, dirFwd, dirAside)))
         fastFlag = 0;
     }
     switch (fastFlag)
@@ -24112,6 +24141,22 @@ TMError Man::TransferMsg(NetworkMessageContext &ctx)
 	  int lastLadderIndex = _ladderIndex;
       PREPARE_TRANSFER(UpdatePositionMan)
 
+      // Position snapshots are authoritative for the body, but the local
+      // player's view angles are predicted from this frame's mouse input.
+      // Keep them before reading the server snapshot so an older look value
+      // cannot visibly pull the camera back after a local mouse movement.
+      const bool preserveLocalView = !ctx.IsSending() && GWorld && this == GWorld->GetRealPlayer();
+      const float localGunXRotWanted = _gunXRotWanted;
+      const float localGunYRotWanted = _gunYRotWanted;
+      const float localHeadXRotWanted = _headXRotWanted;
+      const float localHeadYRotWanted = _headYRotWanted;
+      const float localHeadXRotWantedCont = _headXRotWantedCont;
+      const float localHeadYRotWantedCont = _headYRotWantedCont;
+      const float localHeadXRotWantedPan = _headXRotWantedPan;
+      const float localHeadYRotWantedPan = _headYRotWantedPan;
+      const float localLookXRotWanted = _lookXRotWanted;
+      const float localLookYRotWanted = _lookYRotWanted;
+
       TRANSF(gunXRotWanted)
       TRANSF(gunYRotWanted)
       TRANSF(headXRotWanted)
@@ -24123,6 +24168,20 @@ TMError Man::TransferMsg(NetworkMessageContext &ctx)
       TRANSF(headXRotWantedPan)
       TRANSF(headYRotWantedPan)
       TRANSF(leanZRotWanted)
+
+      if (preserveLocalView)
+      {
+        _gunXRotWanted = localGunXRotWanted;
+        _gunYRotWanted = localGunYRotWanted;
+        _headXRotWanted = localHeadXRotWanted;
+        _headYRotWanted = localHeadYRotWanted;
+        _headXRotWantedCont = localHeadXRotWantedCont;
+        _headYRotWantedCont = localHeadYRotWantedCont;
+        _headXRotWantedPan = localHeadXRotWantedPan;
+        _headYRotWantedPan = localHeadYRotWantedPan;
+        _lookXRotWanted = localLookXRotWanted;
+        _lookYRotWanted = localLookYRotWanted;
+      }
 
       TRANSF_REF(ladderBuilding)
       TRANSF(ladderIndex)
