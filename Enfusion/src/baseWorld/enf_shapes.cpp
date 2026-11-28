@@ -1,11 +1,8 @@
 //# pragma optimize( "", off )
 
-// Enfusion's debug-shape renderer is hard-wired to IDirect3DDevice9.  The
-// x64 client uses EngineDD11; keep the shape data/API available, but do not
-// compile this legacy renderer into the DX11 client.
-#if defined(_WIN64)
-	#define ENF_SHAPES_DUMMYRENDER
-#endif
+// The active client renderer is implemented in EngineDD11. Enfusion's
+// legacy debug-shape renderer is disabled for this backend.
+#define ENF_SHAPES_DUMMYRENDER
 
 //-----------------------------------------------------------------------------
 // File: enf_shapes.h
@@ -24,15 +21,6 @@
 #include "lib/scene.hpp"
 #include "es/Threads/multisync.hpp"
 
-#ifndef ENF_SHAPES_DUMMYRENDER
-	#include "lib/d3d9/postProcess.hpp"
-	#include "lib/d3d9/engdd9.hpp"
-
-	extern void ConvertMatrixTransposed(PASSMATRIXTYPE &mat, Matrix4Val src);
-	extern void ConvertMatrixTransposed3(MatrixFloat34 &mat, Matrix4Val src);
-	extern void ConvertMatrix3(MatrixFloat34 &mat, Matrix4Val src);
-	extern void ConvertProjectionMatrix(D3DMATRIX &mat, Matrix4Val src, float zBias);
-#endif
 
 namespace enf
 {
@@ -48,13 +36,6 @@ ShapeCollection*	ShapeCollection::m_pCurrent = NULL;
 //#define LOG_SHAPES
 
 //-----------------------------------------------------------------------
-#ifndef ENF_SHAPES_DUMMYRENDER
-	static bool RenderDisabled() 
-	{
-		//return false;
-		return GEngineDD->IsDummy() || GEngineDD->GetDirect3DDevice().IsNull();
-	}
-#endif
 
 //-----------------------------------------------------------------------
 struct ShapeMesh
@@ -65,7 +46,6 @@ struct ShapeMesh
 
 	ShapeMesh(): NumIndices(0), NumVerts(0) {}
 
-	#ifdef ENF_SHAPES_DUMMYRENDER
 		ShapeMesh(uint numIndices, uint numVerts, uint flags): NumIndices(numIndices), NumVerts(numVerts) 
 		{}
 
@@ -89,83 +69,6 @@ struct ShapeMesh
 
 		void UnlockVertexBuffer()
 		{}
-	#else
-		ComRef<IDirect3DVertexBuffer9> buffVB;
-		ComRef<IDirect3DIndexBuffer9> buffIB;
-
-		VertexStaticData9::BufferFuture	VB;
-		IndexStaticData9::BufferFuture	IB;
-  
-		ShapeMesh(uint numIndices, uint numVerts, uint flags): NumIndices(numIndices), NumVerts(numVerts) 
-		{
-			if (RenderDisabled())
-				return;
-
-			ComRef<IDirect3DVertexBuffer9> vb;
-			GEngineDD->GetDirect3DDevice()->CreateVertexBuffer(sizeof(Vector3)*numVerts, flags, 0, D3DPOOL_DEFAULT, vb.Init(), NULL);
-
-			ComRef<IDirect3DIndexBuffer9> ib;
-			GEngineDD->GetDirect3DDevice()->CreateIndexBuffer(sizeof(short) * numIndices, flags, D3DFMT_INDEX16, D3DPOOL_DEFAULT, ib.Init(), NULL);
-		
-			VB = VertexStaticData9::BufferFuture(vb);
-			IB = IndexStaticData9::BufferFuture(ib);
-
-			buffVB = vb;
-			buffIB = ib;
-		}
-
-		~ShapeMesh()
-		{
-			VB = VertexStaticData9::BufferFuture(VertexStaticData9::BufferFuture::Null);
-			IB = IndexStaticData9::BufferFuture(IndexStaticData9::BufferFuture::Null);
-		}
-
-		bool LockIndexBuffer(uint Flags, void** ppData)
-		{
-			if (!buffIB)
-			{
-				*ppData = NULL;
-				return false;
-			}
-
-			buffIB->Lock(0, NumIndices, ppData, Flags);
-			if(*ppData != NULL)
-				return true;
-    
-			return false;
-		}
-
-		void UnlockIndexBuffer()
-		{
-			if (!buffIB)
-				return;
-
-			buffIB->Unlock();
-		}
-
-		bool LockVertexBuffer(uint Flags, void** ppData)
-		{
-			if (!buffVB)
-			{
-				*ppData = NULL;
-				return false;
-			}
-
-			buffVB->Lock(0, NumVerts, ppData, Flags);
-			if(*ppData != NULL)
-				return true;
-    
-			return false;
-		}
-
-		void UnlockVertexBuffer()
-		{
-			if (!buffVB)
-				return;
-
-			buffVB->Unlock();
-		}
-	#endif
 
   uint GetNumVertices() const
 	{
@@ -183,9 +86,6 @@ ShapeMesh* CreateShapeMesh(bool dynamic, uint numFaces, uint numVertexes)
 	uint numIndices = numFaces * 3;
 	uint flags = 0;
 
-	#ifndef ENF_SHAPES_DUMMYRENDER
-		flags = dynamic ? D3DUSAGE_WRITEONLY|D3DUSAGE_DYNAMIC : D3DUSAGE_WRITEONLY;
-	#endif
 
 	ShapeMesh* mesh = ENF_NEW ShapeMesh(numIndices, numVertexes, flags);
 
@@ -683,11 +583,6 @@ Ref<Shape> Shape::CreateIndexedMesh(const Vector3* vertexes, uint numVertexes, u
 			pMesh->UnlockVertexBuffer();
 		}
 
-		#ifndef ENF_SHAPES_DUMMYRENDER
-			Assert(sh->m_BBox.IsValid());
-			Assert(!BadVec(sh->m_BBox.GetMins()));
-			Assert(!BadVec(sh->m_BBox.GetMaxs()));
-		#endif
 
 		ushort* pIndexData;
 		if(pMesh->LockIndexBuffer(0, (void**)&pIndexData))
@@ -855,301 +750,18 @@ void ShapeCollection::FlushShapes(int flag)
 //-----------------------------------------------------------------------
 void ShapeCollection::SetHWDepthBias(float bias)
 {
-	#ifndef ENF_SHAPES_DUMMYRENDER
-		static float depth = 0.000001f;
-
-		float b = depth * bias;
-		GEngineDD->D3DSetRenderState(-1, D3DRS_DEPTHBIAS, *((uint*)&b));
-	
-		b = bias > 0 ? 1.0f : -1.0f;
-		GEngineDD->D3DSetRenderState(-1, D3DRS_SLOPESCALEDEPTHBIAS, *((uint*)&b));
-	#endif
 }
 
 //-----------------------------------------------------------------------
 void ShapeCollection::RenderFirstPass(Shape** firstpass, uint nfirstpass, float bias, int cb)
 {
-#ifndef ENF_SHAPES_DUMMYRENDER
-
-  QuickSortCmp<Shape*, CCompareShapes>(nfirstpass, firstpass);
-	ComRef<IDirect3DDevice9> &device = GEngineDD->GetDirect3DDevice()->GetRefForCB();
-
-  device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-
-	float biasVec[4] = {0, 0, bias, 0};
-  device->SetVertexShaderConstantF(FREESPACE_START_REGISTER0, biasVec, 1);
-
-	uint lflags = 0xffffffff;
-	uint lcolor = ~(firstpass[0]->m_Color);
-	bool ident = false;
-
-	for(uint n = 0; n < nfirstpass; n++)
-	{
-		Shape* sh = firstpass[n];
-
-		if(sh->m_Color != lcolor)
-		{
-			lcolor = sh->m_Color;
-      device->SetPixelShaderConstantF(0, (ColorP((long)lcolor)).GetArray(), 1);
-		}
-
-		if(sh->m_Flags & SS_IDENTMATRIX)
-		{
-			if(!ident)
-			{
-				ident = true;
-
-				MatrixFloat34 zeroMatrix = {1,0,0,0,0,1,0,0,0,0,1,0};
-        device->SetVertexShaderConstantF(VSC_EnfShapeWorldMatrix, (const float*) zeroMatrix, 3);
-			}
-		}
-		else
-		{
-			ident = false;
-
-			MatrixFloat34 worldMatrix;
-			::ConvertMatrixTransposed3(worldMatrix, sh->m_Matrix);
-
-			device->SetVertexShaderConstantF(VSC_EnfShapeWorldMatrix, (const float*) &worldMatrix, 3);
-		}
-		
-		if(sh->m_Flags != lflags)
-		{
-			lflags = sh->m_Flags;
-
-			if(lflags & SS_DOUBLESIDE)
-			{
-				device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-			}
-			else
-			{
-				device->SetRenderState(D3DRS_CULLMODE, (lflags & SS_BACKFACE) ? D3DCULL_CCW : D3DCULL_CW);
-			}
-
-			if(lflags & SS_TRANSP)
-			{
-				device->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-
-				if (lflags & SS_ADDITIVE)
-				{
-					device->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCALPHA);
-					device->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_ONE);
-				}
-				else
-				{
-					device->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCALPHA);
-					device->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
-				}
-			}
-			else
-			{
-				device->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-			}
-
-			device->SetRenderState(D3DRS_FILLMODE, (lflags & SS_WIREFRAME) ? D3DFILL_WIREFRAME : D3DFILL_SOLID);
-
-			switch(lflags & (SS_NOZWRITE|SS_NOZBUFFER))
-			{
-			case 0:
-				device->SetRenderState(D3DRS_ZENABLE, true);
-				device->SetRenderState(D3DRS_ZWRITEENABLE, true);
-				device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-				break;
-			case SS_NOZWRITE:
-				device->SetRenderState(D3DRS_ZENABLE, true);
-				device->SetRenderState(D3DRS_ZWRITEENABLE, false);
-				device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-				break;
-			case SS_NOZBUFFER:
-				device->SetRenderState(D3DRS_ZENABLE, false);
-				device->SetRenderState(D3DRS_ZWRITEENABLE, true);
-				break;
-			case (SS_NOZWRITE|SS_NOZBUFFER):
-				device->SetRenderState(D3DRS_ZENABLE, false);
-				device->SetRenderState(D3DRS_ZWRITEENABLE, false);
-				break;
-			}
-		}
-		
-		sh->Render(0);
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------
 void ShapeCollection::RenderSecondPass(Shape** secondpass, uint nsecondpass, float bias)
 {
-#ifndef ENF_SHAPES_DUMMYRENDER
-	QuickSortCmp<Shape*, CCompareShapes>(nsecondpass, secondpass);
-	
-	ComRef<IDirect3DDevice9> &device = GEngineDD->GetDirect3DDevice()->GetRefForCB();
-	
-	float zero[4] = {0,0,0,0};
-	device->SetVertexShaderConstantF(VSC_EnfShapeBias, zero, 1);
-
-	float color[4] = {0.7, 0.7, 0.7, 0.7};
-	device->SetPixelShaderConstantF(0, color, 1);
-
-	device->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-	device->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
-	device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-
-	const ::Camera& camera = *::GScene->GetCamera();
-
-	D3DXMATRIX projMatrix;
-	ConvertProjectionMatrix(projMatrix, camera.ProjectionNormal(), bias);
-
-	device->SetVertexShaderConstantF(VSC_EnfShapeProjMatrix, (const float*)&projMatrix, 4);
-
-	uint lflags = 0xffffffff;
-	uint lcolor = ~(secondpass[0]->m_OutlineColor);
-	bool ident = false;
-
-	for(uint n = 0; n < nsecondpass; n++)
-	{
-		Shape* sh = secondpass[n];
-
-		if(sh->m_OutlineColor != lcolor)
-		{
-			lcolor = sh->m_OutlineColor;
-			device->SetPixelShaderConstantF(0, (ColorP((long)lcolor)).GetArray(), 1);
-		}
-
-		if(sh->m_Flags & SS_IDENTMATRIX)
-		{
-			if(!ident)
-			{
-				ident = true;
-
-				MatrixFloat34 zeroMatrix = {1,0,0,0,0,1,0,0,0,0,1,0};
-				device->SetVertexShaderConstantF(VSC_EnfShapeWorldMatrix, (const float*) zeroMatrix, 3);
-			}
-		}
-		else
-		{
-			ident = false;
-
-			MatrixFloat34 worldMatrix;
-			::ConvertMatrixTransposed3(worldMatrix, sh->m_Matrix);
-
-			device->SetVertexShaderConstantF(VSC_EnfShapeWorldMatrix, (const float*) worldMatrix, 3);
-		}
-
-		if(sh->m_Flags != lflags)
-		{
-			lflags = sh->m_Flags;
-
-			switch(lflags & (SS_NOZWRITE|SS_NOZBUFFER))
-			{
-			case 0:
-				device->SetRenderState(D3DRS_ZENABLE, true);
-				device->SetRenderState(D3DRS_ZWRITEENABLE, true);
-				device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-				break;
-			case SS_NOZWRITE:
-				device->SetRenderState(D3DRS_ZENABLE, true);
-				device->SetRenderState(D3DRS_ZWRITEENABLE, false);
-				device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-				break;
-			case SS_NOZBUFFER:
-				device->SetRenderState(D3DRS_ZENABLE, false);
-				device->SetRenderState(D3DRS_ZWRITEENABLE, true);
-				break;
-			case (SS_NOZWRITE|SS_NOZBUFFER):
-				device->SetRenderState(D3DRS_ZENABLE, false);
-				device->SetRenderState(D3DRS_ZWRITEENABLE, false);
-				break;
-			}
-		}
-
-		sh->Render(1);
-	}
-#endif
 }
 
-#ifndef ENF_SHAPES_DUMMYRENDER
-//-----------------------------------------------------------------------
-class D3DDeviceState
-{
-	ComRef<IDirect3DDevice9> device;
-
-	ComRef<IDirect3DIndexBuffer9>				savedIB;
-	ComRef<IDirect3DVertexDeclaration9> savedVD;
-	ComRef<IDirect3DVertexBuffer9>			savedVB;
-	ComRef<IDirect3DVertexShader9>			savedVS;
-	ComRef<IDirect3DPixelShader9>				savedPS;
-	ComRef<IDirect3DSurface9>						savedDepth;
-	D3DVIEWPORT9												savedVP;
-
-	//32 should be enough for each effect, we do not want to use dynamic memory
-	static const int maxRegs = 32;
-
-	struct GPURegs
-	{
-		typedef float GPUReg[4];
-		int _start;
-		int _num;
-		GPUReg savedRegs[maxRegs];
-	} savedPSRegs, savedVSRegs;
-
-	uint savedVBBytes, savedVBStride;
-
-	static const int maxRS = 14;
-	static const D3DRENDERSTATETYPE SaveRS[maxRS];
-	DWORD savedRS[maxRS];
-
-public:
-	D3DDeviceState(ComRef<IDirect3DDevice9>& devD9, int startVSReg, int numVSReg, int startPSReg, int numPSReg)
-	{
-		device = devD9;
-
-		device->GetIndices(savedIB.Init());		
-		device->GetVertexDeclaration(savedVD.Init());
-		device->GetStreamSource(0, savedVB.Init(), &savedVBBytes, &savedVBStride);
-		device->GetVertexShader(savedVS.Init());
-		device->GetPixelShader(savedPS.Init());
-		device->GetViewport(&savedVP);
-		device->GetDepthStencilSurface(savedDepth.Init());
-
-		int items = sizeof(SaveRS)/sizeof(int);
-		for (uint i = 0; i < items; i++)
-			device->GetRenderState(SaveRS[i], &savedRS[i]);
-
-		savedVSRegs._start = startVSReg;
-		savedVSRegs._num = numVSReg;
-		device->GetVertexShaderConstantF(startVSReg, (float*) &savedVSRegs.savedRegs[0], numVSReg);
-
-		savedPSRegs._start = startPSReg;
-		savedPSRegs._num = numPSReg;
-		device->GetVertexShaderConstantF(startPSReg, (float*) &savedPSRegs.savedRegs[0], numPSReg);
-	}
-	
-	~D3DDeviceState()
-	{
-		device->SetIndices(savedIB);		
-		device->SetVertexDeclaration(savedVD);
-		device->SetStreamSource(0, savedVB, savedVBBytes, savedVBStride);		
-		device->SetVertexShader(savedVS);
-		device->SetPixelShader(savedPS);
-		device->SetViewport(&savedVP);
-		device->SetDepthStencilSurface(savedDepth);
-		
-		int items = sizeof(SaveRS)/sizeof(int);
-		for (uint i = 0; i < items; i++)
-			device->SetRenderState(SaveRS[i], savedRS[i]);
-
-		device->SetVertexShaderConstantF(savedVSRegs._start, (const float*) &savedVSRegs.savedRegs[0], savedVSRegs._num);
-		device->SetVertexShaderConstantF(savedPSRegs._start, (const float*) &savedPSRegs.savedRegs[0], savedPSRegs._num);
-	}
-};
-
-const D3DRENDERSTATETYPE D3DDeviceState::SaveRS[D3DDeviceState::maxRS] = 
-{
-	D3DRS_CULLMODE, D3DRS_FILLMODE, D3DRS_ZENABLE, D3DRS_ZWRITEENABLE, D3DRS_ALPHATESTENABLE, 
-	D3DRS_ALPHABLENDENABLE, D3DRS_STENCILENABLE, D3DRS_COLORWRITEENABLE, D3DRS_ZFUNC, D3DRS_SRCBLEND, D3DRS_DESTBLEND,
-	D3DRS_CLIPPING, D3DRS_DEPTHBIAS, D3DRS_SLOPESCALEDEPTHBIAS
-};
-#endif
 
 
 //-----------------------------------------------------------------------
@@ -1157,192 +769,6 @@ void ShapeCollection::RenderShapes()
 {
 	ScopeLockSection lock(m_CriticalSection);
 
-#ifndef ENF_SHAPES_DUMMYRENDER
-	
-	#ifdef LOG_SHAPES
-		LogF("Rendering shapes");
-	#endif
-
-	PROFILE_SCOPE_GRF_EX(RenderDebugShapes,pp,SCOPE_COLOR_YELLOW);
-
-	//dummy render with no shaders 
-	if (!GEngineDD->GetEnfShapeCollectionResources() || RenderDisabled())
-	{
-		FlushShapes();
-		return;
-	}
-
-	//new simulation frame begin? remove all processed shapes
-	if (m_iLastFrame < Glob.frameID)
-	{
-		m_iLastFrame = Glob.frameID;
-		FlushShapes(SS_PROCESSED);
-	}
-
-	if(m_iCount == 0)
-		return;
-
-  int cb = -1;
-
-	//some preparations
-	bool inScene = GEngineDD->_d3dFrameOpen;
-	if (!inScene) 
-		GEngineDD->D3DBeginScene();
-
-	/*
-	GEngineDD->FlushAndFreeAllQueues();
-	GEngineDD->SwitchTL(cb, EngineDD9::TLViewspace);
-
-	EngineShapeProperties prop;
-	GEngineDD->DoPrepareTriangle(cb,NULL,TexMaterialLODInfo(NULL),0,NoZBuf|NoZWrite|ClampU|ClampV|FilterPoint,prop);
-	GEngineDD->DoShadowsStatesSettings(cb,SS_Transparent,false);
-	*/
-
-	ComRef<IDirect3DDevice9> &device = GEngineDD->GetDirect3DDevice()->GetRefForCB();
-
-	D3DDeviceState state(device, FREESPACE_START_REGISTER0, 12, 0, 2);
-
-	static float _bias1 = 40.0f;
-	static float _bias2 = 80.0f;
-	float bias1, bias2;
-
-  Assert(!GEngine->IsCBRecording());
-
-  device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_ALPHA);
-  device->SetRenderState(D3DRS_ALPHATESTENABLE, false);
-	device->SetRenderState(D3DRS_STENCILENABLE, false);
-	device->SetRenderState(D3DRS_CLIPPING, false);
-	device->SetRenderState(D3DRS_DEPTHBIAS, 0);
-	device->SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS, 0);
-
-	bool msaa = GEngineDD->_rtMultiSampleType != D3DMULTISAMPLE_NONE;
-	ComRefFake<IDirect3DSurface9> origDepth = msaa ? GEngineDD->_depthBufferRT : GEngineDD->_depthBuffer;	
-	device->SetDepthStencilSurface(origDepth);
-
-	D3DVIEWPORT9 vp;
-	vp.X = 0;
-	vp.Y = 0;
-	vp.Width  = GEngineDD->Width();
-	vp.Height = GEngineDD->Height();
-	vp.MinZ = GEngineDD->_minZRange;
-	vp.MaxZ = GEngineDD->_maxZRange;
-	device->SetViewport(&vp);
-
-	const ::Camera& camera = *::GScene->GetCamera();
-
-	//matrices
-	Matrix4 modelToWorldOffset(true);
-	Vector3 camPos = -camera.Position() ;//-GEngineDD->CBState(-1)._invView.Position();
-	modelToWorldOffset.SetPosition(camPos);
-	
-	Matrix4 viewZero;
-	Matrix3 orientMat = camera.Orientation().InverseRotation();//GEngineDD->CBState(-1)._view.Orientation();
-	viewZero.SetOrientation(orientMat);
-	viewZero.SetPosition(VZero);
-	
-	Matrix4 viewWorld;
-	viewWorld = viewZero * modelToWorldOffset;
-
-	MatrixFloat34 viewWorldMatrix;
-	ConvertMatrixTransposed3(viewWorldMatrix, viewWorld);
-	device->SetVertexShaderConstantF(VSC_EnfShapeViewMatrix, (const float*) &viewWorldMatrix, 3);
-
-	bias1 = _bias1;
-	bias2 = _bias2;
-
-	D3DXMATRIX projMatrix;
-	ConvertProjectionMatrix(projMatrix, camera.ProjectionNormal(), bias1);
-
-	device->SetVertexShaderConstantF(VSC_EnfShapeProjMatrix, (const float*)&projMatrix, 4);
-
-	device->SetVertexDeclaration(GEngineDD->GetEnfShapeCollectionResources()->_vd);
-	device->SetVertexShader(GEngineDD->GetEnfShapeCollectionResources()->_vs);
-	device->SetPixelShader(GEngineDD->GetEnfShapeCollectionResources()->_ps);
-
-	uint count = m_iCount;
-
-	const int MAX_STACK_SHAPE_COUNT = 50000;
-	int stackCount = intMin(MAX_STACK_SHAPE_COUNT, count);
-
-	Shape** firstpass = ALLOCA(Shape*, stackCount);
-	Shape** secondpass = ALLOCA(Shape*, stackCount);
-
-	uint nfirstpass = 0;
-	uint nsecondpass = 0;
-
-	if (stackCount >= MAX_STACK_SHAPE_COUNT)
-	{
-		typedef Shape* pShape;
-		firstpass  = new pShape[count];
-		secondpass = new pShape[count];
-	}
-
-
-	for(uint n = 0; n < m_iSize && count; n++)
-	{
-		Shape* sh = m_pShapes[n];
-		if(!IsValid(sh))
-			continue;
-
-		count--;
-		
-		if (sh->m_Flags & SS_ONCE)
-			sh->m_Flags |= SS_PROCESSED;
-
-		{
-			if(!(sh->m_Flags & SS_VISIBLE))
-				continue;
-
-			if(!(m_pShapes[n]->m_Flags & SS_NOCULL))
-			{
-				Vector3 center = sh->m_BBox.GetCenter();
-				float radius = sh->m_BBox.GetCorner().Distance(Vector3(0.0f));
-
-				if(sh->m_Flags & SS_IDENTMATRIX)
-				{
-					if (camera.IsClippedByAnyPlane(center, radius, sh->m_BBox.GetMinMax()))
-						continue;
-				}
-				else
-				{
-					ClipFlags f;
-					Vector3 c (VMultiply, sh->m_Matrix, center);
-					if (camera.IsClippedByAnyPlane(c, radius, sh->m_Matrix, sh->m_BBox.GetMinMax(), f))
-						continue;
-				}
-			}
-
-			//don't add to solid pass
-			if(!(sh->m_Flags & SS_WIREFRAME))
-				firstpass[nfirstpass++] = sh;
-
-			if(!(sh->m_Flags & SS_NOOUTLINE) && sh->m_Type != SHAPE_LINE)
-				secondpass[nsecondpass++] = sh;
-		}
-	}
-
-	if(nfirstpass)
-	{
-		RenderFirstPass(firstpass, nfirstpass, bias1, cb);
-	}
-
-	if(nsecondpass)
-	{
-		RenderSecondPass(secondpass, nsecondpass, bias2);
-	}
-
-	if (stackCount >= MAX_STACK_SHAPE_COUNT)
-	{
-		delete [] firstpass;
-		delete [] secondpass;
-	}
-
-	if (!inScene) 
-		GEngineDD->D3DEndScene();
-
-	//this must be when rendering as postprocess step
-	//GEngineDD->SwitchTL(cb, EngineDD9::TLDisabled);
-#endif
 
 	//FlushShapes();
 
@@ -1356,155 +782,6 @@ void ShapeCollection::RenderShapes()
 //-----------------------------------------------------------------------
 void Shape::Render(uint c) const
 {
-#ifndef ENF_SHAPES_DUMMYRENDER
-	ShapeType type = m_Type;
-	uint stride = sizeof(float) * 3;
-
-	ComRef<IDirect3DDevice9> &device = GEngineDD->GetDirect3DDevice()->GetRefForCB();
-
-	if(type == SHAPE_INDEXEDMESH)
-	{
-		const ShapeMesh* pmesh = m_pMesh;
-		if(pmesh)
-		{
-			device->SetStreamSource(0, pmesh->buffVB, 0, stride);
-			device->SetIndices(pmesh->buffIB);
-			device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, pmesh->GetNumFaces()*3, 0, pmesh->GetNumFaces());
-		}
-	}
-	else
-	{
-		if(type == SHAPE_BBOX)
-		{
-			const ::Vector3& mins = m_BBox.GetMins();
-			const ::Vector3& maxs = m_BBox.GetMaxs();
-
-			if(c == 0)
-			{
-				Vector3* p = ALLOCA(Vector3, 36);
-
-				p[0]._e[0] = mins._e[0]; p[0]._e[1] = maxs._e[1]; p[0]._e[2] = maxs._e[2];
-				p[1]._e[0] = maxs._e[0]; p[1]._e[1] = maxs._e[1]; p[1]._e[2] = maxs._e[2];
-				p[2]._e[0] = maxs._e[0]; p[2]._e[1] = mins._e[1]; p[2]._e[2] = maxs._e[2];
-				p[3]._e[0] = mins._e[0]; p[3]._e[1] = maxs._e[1]; p[3]._e[2] = maxs._e[2];
-				p[4]._e[0] = maxs._e[0]; p[4]._e[1] = mins._e[1]; p[4]._e[2] = maxs._e[2];
-				p[5]._e[0] = mins._e[0]; p[5]._e[1] = mins._e[1]; p[5]._e[2] = maxs._e[2];
-				p[6]._e[0] = maxs._e[0]; p[6]._e[1] = mins._e[1]; p[6]._e[2] = mins._e[2];
-				p[7]._e[0] = maxs._e[0]; p[7]._e[1] = maxs._e[1]; p[7]._e[2] = mins._e[2];
-				p[8]._e[0] = mins._e[0]; p[8]._e[1] = maxs._e[1]; p[8]._e[2] = mins._e[2];
-				p[9]._e[0] = mins._e[0]; p[9]._e[1] = mins._e[1]; p[9]._e[2] = mins._e[2];
-				p[10]._e[0] = maxs._e[0]; p[10]._e[1] = mins._e[1]; p[10]._e[2] = mins._e[2];
-				p[11]._e[0] = mins._e[0]; p[11]._e[1] = maxs._e[1]; p[11]._e[2] = mins._e[2];
-			//Y axis
-				p[12]._e[0] = mins._e[0]; p[12]._e[2] = maxs._e[2]; p[12]._e[1] = mins._e[1];
-				p[13]._e[0] = maxs._e[0]; p[13]._e[2] = maxs._e[2]; p[13]._e[1] = mins._e[1];
-				p[14]._e[0] = maxs._e[0]; p[14]._e[2] = mins._e[2]; p[14]._e[1] = mins._e[1];
-				p[15]._e[0] = mins._e[0]; p[15]._e[2] = maxs._e[2]; p[15]._e[1] = mins._e[1];
-				p[16]._e[0] = maxs._e[0]; p[16]._e[2] = mins._e[2]; p[16]._e[1] = mins._e[1];
-				p[17]._e[0] = mins._e[0]; p[17]._e[2] = mins._e[2]; p[17]._e[1] = mins._e[1];
-				p[18]._e[0] = maxs._e[0]; p[18]._e[2] = mins._e[2]; p[18]._e[1] = maxs._e[1];
-				p[19]._e[0] = maxs._e[0]; p[19]._e[2] = maxs._e[2]; p[19]._e[1] = maxs._e[1];
-				p[20]._e[0] = mins._e[0]; p[20]._e[2] = maxs._e[2]; p[20]._e[1] = maxs._e[1];
-				p[21]._e[0] = mins._e[0]; p[21]._e[2] = mins._e[2]; p[21]._e[1] = maxs._e[1];
-				p[22]._e[0] = maxs._e[0]; p[22]._e[2] = mins._e[2]; p[22]._e[1] = maxs._e[1];
-				p[23]._e[0] = mins._e[0]; p[23]._e[2] = maxs._e[2]; p[23]._e[1] = maxs._e[1];
-			//X axis
-				p[24]._e[2] = mins._e[2]; p[24]._e[1] = maxs._e[1]; p[24]._e[0] = mins._e[0];
-				p[25]._e[2] = maxs._e[2]; p[25]._e[1] = maxs._e[1]; p[25]._e[0] = mins._e[0];
-				p[26]._e[2] = maxs._e[2]; p[26]._e[1] = mins._e[1]; p[26]._e[0] = mins._e[0];
-				p[27]._e[2] = mins._e[2]; p[27]._e[1] = maxs._e[1]; p[27]._e[0] = mins._e[0];
-				p[28]._e[2] = maxs._e[2]; p[28]._e[1] = mins._e[1]; p[28]._e[0] = mins._e[0];
-				p[29]._e[2] = mins._e[2]; p[29]._e[1] = mins._e[1]; p[29]._e[0] = mins._e[0];
-				p[30]._e[2] = maxs._e[2]; p[30]._e[1] = mins._e[1]; p[30]._e[0] = maxs._e[0];
-				p[31]._e[2] = maxs._e[2]; p[31]._e[1] = maxs._e[1]; p[31]._e[0] = maxs._e[0];
-				p[32]._e[2] = mins._e[2]; p[32]._e[1] = maxs._e[1]; p[32]._e[0] = maxs._e[0];
-				p[33]._e[2] = mins._e[2]; p[33]._e[1] = mins._e[1]; p[33]._e[0] = maxs._e[0];
-				p[34]._e[2] = maxs._e[2]; p[34]._e[1] = mins._e[1]; p[34]._e[0] = maxs._e[0];
-				p[35]._e[2] = mins._e[2]; p[35]._e[1] = maxs._e[1]; p[35]._e[0] = maxs._e[0];
-				device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 12, p, sizeof(::Vector3));
-			}
-			else 
-			{
-				Vector3 lines[12][2];
-
-				lines[0][0] = mins;
-				lines[0][1]._e[0] = mins._e[0];
-				lines[0][1]._e[1] = mins._e[1];
-				lines[0][1]._e[2] = maxs._e[2];
-
-				lines[1][0] = lines[0][1];
-				lines[1][1]._e[0] = maxs._e[0];
-				lines[1][1]._e[1] = mins._e[1];
-				lines[1][1]._e[2] = maxs._e[2];
-
-				lines[2][0] = lines[1][1];
-				lines[2][1]._e[0] = maxs._e[0];
-				lines[2][1]._e[1] = mins._e[1];
-				lines[2][1]._e[2] = mins._e[2];
-
-				lines[3][0] = lines[2][1];
-				lines[3][1] = mins;
-	///
-				lines[4][0]._e[0] = mins._e[0];
-				lines[4][0]._e[1] = maxs._e[1];
-				lines[4][0]._e[2] = mins._e[2];
-				lines[4][1]._e[0] = mins._e[0];
-				lines[4][1]._e[1] = maxs._e[1];
-				lines[4][1]._e[2] = maxs._e[2];
-
-				lines[5][0] = lines[4][1];
-				lines[5][1] = maxs;
-
-				lines[6][0] = lines[5][1];
-				lines[6][1]._e[0] = maxs._e[0];
-				lines[6][1]._e[1] = maxs._e[1];
-				lines[6][1]._e[2] = mins._e[2];
-
-				lines[7][0] = lines[6][1];
-				lines[7][1] = lines[4][0];
-	///
-				lines[8][0] = lines[3][1];
-				lines[8][1] = lines[4][0];
-
-				lines[9][0] = lines[0][1];
-				lines[9][1] = lines[4][1];
-
-				lines[10][0] = lines[1][1];
-				lines[10][1] = lines[5][1];
-
-				lines[11][0] = lines[2][1];
-				lines[11][1] = lines[6][1];
-
-				device->DrawPrimitiveUP(D3DPT_LINELIST, 12, lines, sizeof(Vector3));
-			}
-		}
-		else
-		{
-			for(const Winding* wnd = m_pWindings; wnd; wnd = wnd->Next)
-			{
-				if(type == SHAPE_MESH)
-				{
-					device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, wnd->GetNumPoints() / 3, wnd->p, sizeof(Vector3));
-				}
-				else if(type == SHAPE_LINE)
-				{
-					device->DrawPrimitiveUP(D3DPT_LINESTRIP, wnd->GetNumPoints() - 1, wnd->p, sizeof(Vector3));
-				}
-				else if(type == SHAPE_POLYGON)
-				{
-					if(c == 1)
-					{
-						device->DrawPrimitiveUP(D3DPT_LINESTRIP, wnd->GetNumPoints(), wnd->p, sizeof(Vector3));
-					}
-					else
-					{
-						device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, wnd->GetNumPoints() - 2 , wnd->p, sizeof(Vector3));
-					}
-				}
-			}
-		}
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------

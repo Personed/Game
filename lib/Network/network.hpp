@@ -456,7 +456,6 @@ public:
   //! Server time of estimated End of MP game
   virtual DWORD GetEstimatedEndServerTime() = 0;
   //! get battleye to know about Steam GUID validation
-  virtual void PlayerGUIDIsValid(int player, const CSteamID &ownerId) = 0;
 
 #if _ENABLE_CHEATS
   virtual void VoNSay(int dpnid, int channel, int frequency, int seconds) = 0;
@@ -553,7 +552,6 @@ public:
   virtual bool DBItemDrop(RString baseURL, RString request) = 0;
 
   virtual void DBLoad(RString baseURL, int playerId, GameDataCode *code) = 0;
-  virtual void DBLoad(RString baseURL, int playerId, RString playerUID, GameDataCode *code) = 0;
   virtual bool DBKill(RString baseURL, RString uid) = 0;
 
   //! Close multiplayer session, listen to sessions again

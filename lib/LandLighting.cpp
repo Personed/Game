@@ -5,24 +5,10 @@
 #include "landLighting.hpp"
 #include "El/ParamFile/paramFile.hpp"
 #include "paramFileExt.hpp"
-#include "global.hpp"
 
 /// returns if given floats are approximately equal (with given epsilon toleration)
 inline bool floatApproxEq(float a, float b, float epsilon = 0.0001f) {return fabs(a-b) <= epsilon;}
 
-/// F9 / ciclo 9 - pequeno ganho de saturacao, usado para dar profundidade ao ceu.
-static Color SkyBoostSaturation(const Color &c, float amount)
-{
-  float lum = c.R()*0.299f + c.G()*0.587f + c.B()*0.114f;
-  return Color(
-    lum + (c.R()-lum)*(1.0f+amount),
-    lum + (c.G()-lum)*(1.0f+amount),
-    lum + (c.B()-lum)*(1.0f+amount),
-    c.A()
-  );
-}
-
-// [F10] rebuild forcado
 //===================================================================
 // Implementation of LandLighting::Item
 //===================================================================
@@ -226,7 +212,6 @@ void LandLighting::Item::InterpolateWith(const Item& other, float coef, Item& re
   result._swBrightness = GetInterpolatedValue(coef, _swBrightness, other._swBrightness);
 }
 
-// [F10] rebuild forcado
 //===================================================================
 // Implementation of LandLighting::LightingResult
 //===================================================================
@@ -249,23 +234,8 @@ LandLighting::LightingResult::LightingResult()
 
 }
 
-void LandLighting::LightingResult::InitFrom(const LandLighting::Item& item, float cloud, float cosSun)
+void LandLighting::LightingResult::InitFrom(const LandLighting::Item& item, float cloud)
 {
-  // [F9-DIAG] mostra o relogio real do client a cada 5s (temporario).
-  {
-    static DWORD s_lastClockLog = 0;
-    DWORD nowMs = GetTickCount();
-    if (nowMs - s_lastClockLog > 5000)
-    {
-      s_lastClockLog = nowMs;
-      Clock &cw = Glob.clockWeather;
-      tm t = {0};
-      cw.GetDate(t);
-      RptF("F9-clock tod=%.2fh clock=%.2fh date=%04d-%02d-%02d %02d:%02d",
-        cw.GetTimeOfDay()*24.0f, Glob.clock.GetTimeOfDay()*24.0f,
-        t.tm_year+1900, t.tm_mon+1, t.tm_mday, t.tm_hour, t.tm_min);
-    }
-  }
 
   _sunOrMoon = item.GetSunOrMoon();
   _diffuse = item.GetDiffuse(cloud);
@@ -283,94 +253,8 @@ void LandLighting::LightingResult::InitFrom(const LandLighting::Item& item, floa
 
   _sun = item.GetDiffuse();
   _sun.SaturateMax(_skyAroundSun);
-
-  // ---- F9 / ciclo 9 - ceu ----
-  // Amplia a profundidade do ceu de dia e o calor do nascer/por do sol.
-  // E o que o 0.62 tem e o 0.45 nao: transicoes atmosfericas de verdade.
-  // [F10] usa o cos do sol REAL (antes usava o cos gravado no item da tabela,
-  // que e constante e nunca batia com a hora do jogo -> poente nunca aparecia).
-  // 1 quando o sol esta no horizonte, 0 no alto do ceu (e a noite tambem)
-  float horizon = 1.0f - floatMinMax(fabsf(cosSun) / 0.35f, 0.0f, 1.0f);
-  horizon *= horizon;
-  // 1 durante o dia
-  float day = floatMinMax((cosSun - 0.10f) / 0.45f, 0.0f, 1.0f);
-
-  // ceu de dia mais profundo (saturacao)
-  _sky = SkyBoostSaturation(_sky, 0.20f * day);
-  _skyAroundSun = SkyBoostSaturation(_skyAroundSun, 0.25f * day);
-
-  // nascer/por do sol: lado do sol quente, ceu com tom de poente
-  _skyAroundSun = Color(
-    _skyAroundSun.R() * (1.0f + 2.40f * horizon) * (1.0f - 0.15f * horizon),
-    _skyAroundSun.G() * (1.0f + 0.40f * horizon) * (1.0f - 0.15f * horizon),
-    _skyAroundSun.B() * (1.0f - 0.78f * horizon) * (1.0f - 0.15f * horizon),
-    _skyAroundSun.A()
-  );
-  // escurece o ceu junto com o calor: sem isto o HDR estoura em branco
-  // e a cor (o laranja) some no tonemap.
-  float duskDim = 1.0f - 0.60f * horizon;
-  _sky = Color(
-    _sky.R() * (1.0f + 2.20f * horizon) * duskDim,
-    _sky.G() * (1.0f + 0.35f * horizon) * duskDim,
-    _sky.B() * (1.0f - 0.72f * horizon) * duskDim,
-    _sky.A()
-  );
-
-  // nuvens douradas no nascer/por do sol (a foto de referencia)
-  _cloudsColor = Color(
-    _cloudsColor.R() * (1.0f + 1.60f * horizon) * (1.0f - 0.25f * horizon),
-    _cloudsColor.G() * (1.0f + 0.25f * horizon) * (1.0f - 0.25f * horizon),
-    _cloudsColor.B() * (1.0f - 0.60f * horizon) * (1.0f - 0.25f * horizon),
-    _cloudsColor.A()
-  );
-
-  // [F10] O ceu visivel no 0.45 e o Simul Weather (scattering atmosferico):
-  // ele ignora _sky e usa Mie / Rayleigh / brilho. Sem mexer nisto nao ha poente.
-  _rayleigh = Color(
-    _rayleigh.R() * (1.0f + 1.40f * horizon),
-    _rayleigh.G() * (1.0f + 0.25f * horizon),
-    _rayleigh.B() * (1.0f - 0.55f * horizon),
-    _rayleigh.A()
-  );
-  _mie = Color(
-    _mie.R() * (1.0f + 3.50f * horizon),
-    _mie.G() * (1.0f + 1.40f * horizon),
-    _mie.B() * (1.0f + 0.25f * horizon),
-    _mie.A()
-  );
-  _swBrightness *= (1.0f - 0.35f * horizon);
-
-  // nuvens douradas no nascer/por do sol (a foto de referencia)
-  _cloudsColor = Color(
-    _cloudsColor.R() * (1.0f + 0.50f * horizon),
-    _cloudsColor.G() * (1.0f + 0.15f * horizon),
-    _cloudsColor.B() * (1.0f - 0.28f * horizon),
-    _cloudsColor.A()
-  );
-
-  _sky.SaturateZero();
-  _skyAroundSun.SaturateZero();
-  _cloudsColor.SaturateZero();
-
-  // log de calibracao: uma linha a cada mudanca relevante de altura do sol
-  static float s_lastLoggedCos = 2.0f;
-  if (fabsf(cosSun - s_lastLoggedCos) > 0.15f)
-  {
-    s_lastLoggedCos = cosSun;
-    float todH = Glob.clockWeather.GetTimeOfDay() * 24.0f;
-    float todClockH = Glob.clock.GetTimeOfDay() * 24.0f;
-    RptF("F9-sky tod=%.2fh clock=%.2fh cosSun=%.3f horizon=%.2f day=%.2f sky=(%.2f,%.2f,%.2f) around=(%.2f,%.2f,%.2f) clouds=(%.2f,%.2f,%.2f) mie=(%.4f,%.4f,%.4f) ray=(%.4f,%.4f,%.4f) sw=%.3f",
-      todH, todClockH, cosSun, horizon, day,
-      _sky.R(), _sky.G(), _sky.B(),
-      _skyAroundSun.R(), _skyAroundSun.G(), _skyAroundSun.B(),
-      _cloudsColor.R(), _cloudsColor.G(), _cloudsColor.B(),
-      _mie.R(), _mie.G(), _mie.B(),
-      _rayleigh.R(), _rayleigh.G(), _rayleigh.B(),
-      _swBrightness);
-  }
 }
 
-// [F10] rebuild forcado
 //===================================================================
 // Implementation of LandLighting
 //===================================================================
@@ -561,7 +445,7 @@ bool LandLighting::GetLighting(LightingResult& result, float height, float overc
   if (ok)
   {
     // fill result
-    result.InitFrom(resultItem, cloud, cosSun);
+    result.InitFrom(resultItem, cloud);
   }
 
   return ok;  

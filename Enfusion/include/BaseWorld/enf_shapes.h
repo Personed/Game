@@ -18,11 +18,7 @@
 #include "Es/Memory/memAlloc.hpp"
 #include <Es/Memory/normalNew.hpp>
 
-#if defined(_DISABLE_GUI) || defined(_SERVER) || defined(_BINARIZE)
-	#define ENF_SHAPES_DUMMYRENDER
-#else 
-	#include "d3d9.h"
-#endif
+#define ENF_SHAPES_DUMMYRENDER
 
 
 #ifndef ENF_SHAPES_DUMMYRENDER
@@ -59,7 +55,6 @@
 	#define ENF_SHAPE_CREATEINDEXMESH(vertices, numVertices, vertexStride, indices, numFaces, indexStride, scale, color, flags, coll) 0
 #endif
 
-class EngineDD9;
 class Plane;
 
 namespace enf

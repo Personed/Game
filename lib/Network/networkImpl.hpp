@@ -32,10 +32,6 @@
 #include <El/Common/randomGen.hpp>
 #include <El/XML/inet.hpp>
 
-#if _ENABLE_STEAM_MATCHMAKING
-# include <steamworks/steam_api.h>
-# include <steamworks/steam_gameserver.h>
-#endif
 
 #include "../AI/ai.hpp"
 #include "../house.hpp"
@@ -1929,13 +1925,12 @@ struct DelayedPublicVariable
 };
 TypeIsMovableZeroed(DelayedPublicVariable)
 
-//! SpawnForPlayer code queued until the mission init script has run
 struct DelayedSpawnForPlayer
 {
   RString _code;
   GameValue _args;
 };
-TypeIsMovableZeroed(DelayedSpawnForPlayer)
+TypeIsGeneric(DelayedSpawnForPlayer)
 
 //! Network Client
 class NetworkClient : public NetworkComponent
@@ -2169,10 +2164,9 @@ protected:
   /// public variables which have Null networkId during PublicVariable are stored to be proccessed later again
   AutoArray<DelayedPublicVariable> _delayedPublicVariables;
 
-  //! true once the mission init script has run and spawned code may execute
-  bool _initScriptRun;
-  //! SpawnForPlayer code received before the mission init script ran
+  /// spawnForClient code received before the mission init script ran (player scripts are not compiled yet)
   AutoArray<DelayedSpawnForPlayer> _delayedSpawns;
+  bool _initScriptRun = false;
 
   //! time synchronized from server to clients
   DWORD _serverTime;
@@ -2184,9 +2178,6 @@ protected:
   bool _serverAdmin;
   int _serverGameMaster;
 
-#if _ENABLE_STEAM_MATCHMAKING
-  HAuthTicket _hAuthTicket;
-#endif
 
 public:
 
@@ -2724,10 +2715,9 @@ public:
   void ClearDelayedPublicVariables();
   void AddDelayedPublicVariable(RString name, int dpnid);
 
-  //! Run a SpawnForPlayer code on this client
-  void RunSpawnedCode(RString code, GameValuePar args);
-  //! Run all SpawnForPlayer code delayed until the mission init script ran
+  //! Run spawnForClient code queued until the mission init script ran
   void ProcessDelayedSpawns();
+  void RunSpawnedCode(RString code, GameValuePar args);
 
   //! Send chat message
   /*!
@@ -3929,39 +3919,6 @@ struct AsyncDBStorage
   void DBCheckLoaded();
 };
 
-#if _ENABLE_STEAM_MATCHMAKING && !(_ENABLE_STEAM_IDENTITY && defined(_WIN64))
-class SteamValidation
-{
-  /// Steam authentication is completed (need not wait for it)
-  bool _authDone;
-  /// Steam authentication passed (client approved)
-  bool _authOK;
-
-  bool _started;
-  DWORD _ticksStarted;
-
-  NetworkServer *_server;
-
-  uint64 _steamId;
-
-  AutoArray<char> _steamSessionTicket;
-
-  RString _name;
-
-  int _dpid;
-
-public:
-  SteamValidation();
-  ~SteamValidation();
-
-  void Start(PlayerIdentity &identity, NetworkServer *server);
-
-  void HandleTimeout();
-
-  // Tells us a client has been authenticated and approved to play by Steam (passes auth, license check, VAC status, etc...)
-  STEAM_GAMESERVER_CALLBACK(SteamValidation, OnValidateAuthTicketResponse, ValidateAuthTicketResponse_t, _callbackGSAuthTicketResponse);
-};
-#endif
 
 
 //! Server info about player
@@ -4065,9 +4022,6 @@ struct NetworkPlayerInfo : public AsyncDBStorage, public RefCount, private NoCop
   SteamValidation _steamValidate;
 #endif
   
-#if _ENABLE_STEAM_MATCHMAKING && !(_ENABLE_STEAM_IDENTITY && defined(_WIN64))
-  SteamValidation _steamValidate;
-#endif
 
   /// CDKey check
   CDKeyCheck cdKeyCheck;
@@ -4593,16 +4547,10 @@ protected:
     void PlayerDisconnected(int player);
 
     //! BEServer.ReceivedPlayerGUID() will be called as soon as the GameSpy cd-key hash is received from the client (after connecting).
-#if _ENABLE_STEAM_OWNERSHIP
-    void PlayerGUIDReceived(int player, const CSteamID &id);
-#else
     void PlayerGUIDReceived(int player);
-#endif
     void PlayerGUIDIsValid(int player);
-#if (_ENABLE_STEAM_IDENTITY && defined(_WIN64)) && !_ENABLE_STEAM_OWNERSHIP
+#if _ENABLE_STEAM_IDENTITY && defined(_WIN64)
     void PlayerGUIDReceived(int player, const CSteamID &id);
-#endif
-#if _ENABLE_STEAM_OWNERSHIP || (_ENABLE_STEAM_IDENTITY && defined(_WIN64))
     void PlayerGUIDIsValid(int player, const CSteamID &ownerId);
 #endif
 
@@ -4786,11 +4734,6 @@ protected:
 
   bool _longLatAuto;
 
-#if _ENABLE_STEAM_MATCHMAKING 
-  // ports for Steam services
-  int _steamPort;
-  int _steamQueryPort;
-#endif
 
   struct GeoJobThread
   {
@@ -4856,11 +4799,6 @@ protected:
   GameState _evaluator;
   /// global variables for _evaluator
   GameDataNamespace _globals;
-
-  /// SDZ_SQF_EXEC: scripts coming from #exec are queued and evaluated after the
-  /// network messages of the current frame have been processed. Running arbitrary
-  /// SQF in the middle of message handling touched half-updated object lists and
-  /// corrupted the script heap (server crashed with no RPT message).
   AutoArray<RString> _sqfExecQueue;
   AutoArray<int> _sqfExecFrom;
   bool _sqfExecBusy;
@@ -5035,9 +4973,7 @@ public:
 
   /// add specific server scripting commands to the _evaluator
   void InitEvaluator();
-  /// SDZ_SQF_EXEC: queue an expression received through #exec
   void QueueExec(int from, RString expression);
-  /// SDZ_SQF_EXEC: evaluate (and answer) every queued expression
   void ProcessQueuedExec();
 
   void ProfileAnswer(const RString &output);
@@ -5097,7 +5033,6 @@ public:
 
   bool DBSave(RString baseURL, int dpnid, RString request);
   void DBLoad(RString baseURL, int playerId, GameDataCode *code);
-  void DBLoad(RString baseURL, int playerId, RString playerUID, GameDataCode *code);
 
   void OnDraw();
   void OnSimulate();
@@ -5115,6 +5050,11 @@ public:
 
   void SpawnForPlayer(int dpnid, GameDataCode *code, const GameValue &args);
 
+  void PlayerGUIDIsValid(int player) {
+#if _USE_BATTL_EYE_SERVER
+    _beIntegration.PlayerGUIDIsValid(player);
+#endif
+  };
 #if _ENABLE_STEAM_IDENTITY && defined(_WIN64)
   void PlayerGUIDReceived(int player, const CSteamID &id) {
 #if _USE_BATTL_EYE_SERVER
@@ -5502,35 +5442,6 @@ public:
   void OnCDKeyAuthorize(int player, int authenticated, const char *errmsg);
 #endif
 
-#elif _ENABLE_STEAM_MATCHMAKING
-public:
-  /// Initialization of Steamworks SDK server reporting interface
-  void InitSteam();
-  /// Steamworks SDK server reporting interface clean up
-  void DoneSteam();
-  /// Simulation of Steamworks SDK callbacks
-  void SimulateSteam();
-  /// Inform Steam master server about the change of the inner game state
-  void ChangeStateSteam();
-#if _ENABLE_DEDICATED_SERVER
-  /// Reset TimeAlive Statistics
-  void ResetCharacterTimeAlive(AIBrain *unit);
-#endif
-
-  #if _ENABLE_STEAM_OWNERSHIP && _USE_BATTL_EYE_SERVER
-  void PlayerGUIDReceived(int player, const CSteamID &id) {_beIntegration.PlayerGUIDReceived(player, id);}
-  #endif
-
-  // Tells us when we have successfully connected to Steam
-  STEAM_GAMESERVER_CALLBACK(NetworkServer, OnSteamServersConnected, SteamServersConnected_t, _callbackSteamServersConnected);
-  // Tells us when there was a failure to connect to Steam
-  STEAM_GAMESERVER_CALLBACK(NetworkServer, OnSteamServersConnectFailure, SteamServerConnectFailure_t, _callbackSteamServersConnectFailure);
-  // Tells us when we have been logged out of Steam
-  STEAM_GAMESERVER_CALLBACK(NetworkServer, OnSteamServersDisconnected, SteamServersDisconnected_t, _callbackSteamServersDisconnected);
-  // Tells us that Steam has set our security policy (VAC on or off)
-  STEAM_GAMESERVER_CALLBACK(NetworkServer, OnPolicyResponse, GSPolicyResponse_t, _callbackPolicyResponse);
-
-protected:
 #endif
 //}
   //@}
@@ -5776,7 +5687,6 @@ public:
   void CustomFilesProgressGet(int &max, int &pos);
   DWORD GetServerTime();
   DWORD GetEstimatedEndServerTime();
-  void PlayerGUIDIsValid(int player, const CSteamID &ownerId) override;
 
 
 #if _GAMES_FOR_WINDOWS
@@ -5892,7 +5802,6 @@ public:
   virtual bool DBItemDrop(RString baseURL, RString request) override;
 
   virtual void DBLoad(RString baseURL, int playerId, GameDataCode *code) override;
-  virtual void DBLoad(RString baseURL, int playerId, RString playerUID, GameDataCode *code) override;
 
   virtual InputInterface *GetInputInterface(int player) override;
   virtual RString GetDiagText(const NetworkObject *obj) const override;

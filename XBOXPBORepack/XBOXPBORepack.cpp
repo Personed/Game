@@ -9,7 +9,6 @@
 #include <El/QStream/packFiles.hpp>
 #include <Es/Algorithms/qsort.hpp>
 #include <lib/pactext.hpp>
-#include <lib/d3d9/txtd3d9.hpp>
 #include <io.h>
 #include <conio.h>
 #include "El/Stringtable/iExtParser.hpp"

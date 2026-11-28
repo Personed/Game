@@ -5112,7 +5112,7 @@ bool TextureHeaderManager::AddHeaderFromFile(const RString& fileName, const RStr
     return false;
   }
 
-  // this is not very good, but MAX_MIPMAPS in txtd3d9.h may not bew vailable here...
+  // this is not very good, but MAX_MIPMAPS may not be available here...
   static const int MaxMipmaps = 12;
 
   PacLevelMem mipmaps[MaxMipmaps];

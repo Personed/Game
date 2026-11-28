@@ -12163,12 +12163,10 @@ void Transport::LookAround(float aimX, float aimY, float deltaT, const ViewPars 
 */
 void Transport::UpdateZoom(AIBrain *unit)
 {
-  Person *player = unit ? unit->GetPerson() : NULL;
-  Zoom *zoom = GetZoom(unit);
-  if (!zoom) return;
-
-  // Recalculate this every frame. Leaving it set after UALockTarget is released
-  // forces the continuous zoom to its minimum FOV until the player leaves the vehicle.
+  Person *player = unit->GetPerson();
+  // The zoom flag must reflect the current button state every frame. Setting
+  // it only when zooming in left the camera stuck at maximum zoom after the
+  // button was released (the "infinite zoom" bug in vehicles).
   bool zoomInsteadOfOptics = false;
   if (player && GInput.GetAction(UALockTarget) && (GWorld->IsCameraActive(CamInternal) || GWorld->IsCameraActive(CamExternal)))
   {

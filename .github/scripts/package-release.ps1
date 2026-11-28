@@ -185,11 +185,11 @@ function Assert-Package([string]$Stage) {
     if (Test-Path -LiteralPath (Join-Path $Stage 'dll')) {
       throw 'The client package must not contain a dll directory.'
     }
-    $shaderRoot = Join-Path $Stage 'bin\ShaderSources_3_0'
+    $shaderRoot = Join-Path $Stage 'bin\ShaderSources_4_0'
     foreach ($shader in @('VS.hlsl', 'PS.hlsl', 'FPShaders.hlsl')) {
       $path = Join-Path $shaderRoot $shader
       if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -eq 0) {
-        throw "Missing or empty Direct3D 9 shader source: $shader"
+        throw "Missing or empty Direct3D 11 shader source: $shader"
       }
     }
   }
@@ -331,7 +331,7 @@ try {
   Add-Tree $roleAssets $StageDirectory
   Add-Tree $binaryRoot $StageDirectory
   if ($Role -eq 'client') {
-    Add-Tree (Join-Path $repoRoot 'lib\d3d9\ShaderSources_3_0') (Join-Path $StageDirectory 'bin\ShaderSources_3_0')
+    Add-Tree (Join-Path $repoRoot 'lib\d3d11\ShaderSources_4_0') (Join-Path $StageDirectory 'bin\ShaderSources_4_0')
   }
   Assert-Package $StageDirectory
 

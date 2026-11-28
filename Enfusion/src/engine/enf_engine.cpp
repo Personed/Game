@@ -434,7 +434,6 @@ Engine::Engine(CStr appname, CStr cliparams, size_t staticPoolSize):
 	m_pPhysicsManager(NULL),
 	m_pXSoundSystem(NULL),
 	m_pFont(NULL),
-	m_pVideoStream(NULL),
 	m_iLastTime(0),
 	m_iSettingsChanged(0),
 	m_dTime(0.0),
@@ -2010,7 +2009,7 @@ ERESULT Engine::RenderFrame(bool inscene)
 
 			if(g_bGrabVideo)
 			{
-				if(!OpenVideo(NULL))
+				if(!OpenVideo())
 					g_bGrabVideo = false;
 			}
 			else

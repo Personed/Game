@@ -56,55 +56,6 @@ extern void PositionToAA11(Vector3Val pos, char *buffer);
 #define MAX_HELICOPTER_SPEED 83.333f
 #define MAX_HELICOPTER_HEIGHT 6000.0
 
-// DayZ status icons: 5 art variants per family, 0 = full ... 4 = empty
-static int StatusIconLevel(float ratio)
-{
-  if (ratio >= 0.8f) return 0;
-  if (ratio >= 0.6f) return 1;
-  if (ratio >= 0.4f) return 2;
-  if (ratio >= 0.2f) return 3;
-  return 4;
-}
-
-static Texture *DayZStatusTexture(int family, int level)
-{
-  // Keep a Ref<> so the textures stay alive even when they are not displayed.
-  static Ref<Texture> textures[5][5];
-  static bool initialized = false;
-  if (!initialized)
-  {
-    static const char *names[5] = {"thirst","hunger","temperature","blood","health"};
-    int loaded = 0;
-    for (int f=0; f<5; f++)
-    {
-      for (int l=0; l<5; l++)
-      {
-        char path[128];
-        // NOTE: no leading backslash. QFBankQueryFunctions::AutoBank matches
-        // the PBO prefix ("DZ\ui\") from the very first character, so a
-        // leading '\' makes the lookup miss the bank and the texture fails.
-        sprintf(path, "DZ\\ui\\data\\igui\\hud\\status\\%s_%d_ca.paa", names[f], l);
-        textures[f][l] = GlobLoadTextureUI(path);
-        if (textures[f][l]) loaded++;
-      }
-    }
-    RptF("[HUD-STATUS] %d/25 status textures loaded", loaded);
-    initialized = true;
-  }
-  if (level < 0) level = 0;
-  if (level > 4) level = 4;
-  return textures[family][level];
-}
-
-static void DrawStatusIconAbs(Texture *texture, float x, float y, float size)
-{
-  if (!texture) return;
-  Draw2DParsExt pars;
-  pars.mip = GEngine->TextBank()->UseMipmap(texture, 0, 0);
-  pars.SetColor(PackedWhite);
-  pars.Init();
-  GEngine->Draw2D(pars, Rect2DAbs(x, y, size, size));
-}
 
 void InGameUI::DrawUnitInfo(EntityAIFull *vehicle)
 {
@@ -140,26 +91,6 @@ void InGameUI::DrawUnitInfo(EntityAIFull *vehicle)
     }
 
     DisplayUnitInfo *disp = desc._display;
-
-    // [HUD-DBG] temporary diagnostics for the DayZ status icons
-    {
-      static int dbgFrame = 0;
-      if (dbgFrame < 6 || (dbgFrame % 600) == 0)
-      {
-        RptF("[HUD-DBG] frame=%d showUI=%d n=%d name='%s' disp=%p thirst=%p hunger=%p temp=%p blood=%p health=%p",
-          dbgFrame, (int)_showUnitInfo, n, (const char *)desc._name, disp,
-          (void*)disp->statusThirst.GetRef(), (void*)disp->statusHunger.GetRef(),
-          (void*)disp->statusTemperature.GetRef(), (void*)disp->statusBlood.GetRef(),
-          (void*)disp->statusHealth.GetRef());
-        if (disp->statusThirst)
-        {
-          RptF("[HUD-DBG] thirst rect x=%g y=%g w=%g h=%g",
-            disp->statusThirst->X(), disp->statusThirst->Y(),
-            disp->statusThirst->W(), disp->statusThirst->H());
-        }
-      }
-      dbgFrame++;
-    }
 
     // reset the dialog size to original
     CStatic *bg = disp->background;
@@ -494,109 +425,6 @@ void InGameUI::DrawUnitInfo(EntityAIFull *vehicle)
         color = barBlinkColor;
       disp->valueHealth->SetPos(health);
       disp->valueHealth->SetBarColor(color);
-    }
-
-    /* --  DAYZ STATUS ICONS -- */
-    if (disp->statusHealth || disp->statusBlood || disp->statusHunger || disp->statusThirst || disp->statusTemperature)
-    {
-      EntityAI *person = agent->GetPerson();
-      if (person)
-      {
-        GameValue gv;
-
-        float healthVal = 5000;
-        gv = person->GetVariableValue("health");
-        if (!gv.GetNil()) healthVal = gv;
-        else healthVal = (1 - person->GetTotalDamage()) * 5000;
-
-        float bloodVal = healthVal;
-        gv = person->GetVariableValue("blood");
-        if (!gv.GetNil()) bloodVal = gv;
-
-        float energyVal = 1000;
-        gv = person->GetVariableValue("energy");
-        if (!gv.GetNil()) energyVal = gv;
-
-        float waterVal = 1800;
-        gv = person->GetVariableValue("water");
-        if (!gv.GetNil()) waterVal = gv;
-
-        float vHealth = healthVal / 5000.0f;
-        float vBlood = bloodVal / 5000.0f;
-        float vEnergy = energyVal / 1000.0f;
-        float vWater = waterVal / 1800.0f;
-        saturate(vHealth, 0, 1);
-        saturate(vBlood, 0, 1);
-        saturate(vEnergy, 0, 1);
-        saturate(vWater, 0, 1);
-
-        // No body temperature variable exists in 0.45: derive the cold level
-        // from the environment plus player wetness (DZ_WET_COOLING = 6).
-        float airTemperature = 15.0f;
-        if (GLandscape)
-        {
-          float black, white;
-          GLandscape->GetTemperature(airTemperature, black, white);
-        }
-        float wet = 0;
-        gv = person->GetVariableValue("wet");
-        if (!gv.GetNil()) wet = gv;
-        saturate(wet, 0, 1);
-        float effectiveTemperature = airTemperature - wet * 8.0f;
-        int temperatureLevel;
-        if (effectiveTemperature >= 10.0f) temperatureLevel = 0;
-        else if (effectiveTemperature >= 0.0f) temperatureLevel = 1;
-        else if (effectiveTemperature >= -10.0f) temperatureLevel = 2;
-        else if (effectiveTemperature >= -20.0f) temperatureLevel = 3;
-        else temperatureLevel = 4;
-
-        // The engine confines HUD controls to its 4:3 "2D area", which leaves
-        // the icons well inside the real screen edges. Hide the config
-        // controls and draw the row directly in absolute screen pixels so it
-        // sits in the true bottom-right corner at the intended size.
-        if (GWorld->UserDialog() == NULL)
-        {
-          if (disp->statusThirst) disp->statusThirst->ShowCtrl(false);
-          if (disp->statusHunger) disp->statusHunger->ShowCtrl(false);
-          if (disp->statusTemperature) disp->statusTemperature->ShowCtrl(false);
-          if (disp->statusBlood) disp->statusBlood->ShowCtrl(false);
-          if (disp->statusHealth) disp->statusHealth->ShowCtrl(false);
-
-          Texture *statusTex[5] =
-          {
-            DayZStatusTexture(0, StatusIconLevel(vWater)),
-            DayZStatusTexture(1, StatusIconLevel(vEnergy)),
-            DayZStatusTexture(2, temperatureLevel),
-            DayZStatusTexture(3, StatusIconLevel(vBlood)),
-            DayZStatusTexture(4, StatusIconLevel(vHealth))
-          };
-
-          float screenW = (float)GEngine->WidthBB();
-          float screenH = (float)GEngine->HeightBB();
-          float iconSize = screenH * 0.052f;
-          float iconGap = iconSize * 0.10f;
-          float rowW = 5 * iconSize + 4 * iconGap;
-          float rowX = screenW - screenW * 0.004f - rowW;
-          float rowY = screenH - screenH * 0.012f - iconSize;
-          for (int k = 0; k < 5; k++)
-            DrawStatusIconAbs(statusTex[k], rowX + k * (iconSize + iconGap), rowY, iconSize);
-        }
-
-        if (disp->statusThirst || disp->statusHunger || disp->statusTemperature || disp->statusBlood || disp->statusHealth)
-        {
-          static int dbgStatus = 0;
-          if (dbgStatus < 6 || (dbgStatus % 600) == 0)
-          {
-            RptF("[HUD-DBG] values h=%.1f b=%.1f e=%.1f w=%.1f air=%.1f wet=%.1f lv=%d,%d,%d,%d,%d",
-              healthVal, bloodVal, energyVal, waterVal, airTemperature, wet,
-              StatusIconLevel(vHealth), StatusIconLevel(vBlood), StatusIconLevel(vEnergy),
-              StatusIconLevel(vWater), temperatureLevel);
-          }
-          dbgStatus++;
-        }
-
-        // (Icons are drawn directly above; the config controls stay hidden.)
-      }
     }
 
     /* --  ARMOR -- */
@@ -1221,21 +1049,17 @@ void InGameUI::DrawUnitInfo(EntityAIFull *vehicle)
       age = Glob.uiTime - desc._changed;
     #endif
 
-    bool statusVisible = GWorld->UserDialog() == NULL &&
-      (disp->statusThirst || disp->statusHunger || disp->statusTemperature ||
-       disp->statusBlood || disp->statusHealth);
-
-    if (statusVisible || (age < piDimEndTime && (
+    if (age < piDimEndTime && (
       (disp->weapon && disp->weapon->IsVisible())
       || (disp->gunnerWeapon && disp->gunnerWeapon->IsVisible())
       || (disp->speed && disp->speed->IsVisible())
 #if _HELISIM_ROTORLIB
       || heliHudDraw
 #endif
-      )))
+      ))
     {
       float alpha = 1.0;
-      if (age < piDimEndTime && age > piDimStartTime)
+      if (age > piDimStartTime)
         alpha = (piDimEndTime - age) / (piDimEndTime - piDimStartTime);
 
       CStatic *bg = disp->background;

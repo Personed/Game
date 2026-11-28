@@ -17,8 +17,6 @@
 #include "system/enf_timer.h"
 #include "system/enf_mutex.h"
 
-struct IDirect3DSurface9;
-
 namespace enf
 {
 /** @defgroup Engine Engine framework
@@ -223,22 +221,6 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-enum VideoStreamFlags
-{
-	VSF_HALFSIZE = BITF(0),
-	VSF_CONFIG = BITF(1)
-};
-
-//-----------------------------------------------------------------------------
-class VideoStream
-{
-public:
-	virtual ~VideoStream() {}
-	virtual void Close()=0;
-	virtual bool Open(IDirect3DSurface9* surface, const char* filename, const char* codec, uint flags, float framerate)=0;
-	virtual void AppendFrame(double currenttime)=0;
-};
-
 //-----------------------------------------------------------------------------
 enum SignInStatus
 {
@@ -633,33 +615,8 @@ public:
 		return m_pPhysicsManager;
 	}
 
-	/*!
-	Begins video grabbing.
-	\param surface
-	Optional source surface. If NULL, primary render target is used
-	\param filename
-	The name of file, where is stream written
-	\param codec
-	FourCC id of codec (i.e. "xvid", "divx" etc)
-	\param flags
-	Flags. See VideoStreamFlags
-	\param framerate
-	Desired video ramerate. You're responsible for feeding the stream
-	as fast as neccessary, otherwise is video not synchronized
-	\return
-	Non zero when successfull
-	*/
-	virtual uint OpenVideo(IDirect3DSurface9* surface, const char* filename, const char* codec, uint flags, float framerate) { return 0;}
-
-	/*!
-	Begins video grabbing. Parameters are taken from engine config and the name is
-	automaticaly generated as video###.avi
-	\param surface
-	Optional source surface. If NULL, primary render target is used
-	\return
-	Non zero when successfull
-	*/
-	virtual uint OpenVideo(IDirect3DSurface9* surface, const char* name = NULL) { return 0; }
+	// Video capture is unavailable in the DX11 client.
+	virtual uint OpenVideo(const char* name = NULL) { (void)name; return 0; }
 
 	/*!
 	Stops video grabbing
@@ -866,9 +823,6 @@ protected:
 	ConsoleWidget*				m_pConsole;
 
 	RenderFont*						m_pFont;
-
-	VideoStream*					m_pVideoStream;
-
 
 	SString<1024>					m_strDiagBuff;
 	uint64								m_iLastDiagTime;

@@ -15,7 +15,7 @@
 
 INCLUDES = -I$(ROOT) -I$(ROOT)/Poseidon -I. -ICloth -I$(ROOT)/Poseidon/extern -I$(ROOT)/Poseidon/extern/libcurl/include -I/usr/lib/jvm/java-6-openjdk-i386/include -I/usr/lib/jvm/java-6-openjdk-i386/include/linux
 
-VPATH    = .:Network:Cloth:UI:GameSpy:GameSpy/common:GameSpy/qr2:GameSpy/serverbrowsing:GameSpy/natneg:GameSpy/gcdkey:GameSpy/pt:GameSpy/ghttp:Encryption:AI:Marina:KBExt:Shape:ASE:SimulWeather:TerSynth:d3d9:../RV/KBBase:../../Es/Memory:../extern/Botan:../extern/libcurl/lib
+VPATH    = .:Network:Cloth:UI:GameSpy:GameSpy/common:GameSpy/qr2:GameSpy/serverbrowsing:GameSpy/natneg:GameSpy/gcdkey:GameSpy/pt:GameSpy/ghttp:Encryption:AI:Marina:KBExt:Shape:ASE:SimulWeather:TerSynth:../RV/KBBase:../../Es/Memory:../extern/Botan:../extern/libcurl/lib
 PROJECT  = -D_SERVER=1
 
 #  linker:
@@ -86,13 +86,11 @@ depMakeUseBinMake.cpp edges.cpp faceArray.cpp material.cpp modelConfig.cpp  \
 plane.cpp poly.cpp shape.cpp shapeFile.cpp vertex.cpp editor.cpp timeManager.cpp  \
 morale.cpp plugins.cpp spacemouse.cpp VBS2AES256.cpp landClutter.cpp  \
 landscape.cpp landWeather.cpp SimulCloudRendererBase.cpp  \
-SimulCloudRendererDX9.cpp SimulCommonDX9.cpp SimulSkyRendererBase.cpp  \
-SimulSkyRendererDX9.cpp SimulWeatherBase.cpp SimulWeatherDX9.cpp  \
+SimulSkyRendererBase.cpp SimulWeatherBase.cpp  \
 SimulWeatherMemAlloc.cpp SimulWeatherUtils.cpp terrain.cpp tersynth.cpp  \
 tersynth_helpers.cpp memAllocCommon.cpp memGrow.cpp memNedAlloc.cpp  \
 memTable.cpp \
-engdd9.cpp engdd9Video.cpp physHeap9.cpp postProcess.cpp  \
-ShaderCompileCache.cpp txtD3D9.cpp kbCenter.cpp kbMessage.cpp kbTopic.cpp  \
+kbCenter.cpp kbMessage.cpp kbTopic.cpp  \
 engDummy.cpp main.cpp main3dfx.cpp useAppInfoOFP.cpp winapp.cpp \
 camShake.cpp oalDummy.cpp \
 networkClient.cpp networkServer.cpp \

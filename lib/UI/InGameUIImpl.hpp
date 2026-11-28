@@ -117,11 +117,6 @@ public:
   InitPtr<CStatic> ammoMode;
   InitPtr<CStatic> counterMeasuresAmmo;
   InitPtr<CStatic> counterMeasuresMode;
-  InitPtr<CStatic> statusThirst;
-  InitPtr<CStatic> statusHunger;
-  InitPtr<CStatic> statusTemperature;
-  InitPtr<CStatic> statusBlood;
-  InitPtr<CStatic> statusHealth;
 
 	InitPtr<CStatic> background;
   float backgroundHeight;

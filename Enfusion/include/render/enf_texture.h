@@ -77,9 +77,6 @@ protected:
 	virtual void _Touch(uint level) const;
 
 	~Texture();
-#ifdef ENF_DX9
-	_D3DTexture*		m_pTexture; // Surface of the texture
-#endif
 
 	CStr					m_strName;
 	ushort				m_iWidth, m_iHeight;
@@ -87,6 +84,7 @@ protected:
 	ushort				m_iMipLevels;
 	ushort/*TextureUsage*/	m_Usage;
 	TextureFormat		m_Format;
+	MemoryImageData*	m_pStagingData;
 
 	Texture(IRenderer *dev, CStr name, uint width, uint height, uint flags);
 	Texture(IRenderer *dev, CStr name);
@@ -148,12 +146,7 @@ public:
 	}
 
 	//!Returns internal texture objects. Do not increments refcount
-	#if defined(ENF_DX9)
-		_D3DTexture* GetD3DTexture() const
-		{
-			return m_pTexture;
-		}
-	#elif defined(ENF_OGL)
+	#if defined(ENF_OGL)
 		GLuint GetGLTexture() const
 		{
 			return m_iTexture;
@@ -246,10 +239,6 @@ public:
 	ERESULT FillColor(uint color, uint sx, uint sy, uint w, uint h);
 	ERESULT FillColor(const FColor& color, uint sx, uint sy, uint w, uint h);
 
-	#ifdef ENF_DX9
-		ERESULT CopyBitmapToSurface(BitmapInfo* pBmpInfo);
-		_D3DSurface* GetSurface(uint level);
-	#endif
 
 	//!Returns total size in memory including mip-maps
 	size_t GetMemorySize() const;
@@ -282,10 +271,7 @@ class PUBLIC_API RenderTarget: public Texture
 
 private:
 
-	#ifdef ENF_DX9
-		_D3DSurface*	m_pRenderSurface;
-		_D3DSurface*	m_pDepthSurface;
-	#elif defined(ENF_OGL)
+	#if defined(ENF_OGL)
 		GLuint		m_iDepthBuffer;
 		GLuint		m_iFrameBuffer;
 	#endif
@@ -312,17 +298,7 @@ public:
 	}
 
 
-	#ifdef ENF_DX9
-		_D3DSurface* GetSurface() 
-		{ 
-			return m_pRenderSurface; 
-		}
-
-		_D3DSurface* GetDepthSurface() 
-		{ 
-			return m_pDepthSurface; 
-		}
-	#elif defined(ENF_OGL)
+	#if defined(ENF_OGL)
 		GLuint GetDepthBuffer() const
 		{
 			return m_iDepthBuffer;
@@ -411,10 +387,6 @@ enum ImageFileFormat
 PUBLIC_API bool SaveTextureToFile(CStr name, Texture* tex, ImageFileFormat iff = IFF_UNKNOWN);
 PUBLIC_API bool SaveTextureToStream(COutputStream& outStream, Texture* tex, ImageFileFormat iff);
 
-#ifdef ENF_DX9
-	template<class T> class Array2D;
-	PUBLIC_API bool SaveTextureToArray(Array2D<FColor> &colors, _D3DTexture* tex);
-#endif
 
 struct CompressedDDSDesc;
 

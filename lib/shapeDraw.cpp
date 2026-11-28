@@ -153,7 +153,7 @@ void Shape::DrawSections(int cb, const AnimationContext *animContext, ColorVal a
     if (animContext) uvchanged = animContext->GetUVchanged(this, i); 
     if (uvchanged)
     {
-      // get information about UV offset if any and pass them to EngineDD9::PrepareDetailTex(...)
+      // get information about UV offset if any and pass them to the renderer's detail-texture setup
       float offsetU = animContext->GetUOffset(this, i);
       float offsetV = animContext->GetVOffset(this, i);
       pp.PrepareTL(cb, mat, spec, prop, dp, true ,offsetU, offsetV);

@@ -1464,6 +1464,9 @@ static RString VerifyInBank(RString name)
     QFBank *bank=QFBankQueryFunctions::AutoBank(name);
     if (!bank)
     {
+      // SDZ: aceita scripts soltos no disco (missao, raiz e subpastas),
+      // nao apenas arquivos empacotados em PBO.
+      if (QIFileFunctions::FileExists(name)) return name;
       auto encoded = EncodedString<EncoderXOR<0x55>>("Free scripts no longer supported, \'%s\' ignored");
       RptF(DecodeString(encoded), cc_cast(name));
       return RString();

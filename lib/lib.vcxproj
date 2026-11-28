@@ -109,10 +109,10 @@
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/LTCG %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>d3d9.lib;d3dx9.lib;shcore.lib;Delayimp.lib;ddraw.lib;Iphlpapi.lib;libvorbisfile_static.lib;libvorbis_static.lib;libogg.lib;winmm.lib;dxguid.lib;version.lib;rsa_x64.lib;libspeexMt.lib;libspeexdspMt.lib;libbulletcollision.lib;libbulletdynamics.lib;libbulletmath.lib;$(VCToolsInstallDir)lib\x64\legacy_stdio_definitions.lib;%(AdditionalDependencies);libtheora_static.lib;steam_api64.lib</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;d3d10.lib;dxgi.lib;d3dx11.lib;d3dx10.lib;d3dcompiler.lib;DxErr.lib;shcore.lib;Delayimp.lib;ddraw.lib;Iphlpapi.lib;libvorbisfile_static.lib;libvorbis_static.lib;libogg.lib;winmm.lib;dxguid.lib;version.lib;rsa_x64.lib;libspeexMt.lib;libspeexdspMt.lib;libbulletcollision.lib;libbulletdynamics.lib;libbulletmath.lib;$(VCToolsInstallDir)lib\x64\legacy_stdio_definitions.lib;%(AdditionalDependencies);libtheora_static.lib;steam_api64.lib</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>$(SolutionDir)extern\DXSDK\Lib\x64;$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\um\x64;$(SolutionDir)build\port-x64\RSA;$(SolutionDir)build\port-x64\audio;$(SolutionDir)build\port-x64\BulletCollision\;$(SolutionDir)build\port-x64\BulletDynamics\;$(SolutionDir)build\port-x64\LinearMath\;$(SolutionDir)build\port-x64\bin;$(SolutionDir)extern;%(AdditionalLibraryDirectories);$(SolutionDir)build\port-x64\SimulWeather</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)extern\DXSDK\Lib\x64;$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Lib\x64;$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\um\x64;$(SolutionDir)build\port-x64\RSA;$(SolutionDir)build\port-x64\audio;$(SolutionDir)build\port-x64\BulletCollision\;$(SolutionDir)build\port-x64\BulletDynamics\;$(SolutionDir)build\port-x64\LinearMath\;$(SolutionDir)build\port-x64\bin;$(SolutionDir)extern;%(AdditionalLibraryDirectories);$(SolutionDir)build\port-x64\SimulWeather</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>libc.lib;wsock32.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <DelayLoadDLLs>steam_api64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -181,7 +181,7 @@
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/LTCG %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>d3d9.lib;d3dx9.lib;shcore.lib;Delayimp.lib;ddraw.lib;Iphlpapi.lib;libvorbisfile_static.lib;libvorbis_static.lib;libogg.lib;winmm.lib;dxguid.lib;version.lib;rsa_x64.lib;libspeexMt.lib;libspeexdspMt.lib;libbulletcollision.lib;libbulletdynamics.lib;libbulletmath.lib;$(VCToolsInstallDir)lib\x64\legacy_stdio_definitions.lib;%(AdditionalDependencies);libtheora_static.lib;steam_api64.lib</AdditionalDependencies>
+      <AdditionalDependencies>shcore.lib;Delayimp.lib;ddraw.lib;Iphlpapi.lib;libvorbisfile_static.lib;libvorbis_static.lib;libogg.lib;winmm.lib;dxguid.lib;version.lib;rsa_x64.lib;libspeexMt.lib;libspeexdspMt.lib;libbulletcollision.lib;libbulletdynamics.lib;libbulletmath.lib;$(VCToolsInstallDir)lib\x64\legacy_stdio_definitions.lib;%(AdditionalDependencies);libtheora_static.lib;steam_api64.lib</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>$(SolutionDir)extern\DXSDK\Lib\x64;$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\um\x64;$(SolutionDir)build\port-x64\RSA;$(SolutionDir)build\port-x64\audio;$(SolutionDir)build\port-x64\BulletCollision\;$(SolutionDir)build\port-x64\BulletDynamics\;$(SolutionDir)build\port-x64\LinearMath\;$(SolutionDir)build\port-x64\bin;$(SolutionDir)extern;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -239,22 +239,6 @@
     <None Include="ASE\readme.txt" />
     <None Include="TerSynth\readme.txt" />
     <None Include="..\El\Math\matrix.asm" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\FPShaders.hlsl" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\PS.hlsl" />
-    <CustomBuild Include="d3d9\shadersources_3_0\PSBasic.hlsl" />
-    <CustomBuild Include="d3d9\shadersources_3_0\PSBasicSSSM.hlsl" />
-    <CustomBuild Include="d3d9\shadersources_3_0\PSSR_Default.hlsl" />
-    <CustomBuild Include="d3d9\shadersources_3_0\PSSR_nVidia.hlsl" />
-    <CustomBuild Include="d3d9\shadersources_3_0\PSThermal.hlsl" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VS.hlsl" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSCalmWater.hlsl" />
-    <CustomBuild Include="d3d9\shadersources_3_0\VSPoint.hlsl" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSShadowVolume.hlsl" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSShore.hlsl" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSSprite.hlsl" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSTerrain.hlsl" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSTerrainGrass.hlsl" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSWater.hlsl" />
     <None Include="X:\update\getCfg.bat" />
     <None Include="B:\build\BuildArmaDemo.bat" />
     <None Include="tools\ArmA\UpdDta.bat" />
@@ -517,12 +501,6 @@
     <ClInclude Include="..\extern\rapidjson\reader.h" />
     <ClInclude Include="..\extern\rapidjson\stringbuffer.h" />
     <ClInclude Include="..\extern\rapidjson\writer.h" />
-    <ClInclude Include="d3d9\d3d9Buffers.hpp" />
-    <ClInclude Include="d3d9\ShaderSources_3_0\Fxaa3_11.h" />
-    <ClInclude Include="d3d9\ShaderSources_3_0\FxaaShader.h" />
-    <ClInclude Include="d3d9\ShaderSources_3_0\PPAA\AreaTex.h" />
-    <ClInclude Include="d3d9\ShaderSources_3_0\PPAA\SearchTex.h" />
-    <ClInclude Include="d3d9\ShaderSources_3_0\PPAA\SMAA.h" />
     <ClInclude Include="diagGraph.hpp" />
     <ClInclude Include="encodeString.h" />
     <ClInclude Include="entityEventHandler.hpp" />
@@ -571,6 +549,18 @@
     <ClInclude Include="dynSound.hpp" />
     <ClInclude Include="engine.hpp" />
     <ClInclude Include="engineDll.hpp" />
+    <ClInclude Include="d3d11\d3d11Defs.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="d3d11\d3d11Utils.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="d3d11\engdd11.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="d3d11\postProcessDX11.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="d3d11\ShaderCompileCacheDX11.h" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="d3d11\ShaderConstants.h" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="d3d11\StateLists.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="d3d11\txtd3d11.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="SimulWeather\SimulCommonDX11.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="SimulWeather\SimulCloudRendererDX11.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="SimulWeather\SimulSkyRendererDX11.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClInclude Include="SimulWeather\SimulWeatherDX11.hpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
     <ClInclude Include="font.hpp" />
     <ClInclude Include="fsm.hpp" />
     <ClInclude Include="global.hpp" />
@@ -607,12 +597,8 @@
     <ClInclude Include="scripts.hpp" />
     <ClInclude Include="sentences.hpp" />
     <ClInclude Include="SimulWeather\SimulCloudRendererBase.hpp" />
-    <ClInclude Include="SimulWeather\SimulCloudRendererDX9.hpp" />
-    <ClInclude Include="SimulWeather\SimulCommonDX9.hpp" />
     <ClInclude Include="SimulWeather\SimulSkyRendererBase.hpp" />
-    <ClInclude Include="SimulWeather\SimulSkyRendererDX9.hpp" />
     <ClInclude Include="SimulWeather\SimulWeatherBase.hpp" />
-    <ClInclude Include="SimulWeather\SimulWeatherDX9.hpp" />
     <ClInclude Include="SimulWeather\SimulWeatherIncludes.hpp" />
     <ClInclude Include="SimulWeather\SimulWeatherUtils.hpp" />
     <ClInclude Include="speaker.hpp" />
@@ -1083,15 +1069,6 @@
     <ClInclude Include="..\Es\Files\filenames.hpp" />
     <ClInclude Include="..\Es\ErrorProp\errorProp.hpp" />
     <ClInclude Include="..\Es\reportStack\reportStack.hpp" />
-    <ClInclude Include="d3d9\d3d9Defs.hpp" />
-    <ClInclude Include="d3d9\engdd9.hpp" />
-    <ClInclude Include="d3d9\postProcess.hpp" />
-    <ClInclude Include="d3d9\ShaderCompileCache.h" />
-    <ClInclude Include="d3d9\txtd3d9.hpp" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\common.h" />
-    <CustomBuild Include="d3d9\shadersources_3_0\PS.h" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\psvs.h" />
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VS.h" />
     <ClInclude Include="..\RV\KBBase\kbCenter.hpp" />
     <ClInclude Include="..\RV\KBBase\kbContext.hpp" />
     <ClInclude Include="..\RV\KBBase\kbMessage.hpp" />
@@ -1153,10 +1130,14 @@
     <ClCompile Include="..\Enfusion\src\Physics\enf_physicsragdoll.cpp" />
     <ClCompile Include="..\Enfusion\src\Physics\enf_worldphysics.cpp" />
     <ClCompile Include="..\Enfusion\src\render\enf_rendindexbuffer.cpp" />
-    <ClCompile Include="..\Enfusion\src\render\enf_rendinitDZ.cpp" />
+    <ClCompile Include="..\Enfusion\src\render\enf_rendinitDZ.cpp">
+      <PreprocessorDefinitions>_DX11_ONLY=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\Enfusion\src\render\enf_rendmain.cpp" />
     <ClCompile Include="..\Enfusion\src\render\enf_rendrendertarget.cpp" />
-    <ClCompile Include="..\Enfusion\src\render\enf_rendshaders.cpp" />
+    <ClCompile Include="..\Enfusion\src\render\enf_rendshaders.cpp">
+      <PreprocessorDefinitions>_DX11_ONLY=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\Enfusion\src\render\enf_rendswapchain.cpp" />
     <ClCompile Include="..\Enfusion\src\render\enf_rendvertexbuffer.cpp" />
     <ClCompile Include="..\Enfusion\src\render\enf_texture.cpp" />
@@ -1308,7 +1289,6 @@
     <ClCompile Include="..\extern\libcurl\lib\version.c" />
     <ClCompile Include="..\extern\libcurl\lib\warnless.c" />
     <ClCompile Include="..\extern\libcurl\lib\wildcard.c" />
-    <ClCompile Include="d3d9\d3d9Buffers.cpp" />
     <ClCompile Include="delayhlp.cpp" />
     <ClCompile Include="diagGraph.cpp" />
     <ClCompile Include="drawText.cpp" />
@@ -1358,12 +1338,8 @@
     <ClCompile Include="location.cpp" />
     <ClCompile Include="oalDummy.cpp" />
     <ClCompile Include="SimulWeather\SimulCloudRendererBase.cpp" />
-    <ClCompile Include="SimulWeather\SimulCloudRendererDX9.cpp" />
-    <ClCompile Include="SimulWeather\SimulCommonDX9.cpp" />
     <ClCompile Include="SimulWeather\SimulSkyRendererBase.cpp" />
-    <ClCompile Include="SimulWeather\SimulSkyRendererDX9.cpp" />
     <ClCompile Include="SimulWeather\SimulWeatherBase.cpp" />
-    <ClCompile Include="SimulWeather\SimulWeatherDX9.cpp" />
     <ClCompile Include="SimulWeather\SimulWeatherMemAlloc.cpp" />
     <ClCompile Include="SimulWeather\SimulWeatherUtils.cpp" />
     <ClCompile Include="soundScene.cpp" />
@@ -1884,15 +1860,54 @@
     <ClCompile Include="..\Es\Files\filenames.cpp" />
     <ClCompile Include="..\Es\ErrorProp\errorProp.cpp" />
     <ClCompile Include="..\Es\reportStack\reportStack.cpp" />
-    <ClCompile Include="d3d9\engdd9.cpp">
-      <Optimization Condition="'$(Platform)'=='x64'">MaxSpeed</Optimization>
-      <FavorSizeOrSpeed Condition="'$(Platform)'=='x64'">Speed</FavorSizeOrSpeed>
-      <UseFullPaths Condition="'$(Platform)'=='x64'">true</UseFullPaths>
+    <ClCompile Include="d3d11\d3d11Utils.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="d3d9\engdd9Video.cpp" />
-    <ClCompile Include="d3d9\postProcess.cpp" />
-    <ClCompile Include="d3d9\ShaderCompileCache.cpp" />
-    <ClCompile Include="d3d9\txtD3D9.cpp" />
+    <ClCompile Include="d3d11\dx11OnlyCompat.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" />
+    <ClCompile Include="d3d11\engdd11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <Optimization>MaxSpeed</Optimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <UseFullPaths>true</UseFullPaths>
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;_DX11_ONLY=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="d3d11\postProcessDX11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="d3d11\ShaderCompileCacheDX11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="d3d11\ShaderConstants.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="d3d11\StateLists.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="d3d11\txtD3D11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="SimulWeather\SimulCommonDX11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="SimulWeather\SimulCloudRendererDX11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="SimulWeather\SimulSkyRendererDX11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="SimulWeather\SimulWeatherDX11.cpp" Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+      <AdditionalIncludeDirectories>$(SolutionDir)DX11_Futura_Extraido\extern\dxsdk\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_DX11=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\RV\KBBase\kbCenter.cpp" />
     <ClCompile Include="..\RV\KBBase\kbMessage.cpp" />
     <ClCompile Include="..\RV\SpeechRecognition\fonix.cpp">
@@ -1905,6 +1920,7 @@
     <ClCompile Include="engDummy.cpp" />
     <ClCompile Include="main.cpp">
       <AdditionalIncludeDirectories Condition="'$(Platform)'=='x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">_ENABLE_DX11=1;_DX11_ONLY=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="main3dfx.cpp" />
     <ClCompile Include="useAppInfoOFP.cpp" />

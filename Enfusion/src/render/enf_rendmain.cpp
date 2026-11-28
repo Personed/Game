@@ -54,7 +54,7 @@ namespace enf
 {
 Renderer* g_pRender = NULL;
 
-#if defined(ENF_DX9) || defined(ENF_OGL) || defined(ENF_PS3)
+#if defined(ENF_OGL) || defined(ENF_PS3)
 ENF_ALIGN16(ShaderVec)	Renderer::m_PSConstants[Renderer::MAX_PS_CONSTANTS];
 uint Renderer::m_iStartPSConstants = -1;
 uint Renderer::m_iNumPSConstants = 0;
@@ -236,76 +236,6 @@ uint Renderer::m_iNumVSConstants = 0;
 	};
 #endif
 
-#ifdef ENF_RENDISSTATIC
-_Direct3DDevice*				Renderer::m_pd3dDevice;
-LPDIRECT3DVERTEXSHADER9		Renderer::m_pVShader;
-LPDIRECT3DPIXELSHADER9		Renderer::m_pPShader;
-RenderStats						Renderer::m_Stats;
-LPDIRECT3DBASETEXTURE9		Renderer::m_pTextures[MAX_TEXTURES];
-LPDIRECT3DBASETEXTURE9		Renderer::m_pVertexTextures[MAX_VERTEX_TEXTURES];
-BlendState						Renderer::m_iBlendStates[MAX_RENDER_TARGETS];
-SamplerFilterStateHandle	Renderer::m_iSamplerFilterStateValue[MAX_TEXTURES];
-SamplerFilterStateHandle	Renderer::m_iSamplerFilterStateValue2[MAX_VERTEX_TEXTURES];
-SamplerAddressStateHandle	Renderer::m_iSamplerAddressStateValue[MAX_TEXTURES];
-SamplerAddressStateHandle	Renderer::m_iSamplerAddressStateValue2[MAX_VERTEX_TEXTURES];
-IDirect3DIndexBuffer9*		Renderer::m_pIndexBuffer;
-Renderer::StreamState		Renderer::m_Streams[MAX_STREAMS];
-SArray<SamplerAddressState,64>	Renderer::m_SamplerAddressStates;
-SArray<DepthStencilStateDef,64> Renderer::m_DepthStencilStateDefs;
-DepthStencilStateHandle		Renderer::m_iDepthStencilState = -1;
-uint								Renderer::m_iStencilRef = 0;
-uint								Renderer::m_iRTStackDepth[MAX_RENDER_TARGETS];
-
-#if defined(ENF_OGL) || defined(ENF_DX9)
-uint								Renderer::m_iRenderStateValue[256];
-#endif
-
-#ifdef ENF_OGL
-DepthStencilStateHandle		Renderer::m_iDepthStencilShadowState;
-uint								Renderer::m_iStencilShadowRef;
-uint								Renderer::m_iVSConstantsB;
-uint								Renderer::m_iPSConstantsB;
-SamplerFilterStateHandle	Renderer::m_iSamplerFilterShadowStateValue[];
-SamplerFilterStateHandle	Renderer::m_iSamplerFilterShadowStateValue2[];
-SamplerAddressStateHandle	Renderer::m_iSamplerAddressShadowStateValue[];
-SamplerAddressStateHandle	Renderer::m_iSamplerAddressShadowStateValue2[];
-StreamState						Renderer::m_ShadowStreams[];
-uint								Renderer::m_iCommitMask;
-bool								Renderer::m_bEnableAlphaTest;
-uint								Renderer::m_iShadowVertexDeclaration;
-uint								Renderer::m_iVertexDeclaration;
-Texture*							Renderer::m_pTextures[];
-Texture*							Renderer::m_pVertexTextures[];
-CGprogram 						Renderer::m_iVShader;
-CGprogram 						Renderer::m_iPShader;
-GLint								Renderer::m_iIndexBuffer;
-Texture*							Renderer::m_pShadowTextures[];
-Texture*							Renderer::m_pShadowVertexTextures[];
-
-ENF_INLINEFUNC GLenum GLDPType(PrimitiveType pt)
-{
-	switch(pt)
-	{
-	case PT_POINTLIST:
-		return GL_POINTS;
-	case PT_LINELIST:
-		return GL_LINES;
-	case PT_LINESTRIP:
-		return GL_LINE_STRIP;
-	case PT_TRIANGLELIST:
-		return GL_TRIANGLES;
-	case PT_TRIANGLESTRIP:
-		return GL_TRIANGLE_STRIP;
-	case PT_TRIANGLEFAN:
-		return GL_TRIANGLE_FAN;
-	case PT_QUADLIST:
-		return GL_QUADS;
-	}
-	return GL_POINTS;
-}
-
-#endif
-#endif
 
 #if defined(ENF_OGL) || defined(ENF_PS3)
 	uint64 Renderer::m_PSConstChanged = 0;
@@ -406,17 +336,6 @@ Renderer* CreateRenderer()
 }
 
 //----------------------------------------------------------------------
-#ifdef ENF_DX9
-uint Renderer::GetAvailableMemory()
-{
-	return m_pd3dDevice->GetAvailableTextureMem();
-}
-
-uint Renderer::GetAllocatedMemory()
-{
-	return m_uiAvailMem - m_pd3dDevice->GetAvailableTextureMem();
-}
-#else
 uint Renderer::GetAvailableMemory()
 {
 	return 0;
@@ -426,7 +345,6 @@ uint Renderer::GetAllocatedMemory()
 {
 	return 0;
 }
-#endif
 
 //----------------------------------------------------------------------
 bool Renderer::OnChangeSettings(TiXmlElement* xmlnode)
@@ -435,7 +353,7 @@ bool Renderer::OnChangeSettings(TiXmlElement* xmlnode)
 }
 
 //----------------------------------------------------------------------
-#if defined(ENF_DEVELOPER) || defined(ENF_DX9)
+#if defined(ENF_DEVELOPER)
 
 ENF_INLINEFUNC CStr GetFormatName(TextureFormat format)
 {
@@ -526,7 +444,7 @@ public:
 //----------------------------------------------------------------------
 void IRenderer::DumpResources() const
 {
-#if defined(ENF_DEVELOPER) || defined(ENF_DX9)
+#if defined(ENF_DEVELOPER)
 	Array<ResItem> resources;
 
 	for(const DeviceResource *res = m_pResources; res != NULL; res = res->m_pNext)
@@ -623,40 +541,13 @@ void IRenderer::DumpResources() const
 //----------------------------------------------------------------------
 uint Renderer::GetBaseEDRAMOffset() const
 {
-#ifdef ENF_XENON
-	return XGSurfaceSize(m_Setup.m_iBackBufferWidth, m_Setup.m_iBackBufferHeight, (D3DFORMAT)m_Setup.m_BackBufferFormat, (D3DMULTISAMPLE_TYPE)m_Setup.m_FSAAType) +
-			XGSurfaceSize(m_Setup.m_iBackBufferWidth, m_Setup.m_iBackBufferHeight, (D3DFORMAT)m_Setup.m_DepthBufferFormat, D3DMULTISAMPLE_NONE);
-#else
 	return 0;
-#endif
 }
 
 //----------------------------------------------------------------------
 TextureFormat Renderer::GetBestDepthTextureFormat() const
 {
-#ifdef ENF_XENON
 	return TEXFMT_R32F;
-#elif defined(ENF_DX9)
-	TextureFormat depthfmt[] = 
-	{
-		TEXFMT_R32F,
-		TEXFMT_R16F,
-		TEXFMT_G16R16F
-	};
-
-	for(uint f = 0; f < 3; f++)
-	{
-		if(CheckDeviceFormat(D3DUSAGE_RENDERTARGET, TextureTypeID, depthfmt[f])==EE_OK)
-		{
-			return depthfmt[f];
-		}
-	}
-	return TEXFMT_UNKNOWN;
-#elif defined(ENF_PS3)
-	return TEXFMT_R32F;
-#elif defined(ENF_OGL)
-	return TEXFMT_R32F;
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -670,43 +561,7 @@ bool Renderer::EnablePrimaryRT(bool enable)
 //----------------------------------------------------------------------
 ERESULT Renderer::CheckDeviceFormat(uint usage, ResourceType resourcetype, TextureFormat format) const
 {
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	D3DRESOURCETYPE rtype;
-	uint dxusage = 0;
-	switch(resourcetype)
-	{
-	case VertexBufferTypeID:
-		rtype = D3DRTYPE_VERTEXBUFFER;
-		break;
-	case IndexBufferTypeID:
-		rtype = D3DRTYPE_INDEXBUFFER;
-		break;
-	case TextureTypeID:
-		rtype = D3DRTYPE_TEXTURE;
-		break;
-	case RenderTargetTypeID:
-		rtype = D3DRTYPE_TEXTURE;
-		dxusage |= D3DUSAGE_RENDERTARGET;
-		break;
-	}
-	dxusage |= usage;
-
-	
-	D3DFORMAT devformat;
-
-	//Isn't it bug in DX??? It fails with TEXFMT_A8R8G8B8, but it's possible to create it anyway.
-	devformat = m_Setup.m_BackBufferFormat == TEXFMT_A8R8G8B8 ? D3DFMT_X8R8G8B8 : (D3DFORMAT)m_Setup.m_BackBufferFormat;
-
-	HRESULT hr = m_pD3D->CheckDeviceFormat(m_iAdapter, D3DDEVTYPE_HAL, devformat, dxusage, rtype, (D3DFORMAT)format);
-
-	if(hr == D3D_OK)
-		return EE_OK;
-	if(hr == D3DERR_NOTAVAILABLE)
-		return EE_UNSUPPORTED;
-	if(hr == D3DERR_INVALIDCALL )
-		return EE_INVALIDPARAM;
-
-#elif defined(ENF_PS3) 
+#if defined(ENF_PS3)
 	if(usage & RES_USAGE_QUERY_VERTEXTEXTURE)
 	{
 		if(resourcetype == TextureTypeID)
@@ -726,31 +581,16 @@ ERESULT Renderer::CheckDeviceFormat(uint usage, ResourceType resourcetype, Textu
 
 
 //----------------------------------------------------------------------
-#if defined(ENF_DX9) || defined(ENF_XENON)
-_D3DSurface* Renderer::GetRenderTargetSurface(uint rtindex)
-{
-	_D3DSurface* surf = NULL;
-	
-	HRESULT hr = m_pd3dDevice->GetRenderTarget(rtindex, &surf);
-
-	return (hr == D3D_OK) ? surf : NULL;
-}
-#endif
 //----------------------------------------------------------------------
 RenderQuery::RenderQuery(IRenderer *dev, uint type): DeviceResource(dev)
 {
 	m_iQueryType = type;
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	m_pQuery = NULL;
-#elif defined(ENF_OGL) 
+#if defined(ENF_OGL)
 	m_iQuery = 0;
 #elif defined(ENF_PS3)
 	m_iQuery = 0xFFFFFFFF;
 #endif
 
-#ifdef ENF_DX9
-	m_bManaged = false;
-#endif
 	m_bIssued = false;
 	Allocate();
 }
@@ -759,14 +599,7 @@ RenderQuery::RenderQuery(IRenderer *dev, uint type): DeviceResource(dev)
 ERESULT RenderQuery::Allocate()
 {
 	m_bIssued = false;
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	if(GetDevice()->GetDXDevice()->CreateQuery((D3DQUERYTYPE)m_iQueryType, &m_pQuery) != D3D_OK)
-	{
-		enf_assert(m_pQuery);
-		m_pQuery = NULL;
-		return EE_ERROR;
-	}
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	if(m_iQueryType == QUERYTYPE_OCCLUSION)
 	{
 		m_iQuery = reinterpret_cast<IRenderer*>(g_pRender)->AllocQuery();
@@ -785,34 +618,7 @@ void RenderQuery::Free()
 {
 	int ref = -1;
 
-#ifdef ENF_XENON
-	if(m_pQuery)
-	{
-		switch(m_iQueryType)
-		{
-		case D3DQUERYTYPE_OCCLUSION:
-			DWORD qdata;
-			m_pQuery->GetData(&qdata, sizeof(qdata), D3DGETDATA_FLUSH);
-			break;
-
-		case D3DQUERYTYPE_EVENT:
-			BOOL edata;
-			m_pQuery->GetData(&edata, sizeof(edata), D3DGETDATA_FLUSH);
-			break;
-		}
-		ref = m_pQuery->Release();
-		m_pQuery = NULL;
-		enf_assert(ref == 0);
-	}
-#elif defined(ENF_DX9)
-	if(m_pQuery)
-	{
-		m_pQuery->GetData(NULL, 0, D3DGETDATA_FLUSH);
-		ref = m_pQuery->Release();
-		m_pQuery = NULL;
-		enf_assert(ref == 0);
-	}
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	if(m_iQuery && m_iQueryType == QUERYTYPE_OCCLUSION)
 	{
 		reinterpret_cast<IRenderer*>(g_pRender)->FreeQuery(m_iQuery);
@@ -830,17 +636,7 @@ void RenderQuery::Free()
 //----------------------------------------------------------------------
 void RenderQuery::Issue(QueryCommand cmd)
 {
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	if(m_pQuery)
-	{
-		if(cmd == D3DISSUE_BEGIN)
-			m_bIssued = false;
-		else if(cmd == D3DISSUE_END)
-			m_bIssued = true;
-
-		m_pQuery->Issue((DWORD)cmd);
-	}
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	enf_assert(m_iQuery != 0xFFFFFFFF);
 
 	if(m_iQueryType == QUERYTYPE_OCCLUSION)
@@ -880,10 +676,7 @@ void RenderQuery::Issue(QueryCommand cmd)
 //----------------------------------------------------------------------
 ERESULT RenderQuery::GetData(void* data, uint size, uint flags)
 {
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	if(m_pQuery && m_pQuery->GetData(data, size, flags) == S_OK)
-		return EE_OK;
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	enf_assert(m_iQuery != 0xFFFFFFFF);
 
 	if(m_iQueryType == QUERYTYPE_OCCLUSION)
@@ -973,21 +766,6 @@ ERESULT DeviceResource::Allocate()
 }
 
 //----------------------------------------------------------------------
-#ifdef ENF_DX9
-ERESULT DeviceResource::AfterReset()
-{
-	if(!m_bManaged)
-	{
-		if(HasType(SwapChainTypeID))
-		{
-			LogF(LL_NORMAL, "SwapChain::AfterReset");
-		}
-		return Allocate();
-	}
-
-	return EE_OK;
-}
-#endif
 //----------------------------------------------------------------------
 int DeviceResource::Release()
 {
@@ -1040,22 +818,12 @@ IRenderer::IRenderer():
 
 //-----------------------------------------------------------------------
 Renderer::Renderer():
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	m_hWnd(NULL),
-	m_pD3D(NULL),
-#endif
 	m_uiAvailMem(0),
 	m_iLock(0),
 	m_iAdapter(0L),
 	m_iTargetWidth(0),
 	m_iTargetHeight(0),
 	m_bInScene(false),
-#ifdef ENF_DX9
-	m_pd3dDevice(NULL),
-	m_pIndexBuffer(NULL),
-	m_pVShader(NULL),
-	m_pPShader(NULL),
-#endif
 #ifdef ENF_PS3
 	m_pIndexBuffer(NULL),
 	m_iCommitMask(0),
@@ -1091,9 +859,7 @@ Renderer::Renderer():
 	m_bATICrap(false),
 	m_iGPUCount(1),
 	m_ThreadLock(0),
-	#ifdef ENF_XENON
-		m_GPUVendor(GPU_XENON)
-	#elif defined(ENF_PS3)
+	#if defined(ENF_PS3)
 		m_GPUVendor(GPU_PS3)
 	#else
 		m_GPUVendor(GPU_UNKNOWN)
@@ -1102,15 +868,7 @@ Renderer::Renderer():
 	m_iStencilRef = 0;
 	m_iDepthStencilState = -1;
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	ZeroMem(&m_d3dCaps, sizeof(m_d3dCaps));
-#endif
 	ZeroMem(&m_Viewport, sizeof(m_Viewport));
-#ifdef ENF_DX9
-	ZeroMem(m_iRenderStateValue, sizeof(m_iRenderStateValue));
-	ZeroMem(m_pTextures, sizeof(m_pTextures));
-	ZeroMem(m_pVertexTextures, sizeof(m_pVertexTextures));
-#endif
 
 #if defined(ENF_OGL) || defined(ENF_PS3)
 	ZeroMem(m_iRenderStateValue, sizeof(m_iRenderStateValue));
@@ -1193,14 +951,7 @@ Renderer::Renderer():
 //-----------------------------------------------------------------------
 void Renderer::InvalidateGPUCache(DeviceResource* res)
 {
-#ifdef ENF_XENON
-	if(res->HasType(VertexBufferTypeID))
-		m_pd3dDevice->InvalidateResourceGpuCache(&VertexBuffer::Cast(res)->m_VB, 0);
-	else if(res->HasType(IndexBufferTypeID))
-		m_pd3dDevice->InvalidateResourceGpuCache(&IndexBuffer::Cast(res)->m_IB, 0);
-	else if(res->HasType(TextureTypeID))
-		m_pd3dDevice->InvalidateResourceGpuCache(&Texture::Cast(res)->m_Texture, 0);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	if(res->HasType(VertexBufferTypeID))
 		GCM_CALL(cellGcmSetInvalidateVertexCache)(gCellGcmCurrentContext);
 	else if(res->HasType(IndexBufferTypeID))
@@ -1238,64 +989,13 @@ ENF_INLINEFUNC double ApplyImageCurve(float x, float gamma, float contrast)
 //-----------------------------------------------------------------------
 void Renderer::SetBrightness(int gamma, int contrast)
 {
-	#if defined(ENF_DX9) || defined(ENF_XENON)
-		//<0..50..100> -> <3..1..0.33>
-		float g = enf_limit(gamma, 0, 100) - 50;
-		float eGamma = gamma >= 50 ? (1.0f - g/75.0f) : (1.0f + abs(g)/25.0f);
-
-		//<0..50..100> -> <0.5..1..2>
-		float c = enf_limit(contrast, 0, 100) - 50;
-		c = contrast >= 50 ? (1.0f + c/50.0f) : (1.0f - abs(c)/100.0f);
-
-		#ifdef ENF_DX9
-			if(m_pd3dDevice == NULL)
-				return;
-
-			D3DGAMMARAMP ramp;
-			float step = 1 / 255.0f;
-
-			for(int n = 0; n < 256; n++)
-			{
-				float x01 = n * step;
-				double fx = ApplyImageCurve(x01, eGamma, c);
-
-				ramp.red[n] = ramp.green[n] = ramp.blue[n] = enf_limit(enf_toint(fx * 65535.0), 0, 65535);
-			}
-
-			//this should work for 8bit XBOX360 RT too
-			m_pd3dDevice->SetGammaRamp(0, (m_d3dCaps.Caps2 & D3DCAPS2_CANCALIBRATEGAMMA ) ? D3DSGR_CALIBRATE : D3DSGR_NO_CALIBRATION, &ramp);
-
-		#elif defined(ENF_XENON)
-			if(m_pd3dDevice == NULL)
-				return;
-
-			D3DPWLGAMMA ramp;
-
-			float step = 1 / 128.0f;
-			double next = ApplyImageCurve(0.0f, eGamma, c);
-			int nextI = enf_limit(enf_toint(next * 65535.0), 0, 65535);
-
-			for(int n = 0; n < 128; n++)
-			{
-				next = ApplyImageCurve(n*step, eGamma, c);
-
-				int currI = nextI;
-				nextI = enf_limit(enf_toint(next * 65535.0), 0, 65535);
-
-				ramp.red[n].Base  = ramp.green[n].Base  = ramp.blue[n].Base  = currI;
-				ramp.red[n].Delta = ramp.green[n].Delta = ramp.blue[n].Delta = nextI - currI;
-			}
-
-			//this is just for 10bit RT for XBOX360
-			m_pd3dDevice->SetPWLGamma(0, &ramp);
-		#endif
-	#elif defined(ENF_PS3)
+	#if defined(ENF_PS3)
 		//<0..50..100> -> <1.2..1.0..0.8>
 		float newGamma = 1.2f - 0.4*(enf_limit(gamma, 0, 100)*0.01f);
 
 		//<0.8..1.2>
 		cellVideoOutSetGamma(CELL_VIDEO_OUT_PRIMARY, newGamma);
-	#else 
+	#else
 		LogF(LL_ERROR, "Don't know hot to set gamma correction");			
 	#endif
 }
@@ -1310,53 +1010,7 @@ void Renderer::SetBrightness(int gamma, int contrast)
 //-----------------------------------------------------------------------
 void Renderer::ClearRenderTarget(uint flags, const RRect* rect, uint color, float depth, uint stencil)
 {
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	D3DRECT r, *pr = NULL;
-	uint nr = 0;
-
-#ifdef ENF_XENON
-	m_pd3dDevice->GpuDisown(D3DTAG_BLENDCONTROL0);
-#endif
-
-	if(rect)
-	{
-		r.x1 = rect->Left;
-		r.y1 = rect->Top;
-		r.x2 = rect->Right;
-		r.y2 = rect->Bottom;
-		pr = &r;
-		nr = 1;
-	}
-
-	if(m_bFloatingPointDepthBuffer)
-		depth = 1.0f - depth;
-
-	if(flags)
-	{
-		uint d3df = 0;
-
-		if(flags & RTCLEAR_ZBUFFER)
-			d3df |= D3DCLEAR_ZBUFFER;
-
-		if(flags & RTCLEAR_STENCIL)
-			d3df |= D3DCLEAR_STENCIL;
-
-		if(flags & RTCLEAR_TARGET)
-			d3df |= D3DCLEAR_TARGET;
-
-		m_pd3dDevice->Clear(nr, pr, d3df, color, depth, stencil);
-	}
-	else
-	{
-		//because of fast-clear feature is always better to clear zbuffer together with stencil
-		m_pd3dDevice->Clear(nr, pr, D3DCLEAR_ZBUFFER|D3DCLEAR_STENCIL, color, depth, stencil);
-	}
-#ifdef ENF_XENON
-	m_pd3dDevice->GpuOwn(D3DTAG_BLENDCONTROL0);
-	for(uint n = 0; n < MAX_RENDER_TARGETS; n++)
-		m_iBlendStates[n] = 0xffffffff;
-#endif
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	uint clearFlag = 0;
 	if(flags == 0 && m_pCurrentDepth)
 	{
@@ -1535,9 +1189,6 @@ void IRenderer::BeginUse()
 		AssertMainThread();
 		//wait for suspended thread to respond
 		//
-#ifdef ENF_XENON
-		//m_pd3dDevice->Resume();
-#endif
 	}
 
 	m_iUsed++;
@@ -1551,10 +1202,6 @@ void IRenderer::EndUse()
 	if(--m_iUsed == 0 && m_iSuspended > 0)
 	{
 		AssertMainThread();
-#ifdef ENF_XENON
-		//m_pd3dDevice->SetShaderGPRAllocation(0, 0, 0);
-		//m_pd3dDevice->Suspend();
-#endif
 	}
 }
 
@@ -1566,10 +1213,6 @@ void IRenderer::Suspend()
 
 	if(m_iSuspended == 0)
 	{
-#ifdef ENF_XENON
-		//m_pd3dDevice->SetShaderGPRAllocation(0, 0, 0);
-		//m_pd3dDevice->Suspend();
-#endif
 	}
 	m_iSuspended++;
 }
@@ -1581,9 +1224,6 @@ void IRenderer::Resume()
 	enf_assert(m_iUsed == 0);
 	if(--m_iSuspended == 0)
 	{
-#ifdef ENF_XENON
-		//m_pd3dDevice->Resume();
-#endif
 	}
 }
 
@@ -1600,18 +1240,6 @@ ERESULT IRenderer::BeginScene()
 	if(m_bInScene)
 		return EE_OK;
 
-#ifdef ENF_DX9
-	ERESULT hres = m_pd3dDevice->TestCooperativeLevel();
-
-	if(hres == D3DERR_DEVICELOST || hres == D3DERR_DEVICENOTRESET)
-	{
-		Lock();
-		hres = Reset(NULL);
-		Unlock();
-		if(hres != D3D_OK)
-			return hres;
-	}
-#endif
 
 	m_bInScene = true;
 	ERESULT res = EE_OK;
@@ -1631,81 +1259,7 @@ ERESULT IRenderer::BeginScene()
 		}
 	#endif
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	// Render the scene as normal
-	res = m_pd3dDevice->BeginScene();
-
-	D3DSURFACE_DESC desc;
-	LPDIRECT3DSURFACE9 pBackBuffer;
-	m_pd3dDevice->GetRenderTarget(0, &pBackBuffer );
-	pBackBuffer->GetDesc( &desc );
-	pBackBuffer->Release();
-
-	m_iTargetWidth = desc.Width;
-	m_iTargetHeight = desc.Height;
-
-	for(uint n = 0; n < MAX_TEXTURES; n++)
-	{
-		m_iSamplerFilterStateValue[n] = 0xffffffff;
-		m_iSamplerAddressStateValue[n] = 0xffffffff;
-	}
-	for(uint n = 0; n < MAX_VERTEX_TEXTURES; n++)
-	{
-		m_iSamplerFilterStateValue2[n] = 0xffffffff;
-		m_iSamplerAddressStateValue2[n] = 0xffffffff;
-	}
-
-#ifndef ENF_XENON
-	if(res == D3D_OK)
-	{
-#define GETRS(a) m_pd3dDevice->GetRenderState((D3DRENDERSTATETYPE)a, (DWORD*)&m_iRenderStateValue[(int)a]);
-		GETRS(RS_FILLMODE);
-		GETRS(RS_ALPHATESTENABLE);
-		GETRS(RS_CULLMODE);
-		GETRS(RS_ALPHAREF);
-		GETRS(RS_ALPHAFUNC);
-		GETRS(RS_POINTSIZE_MIN);
-		GETRS(RS_POINTSPRITEENABLE);
-		GETRS(RS_MULTISAMPLEANTIALIAS);
-		GETRS(RS_MULTISAMPLEMASK);
-		GETRS(RS_POINTSIZE_MAX);
-		GETRS(RS_COLORWRITEENABLE);
-		GETRS(RS_COLORWRITEENABLE1);
-		GETRS(RS_COLORWRITEENABLE2);
-		GETRS(RS_COLORWRITEENABLE3);
-		GETRS(RS_BLENDFACTOR);
-		GETRS(RS_DEPTHBIAS);
-		GETRS(RS_SCISSORTESTENABLE);
-		GETRS(RS_SLOPESCALEDEPTHBIAS);
-		GETRS(RS_SRGBWRITEENABLE);
-		GETRS(RS_CLIPPING);
-	}
-#endif
-
-#ifdef ENF_XENON
-	m_pd3dDevice->GpuOwn(D3DTAG_BLENDCONTROL0);
-	for(uint n = 0; n < MAX_RENDER_TARGETS; n++)
-		m_iBlendStates[n] = 0xffffffff;
-#endif
-
-	float val = 0.0f;
-	#ifdef ENF_DEVELOPER
-		uint bias = ((uint) ENF_DIAG_VALUE(DM_REND_MIPMAPBIAS));
-		val = bias < 13 ? bias : bias < 14 ? -1.0f: bias < 15 ? -0.75 : bias < 16 ? -0.5 : -0.25;	//0..12, -1, -0.75, -0.5, -0.25
-	#endif
-		
-	DWORD mipMapBias = *(DWORD*)&val;
-	DWORD maxMipLevel = ENF_DIAG_VALUE(DM_REND_MAXMIPMAP);
-
-	for(uint n = 0; n < MAX_TEXTURES; n++)
-	{
-		m_pd3dDevice->SetSamplerState(n, D3DSAMP_MIPMAPLODBIAS, mipMapBias);
-		m_pd3dDevice->SetSamplerState(n, D3DSAMP_MAXMIPLEVEL , maxMipLevel);
-	}
-	m_pVShader = NULL;
-	m_pPShader = NULL;
-
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	//it cannot be created in constructor because when constructor is called,
 	//the engine still doesn't have local memory allocator
 	if (!m_pShaderPatchBuffer)
@@ -1874,16 +1428,10 @@ void IRenderer::EndScene()
 {
 	if(m_bInScene)
 	{
-#if defined(ENF_DX9) || defined(ENF_XENON)
-		m_pd3dDevice->EndScene();
-#endif
 		m_bInScene = false;
 		m_iFrame++;
 	}
 	
-#ifdef ENF_XENON
-	m_pd3dDevice->GpuDisown(D3DTAG_BLENDCONTROL0);
-#endif
 
 	ReleaseReferences();
 
@@ -1907,36 +1455,7 @@ void IRenderer::Present()
 
 	ENF_BEGIN_PROFILE(PROFILE_PRESENT);
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	if(m_pd3dDevice)
-	{
-
-#ifdef ENF_XENON
-		m_pd3dDevice->SetRenderState(D3DRS_HIGHPRECISIONBLENDENABLE, FALSE);
-		m_pd3dDevice->SetShaderGPRAllocation(0, 0, 0);
-#else
-		uint issued;
-		if(m_iLimiterTop < m_iLimiterBottom)
-			issued = m_iLimiterTop + ((MAX_LIMIT_FRAMES + 1) - m_iLimiterBottom);
-		else
-			issued = m_iLimiterTop - m_iLimiterBottom;
-
-		if(issued == MAX_LIMIT_FRAMES)
-		{
-			BOOL data;
-			m_pLimiterQueries[m_iLimiterBottom]->GetData(&data, sizeof(data), D3DGETDATA_FLUSH);
-			m_iLimiterBottom = (m_iLimiterBottom + 1) % (MAX_LIMIT_FRAMES + 1);
-		}
-		m_pLimiterQueries[m_iLimiterTop]->Issue(QC_ISSUE_END);
-		m_iLimiterTop = (m_iLimiterTop + 1) % (MAX_LIMIT_FRAMES + 1);
-#endif
-
-		// Show the frame on the primary surface.
-		m_pd3dDevice->Present( NULL, NULL, NULL, NULL );
-
-	}
-
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	m_pVShader = NULL;
 	m_pFShader = NULL;
 
@@ -2032,38 +1551,13 @@ void Renderer::ClearScreen()
 	if(m_bDisablePrimaryRT)
 		return;
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	D3DSURFACE_DESC desc;
-	LPDIRECT3DSURFACE9 pBackBuffer;
-	m_pd3dDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &pBackBuffer );
-	pBackBuffer->GetDesc( &desc );
-	pBackBuffer->Release();
-
-	SetViewport(RenderViewport(0, 0, desc.Width, desc.Height, 0.0f, 1.0f));
-
-	if(m_bInScene)
-		m_pd3dDevice->EndScene();
-
-	for(uint n = 0; n < m_Setup.m_iBackBufferCount + 1; n++)
-	{
-		if(m_pd3dDevice->BeginScene() == D3D_OK)
-		{
-			m_pd3dDevice->Clear(0, NULL, D3DCLEAR_STENCIL | D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0, 1.0f, 0);
-			m_pd3dDevice->EndScene();
-		}
-		m_pd3dDevice->Present(NULL, NULL, NULL, NULL);
-	}
-
-	if(m_bInScene)
-		m_pd3dDevice->BeginScene();
-#endif
 }
 
 
 //-----------------------------------------------------------------------
 ERESULT IRenderer::RemoveResource(DeviceResource *res)
 {
-#if defined(ENF_DEVELOPER) || defined(ENF_DX9)
+#if defined(ENF_DEVELOPER)
 	if(res)
 	{
 		CMutexLock lock(m_Mutex);
@@ -2086,7 +1580,7 @@ ERESULT IRenderer::RemoveResource(DeviceResource *res)
 //-----------------------------------------------------------------------
 ERESULT IRenderer::AddResource(DeviceResource *res)
 {
-#if defined(ENF_DEVELOPER) || defined(ENF_DX9)
+#if defined(ENF_DEVELOPER)
 	if(res)
 	{
 		CMutexLock lock(m_Mutex);
@@ -2103,7 +1597,7 @@ ERESULT IRenderer::AddResource(DeviceResource *res)
 //-----------------------------------------------------------------------
 bool IRenderer::ExistsResource(const DeviceResource* checkRes) const
 {
-#if defined(ENF_DEVELOPER) || defined(ENF_DX9)
+#if defined(ENF_DEVELOPER)
 	CMutexLock lock(m_Mutex);
 	for(const DeviceResource* res = m_pResources; res; res = res->m_pNext)
 	{
@@ -2147,26 +1641,12 @@ void IRenderer::BeforeReset()
 	GetEngine()->BeforeReset();
 	FlushDelayedResources();
 
-#ifdef ENF_DX9
-	for(DeviceResource *res = m_pResources; res != NULL; res = res->m_pNext)
-		res->BeforeReset();
-#endif
 }
 
 //-----------------------------------------------------------------------
 void IRenderer::AfterReset()
 {
 	CMutexLock lock(m_Mutex);
-#ifdef ENF_DX9
-	for(DeviceResource *res = m_pResources; res != NULL; res = res->m_pNext)
-	{
-		if(res->AfterReset() != EE_OK)
-		{
-			res->AfterReset();
-			InternalError("Can't restore resource %s", res->GetTypeName());
-		}
-	}
-#endif
 #ifdef ENF_HWCURSOR
 	if(m_iCurrentCursor != 0)
 	{
@@ -2182,9 +1662,7 @@ void IRenderer::AfterReset()
 //-----------------------------------------------------------------------
 void Renderer::SetStreamSourceFreqOp(uint stream, StreamFreqOp op, uint freq)
 {
-#ifdef ENF_DX9
-	m_pd3dDevice->SetStreamSourceFreq(stream, freq | (uint)op);
-#elif defined(ENF_PS3) && defined (ENF_HWINSTANCING)
+#if defined(ENF_PS3) && defined(ENF_HWINSTANCING)
 	if(m_Streams[stream].Freq != freq ||
 		m_Streams[stream].Op != op)
 	{
@@ -2201,23 +1679,7 @@ void Renderer::SetTexture(uint index, const Texture *tex)
 {
 	enf_assert(index < MAX_TEXTURES);
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	LPDIRECT3DBASETEXTURE9 pTex = NULL;
-	if(tex)
-	{
-		tex->Touch(0);
-		pTex = tex->GetD3DTexture();
-	}
-
-	#ifndef NO_REDUNDANT_RS_CHECK
-		if(m_pTextures[index] == pTex)
-			return;
-	#endif
-
-	m_pTextures[index] = pTex;
-
-	m_pd3dDevice->SetTexture(index, pTex);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 
 	#ifndef NO_REDUNDANT_RS_CHECK
 		if(m_pTextures[index] == tex)
@@ -2252,23 +1714,7 @@ void Renderer::SetVertexTexture(uint index, const Texture *tex)
 */
 	enf_assert(index < MAX_VERTEX_TEXTURES);
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	LPDIRECT3DBASETEXTURE9 pTex = NULL;
-	if(tex)
-	{
-		tex->Touch(0);
-		pTex = tex->GetD3DTexture();
-	}
-
-	#ifndef NO_REDUNDANT_RS_CHECK
-		if(m_pVertexTextures[index] == pTex)
-			return;
-	#endif
-
-	m_pVertexTextures[index] = pTex;
-
-	m_pd3dDevice->SetTexture(index + D3DVERTEXTEXTURESAMPLER0, pTex);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 
 	#ifndef NO_REDUNDANT_RS_CHECK
 		if(m_pVertexTextures[index] == tex)
@@ -2321,10 +1767,7 @@ Renderer::~Renderer()
 //-----------------------------------------------------------------------
 void Renderer::ReleaseReferences()
 {
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	if(m_pd3dDevice == NULL)
-		return;
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 	if(m_glContext == NULL)
 		return;
 #endif
@@ -2348,46 +1791,6 @@ void Renderer::ReleaseReferences(DeviceResource* res)
 {
 	enf_assert(res != NULL);
 
-#ifdef ENF_XENON
-	if(res->HasType(IndexBufferTypeID))
-	{
-		if(m_pIndexBuffer == &IndexBuffer::Cast(res)->m_IB)
-			SetIndices(NULL);
-	}
-	else if(res->HasType(VertexBufferTypeID))
-	{
-		D3DVertexBuffer* vb = &VertexBuffer::Cast(res)->m_VB;
-		for(uint n = 0; n < MAX_STREAMS; n++)
-		{
-			if(m_Streams[n].VB == vb)
-				ClearStreamSource (n);
-		}
-	}
-	else if(res->HasType(TextureTypeID))
-	{
-		LPDIRECT3DBASETEXTURE9 tex = &Texture::Cast(res)->m_Texture;
-		for(uint n = 0; n < MAX_TEXTURES; n++)
-		{
-			if(m_pTextures[n] == tex)
-				SetTexture(n, NULL);
-		}
-		for(uint n = 0; n < MAX_VERTEX_TEXTURES; n++)
-		{
-			if(m_pVertexTextures[n] == tex)
-				SetVertexTexture(n, NULL);
-		}
-	}
-	else if(res->HasType(VertexShaderTypeID))
-	{
-		if(m_pVShader == VertexShader::Cast(res)->m_pShader)
-			SetVertexShader(NULL);
-	}
-	else if(res->HasType(PixelShaderTypeID))
-	{
-		if(m_pPShader == PixelShader::Cast(res)->m_pShader)
-			SetPixelShader(NULL);
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------
@@ -2479,21 +1882,7 @@ void IRenderer::PopRenderTarget(uint rtindex)
 
 	RTStack* rts = &m_RTStack[rtindex][--m_iRTStackDepth[rtindex]];
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	m_pd3dDevice->SetRenderTarget(rtindex, rts->m_pRender);
-
-	if(rtindex == 0)
-	{
-		m_pd3dDevice->SetDepthStencilSurface(rts->m_pDepth);
-		SetViewport(rts->m_Viewport);
-
-		m_iTargetWidth = rts->m_iRTWidth;
-		m_iTargetHeight = rts->m_iRTHeight;
-	}
-
-	SAFE_RELEASE(rts->m_pRender);
-	SAFE_RELEASE(rts->m_pDepth);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	m_CurrentFB = rts->m_FB;
 
 	GCM_CALL(cellGcmSetSurfaceWindow)(gCellGcmCurrentContext, &m_CurrentFB, CELL_GCM_WINDOW_ORIGIN_TOP, PS3_DIRECTX_COMPATIBLE_PIXEL_CENTER);
@@ -2542,43 +1931,7 @@ void IRenderer::PopRenderTarget(uint rtindex)
 void IRenderer::SetRenderTarget(uint rtindex, RenderTarget *rt, uint face, uint flags)
 {
 	enf_assert(m_iRTStackDepth[rtindex] > 0);
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	if(!(flags & RTF_KEEP_RENDERTARGET))
-	{
-		if(rt->IsCube())
-		{
-			IDirect3DCubeTexture9* ctex = (IDirect3DCubeTexture9*)rt->GetD3DTexture();
-			if(ctex)
-			{
-				IDirect3DSurface9* surf;
-				ctex->GetCubeMapSurface((D3DCUBEMAP_FACES)face, 0, &surf);
-				m_pd3dDevice->SetRenderTarget(rtindex, surf);
-				surf->Release();
-			}
-		}
-		else
-		{
-			m_pd3dDevice->SetRenderTarget(rtindex, rt->GetSurface());
-		}
-	}
-
-	if(rtindex == 0)
-	{
-		if(!(flags & RTF_KEEP_DEPTHSTENCILTARGET))
-			m_pd3dDevice->SetDepthStencilSurface(rt->GetDepthSurface());
-
-		if(!(flags & RTF_KEEP_VIEWPORT))
-		{
-			SetViewport(RenderViewport(0, 0, rt->GetWidth(), rt->GetHeight(), 0, 1));
-		}
-		else
-		{
-			SetViewport(GetViewport());
-		}
-		m_iTargetWidth = rt->GetWidth();
-		m_iTargetHeight = rt->GetHeight();
-	}
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	g_pRender->CheckCommandBuffer(512);
 
 	CellGcmSurface surf = rt->GetSurface();
@@ -2684,58 +2037,13 @@ void IRenderer::SetRenderTarget(uint rtindex, RenderTarget *rt, uint face, uint 
 ENF_INLINE bool IRenderer::ValidateMRT() const
 {
 	//all MRT have to have the same width and height and bit depth (unless D3DPMISCCAPS_MRTINDEPENDENTBITDEPTHS is set)
-	// other related caps bits: D3DPMISCCAPS_MRTPOSTPIXELSHADERBLENDING, blending, alpha test.. (IDirect3D9::CheckDeviceFormat 
-	// with the USAGE_QUERY_POSTPIXELSHADER_BLENDING for exact test for specific format)
+	// Related render-target checks include post-pixel-shader blending and alpha test.
 	 
 	//this really shouldn't happen
 	int currDepth  = m_iRTStackDepth[0] - 1;
 	if (currDepth < 0)
 		return false;
 
-#ifdef ENF_DX9
-
-	uint needWidth  = m_RTStack[0][currDepth].m_iRTWidth;
-	uint needHeight = m_RTStack[0][currDepth].m_iRTHeight;
-
-	D3DSURFACE_DESC desc;
-	m_RTStack[0][currDepth].m_pRender->GetDesc(&desc);
-	uint needStride = GetFormatStride(static_cast<TextureFormat>(desc.Format));
-
-	//test for format
-	int mrtIndex = 1;
-	for (; mrtIndex < MAX_RENDER_TARGETS; mrtIndex++)		
-	{
-		currDepth = m_iRTStackDepth[mrtIndex] - 1;
-		if (currDepth < 0)
-			break;
-
-		if (!m_RTStack[mrtIndex][currDepth].m_pRender)
-			return false;
-
-		m_RTStack[mrtIndex][currDepth].m_pRender->GetDesc(&desc);
-		uint stride = GetFormatStride(static_cast<TextureFormat>(desc.Format));
-
-		if (needWidth  != m_RTStack[mrtIndex][currDepth].m_iRTWidth || 
-			 needHeight != m_RTStack[mrtIndex][currDepth].m_iRTHeight || 
-			 needStride != stride)
-		{
-			return false;			
-		}
-	}
-
-	//test for gaps in MRTs
-	mrtIndex++;
-	for (; mrtIndex < MAX_RENDER_TARGETS; mrtIndex++)		
-	{
-		currDepth = m_iRTStackDepth[mrtIndex] - 1;
-		if (currDepth >= 0)
-		{
-			if (m_RTStack[mrtIndex][currDepth].m_pRender)
-				return false;
-		}
-	}
-
-#endif
 
 	return true;
 }
@@ -2750,64 +2058,7 @@ void IRenderer::PushRenderTarget(uint rtindex, RenderTarget *rt, uint face, uint
 
 	RTStack* rts = &m_RTStack[rtindex][m_iRTStackDepth[rtindex]++];
 	
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	m_pd3dDevice->GetViewport((D3DVIEWPORT9*)&rts->m_Viewport);
-	if(m_bFloatingPointDepthBuffer)
-		enf_swap(rts->m_Viewport.MinZ, rts->m_Viewport.MaxZ);
-
-	if(rtindex == 0)
-		m_pd3dDevice->GetDepthStencilSurface(&rts->m_pDepth);
-	else
-		rts->m_pDepth = NULL;
-
-	if (m_iRTStackDepth[rtindex] > 1 || rtindex == 0)
-	{
-		m_pd3dDevice->GetRenderTarget(rtindex, &rts->m_pRender);
-	} else
-	{
-		rts->m_pDepth	= NULL;
-		rts->m_pRender = NULL;
-	}
-
-	if(!(flags & RTF_KEEP_RENDERTARGET))
-	{
-		if(rt->IsCube())
-		{
-			IDirect3DCubeTexture9* ctex = (IDirect3DCubeTexture9*)rt->GetD3DTexture();
-			if(ctex)
-			{
-				IDirect3DSurface9* surf;
-				ctex->GetCubeMapSurface((D3DCUBEMAP_FACES)face, 0, &surf);
-				m_pd3dDevice->SetRenderTarget(rtindex, surf);
-				surf->Release();
-			}
-		}
-		else
-		{
-			m_pd3dDevice->SetRenderTarget(rtindex, rt->GetSurface());
-		}
-	}
-
-	if(rtindex == 0)
-	{
-		rts->m_iRTWidth = m_iTargetWidth;
-		rts->m_iRTHeight = m_iTargetHeight;
-
-		if(!(flags & RTF_KEEP_DEPTHSTENCILTARGET))
-			m_pd3dDevice->SetDepthStencilSurface(rt->GetDepthSurface());
-
-		if(!(flags & RTF_KEEP_VIEWPORT))
-		{
-			SetViewport(RenderViewport(0, 0, rt->GetWidth(), rt->GetHeight(), 0, 1));
-		}
-		else
-		{
-			SetViewport(rts->m_Viewport);
-		}
-		m_iTargetWidth = rt->GetWidth();
-		m_iTargetHeight = rt->GetHeight();
-	}
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	//TODO: not good, I just need to keep buffers and later create surface on the fly for cellgcmSetSurface, because 
 	//surface has 4 buffers for each MRT and can have just one format
 	g_pRender->CheckCommandBuffer(256);
@@ -2981,63 +2232,11 @@ void IRenderer::PushRenderTarget(uint rtindex, RenderTarget *rt, uint face, uint
 }
 
 //-----------------------------------------------------------------------
-#ifdef ENF_DX9
-void IRenderer::PushRenderTarget(uint rtindex, const SwapChain* sw)
-{
-	enf_assert(rtindex < MAX_RENDER_TARGETS);
-	enf_assert(m_iRTStackDepth[rtindex] < MAX_RT_DEPTH);
-	enf_assert(sw != NULL);
-
-	RTStack* rts = &m_RTStack[rtindex][m_iRTStackDepth[rtindex]++];
-	m_pd3dDevice->GetViewport((D3DVIEWPORT9*)&rts->m_Viewport);
-	if(rtindex == 0)
-		m_pd3dDevice->GetDepthStencilSurface(&rts->m_pDepth);
-	else
-		rts->m_pDepth = NULL;
-
-	if (m_iRTStackDepth[rtindex] > 1 || rtindex == 0)
-	{
-		m_pd3dDevice->GetRenderTarget(rtindex, &rts->m_pRender);
-	}
-	else
-	{
-		rts->m_pDepth	= NULL;
-		rts->m_pRender = NULL;
-	}
-
-	ComPtr<_D3DSurface> surf;
-	sw->m_pSwapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, surf.Init());
-
-	D3DSURFACE_DESC desc;
-	surf->GetDesc(&desc);
-
-	m_pd3dDevice->SetRenderTarget(rtindex, surf);
-
-	if(rtindex == 0)
-	{
-		rts->m_iRTWidth = m_iTargetWidth;
-		rts->m_iRTHeight = m_iTargetHeight;
-		m_pd3dDevice->SetDepthStencilSurface(sw->m_pDepthBuffer);
-		D3DVIEWPORT9 vp = {0, 0, sw->m_iWidth, sw->m_iHeight, 0, 1.0f};
-		m_pd3dDevice->SetViewport(&vp);
-		m_iTargetWidth = sw->GetWidth();
-		m_iTargetHeight = sw->GetHeight();
-	}
-}
-#endif
 
 //-----------------------------------------------------------------------
 void Renderer::SetVertexShader(const VertexShader* vsh)
 {
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	LPDIRECT3DVERTEXSHADER9 pVsh = vsh == NULL ? NULL : (LPDIRECT3DVERTEXSHADER9)vsh->m_pShader;
-
-	if(m_pVShader == pVsh)
-		return;
-	m_pVShader = pVsh;
-
-	m_pd3dDevice->SetVertexShader(pVsh);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	CellCgbProgram* sh = vsh ? (CellCgbProgram*)vsh->m_pShader : 0;
 	if(m_pVShader == sh )
 	{
@@ -3068,15 +2267,7 @@ void Renderer::SetVertexShader(const VertexShader* vsh)
 //-----------------------------------------------------------------------
 void Renderer::SetPixelShader(const PixelShader *psh)
 {
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	LPDIRECT3DPIXELSHADER9 pPsh = (psh == NULL ? NULL : (LPDIRECT3DPIXELSHADER9)psh->m_pShader);
-
-	if(m_pPShader == pPsh)
-		return;
-	m_pPShader = pPsh;
-
-	m_pd3dDevice->SetPixelShader(pPsh);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 
 	if(m_pFShader == psh)
 		return;
@@ -3108,11 +2299,7 @@ void Renderer::SetStreamSource(uint stream, VertexBuffer* vertexbuffer, uint off
 		ClearStreamSource(stream);
 		return;
 	}
-#ifdef ENF_DX9
-	SetStreamSourceInternal(stream, vertexbuffer->m_pVB, offset, stride);
-#elif defined(ENF_XENON)
-	SetStreamSourceInternal(stream, &vertexbuffer->m_VB, offset, stride);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	SetStreamSourceInternal(stream, vertexbuffer->m_pVB, vertexbuffer->GetBufferLocation(), offset, stride);//, vertexbuffer->GetID());
 #elif defined(ENF_OGL)
 	SetStreamSourceInternal(stream, vertexbuffer->m_iBuffer, offset, stride);
@@ -3122,19 +2309,7 @@ void Renderer::SetStreamSource(uint stream, VertexBuffer* vertexbuffer, uint off
 //-----------------------------------------------------------------------
 void Renderer::SetIndices(IndexBuffer* indexdata)
 {
-#ifdef ENF_XENON
-	IDirect3DIndexBuffer9* ib = indexdata ? &indexdata->m_IB : NULL;
-	if(m_pIndexBuffer == ib)
-		return;
-	m_pIndexBuffer = ib;
-	m_pd3dDevice->SetIndices(ib);
-#elif defined(ENF_DX9)
-	IDirect3DIndexBuffer9* ib = indexdata ? indexdata->m_pIB : NULL;
-	if(m_pIndexBuffer == ib)
-		return;
-	m_pIndexBuffer = ib;
-	m_pd3dDevice->SetIndices(ib);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	if(m_pIndexBuffer != indexdata)
 	{
 		m_pIndexBuffer = indexdata;
@@ -3183,25 +2358,7 @@ void Renderer::SetViewport(const RenderViewport& vp)
 	m_Viewport.Y = vp.Y;
 	m_Viewport.MaxZ = enf_limit(vp.MaxZ, 0.0f, 1.0f);
 	m_Viewport.MinZ = enf_limit(vp.MinZ, 0.0f, m_Viewport.MaxZ);
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	D3DVIEWPORT9 d3dvp;
-	d3dvp.Width = vp.Width;
-	d3dvp.Height = vp.Height;
-	d3dvp.X = vp.X;
-	d3dvp.Y = vp.Y;
-
-	if(m_bFloatingPointDepthBuffer)
-	{
-		d3dvp.MinZ = m_Viewport.MaxZ;
-		d3dvp.MaxZ = m_Viewport.MinZ;
-	}
-	else
-	{
-		d3dvp.MinZ = m_Viewport.MinZ;
-		d3dvp.MaxZ = m_Viewport.MaxZ;
-	}
-	m_pd3dDevice->SetViewport(&d3dvp);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 
 	//this is quite strange - both documentations, the RSX and PS3 have error in the computation of transformation matrix
 	//from NDC to viewport, thus from <-1, 1>x<-1, 1> to viewport coordinates. 
@@ -3446,22 +2603,12 @@ SamplerAddressStateHandle Renderer::CreateSamplerAddressState(const SamplerAddre
 //-----------------------------------------------------------------------
 void Renderer::GetShaderAllocation(uint& vs, uint& ps) const
 {
-#ifdef ENF_XENON
-	DWORD flags, dvs, dps;
-	m_pd3dDevice->GetShaderGPRAllocation(&flags, &dvs, &dps);
-	vs = dvs;
-	ps = dps;
-#endif
 
 }
 
 //-----------------------------------------------------------------------
 void Renderer::SetShaderAllocation(uint vs, uint ps)
 {
-#ifdef ENF_XENON
-	m_pd3dDevice->SetRenderState(D3DRS_HIGHPRECISIONBLENDENABLE, FALSE);
-	m_pd3dDevice->SetShaderGPRAllocation(0, vs, ps);
-#endif
 }
 
 //-----------------------------------------------------------------------
@@ -3600,107 +2747,11 @@ bool IRenderer::GetMode(uint adapter, uint device, uint mode, RenderModeInfo *mo
 //-----------------------------------------------------------------------
 uint IRenderer::LoadCursorImage(Texture* tex, const RRect& srcRect, int hotspotX, int hotspotY)
 {
-#ifndef ENF_HWCURSOR
+	(void)tex;
+	(void)srcRect;
+	(void)hotspotX;
+	(void)hotspotY;
 	return 0;
-#else
-	enf_assert(tex != NULL);
-	LockedRect lrect;
-	SurfaceDesc desc;
-
-	uint width = srcRect.Right - srcRect.Left;
-	uint height = srcRect.Bottom - srcRect.Top;
-
-	if(width > 32 || height > 32)
-		return 0;
-
-	uint width2 = 32;//GetNearestPower2(width);
-	uint height2 = 32;//GetNearestPower2(height);
-
-	uint cursorID = 0;
-
-	if(tex->Lock(0, &srcRect, &lrect, &desc, true))
-	{
-		ComPtr<IDirect3DSurface9> surf;
-
-		if(m_pd3dDevice->CreateOffscreenPlainSurface(width2, height2, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, surf.Init(), NULL) == D3D_OK)
-		{
-			D3DLOCKED_RECT destRect;
-
-			if(surf->LockRect(&destRect, NULL, 0) == D3D_OK)
-			{
-				if(width2 > width || height2 > height)
-				{
-					//clear first
-					for(uint h = 0; h < height2; h++)
-					{
-						uint* destPtr = (uint*)((ubyte*)destRect.pBits + h * destRect.Pitch);
-						for(uint w = 0; w < width2; w++)
-							destPtr[w] = 0;
-					}
-				}
-
-				if(IsDXTFormat(desc.Format))
-				{
-					for(uint h = 0; h < height; h++)
-					{
-						const uint* srcPtr = (uint*)((ubyte*)lrect.pBits + h * lrect.Pitch);
-						uint* destPtr = (uint*)((ubyte*)destRect.pBits + h * destRect.Pitch);
-						for(uint w = 0; w < width; w++)
-						{
-							uint p = ((w & 2) == 0 && (h & 2) == 0) ? 0xffffffff : 0;
-							destPtr[w] = p;
-						}
-					}
-				}
-				else if(GetFormatStride(desc.Format) == 4)
-				{
-					for(uint h = 0; h < height; h++)
-					{
-						const uint* srcPtr = (uint*)((ubyte*)lrect.pBits + h * lrect.Pitch);
-						uint* destPtr = (uint*)((ubyte*)destRect.pBits + h * destRect.Pitch);
-						for(uint w = 0; w < width; w++)
-						{
-							ubyte a, r, g, b;
-							DecodeChannels(desc.Format, srcPtr[w], r, g, b, a);
-
-							//make alpha discrete
-							a = a ? 0xff : 0;
-							destPtr[w] = (a << 24) | (r << 16) | (g << 8) | b;
-						}
-					}
-				}
-				else if(GetFormatStride(desc.Format) == 2)
-				{
-					for(uint h = 0; h < height; h++)
-					{
-						const ushort* srcPtr = (ushort*)((ubyte*)lrect.pBits + h * lrect.Pitch);
-						uint* destPtr = (uint*)((ubyte*)destRect.pBits + h * destRect.Pitch);
-						for(uint w = 0; w < width; w++)
-						{
-							ubyte a, r, g, b;
-							DecodeChannels(desc.Format, srcPtr[w], r, g, b, a);
-
-							//make alpha discrete
-							a = a ? 0xff : 0;
-							a=r=g=b=0xff;
-							destPtr[w] = (a << 24) | (r << 16) | (g << 8) | b;
-						}
-					}
-				}
-				surf->UnlockRect();
-			}
-
-			surf.AddRef();
-			cursorID = m_Cursors.GetCardinality() + 1;
-			CursorInfo& info = m_Cursors.Append();
-			info.x = enf_limit(hotspotX, 0, (int)(width2 - 1));
-			info.y = enf_limit(hotspotY, 0, (int)(height2 - 1));
-			info.surface = surf;
-		}
-		tex->Unlock(0);
-	}
-	return cursorID;
-#endif
 }
 
 //-----------------------------------------------------------------------
@@ -3767,8 +2818,7 @@ void IRenderer::SetCursorPos(uint x, uint y)
 #if !defined(ENF_DUMMYRENDER)
 
 #if defined(_WIN64)
-// D3DPERF markers are optional profiling instrumentation.  The DX11 client
-// does not load the D3D9 runtime just to emit them.
+// Optional profiling markers are no-ops for the dummy renderer.
 void _D3DPERF_BeginEvent(uint color, const char* name, ...)
 {
 }
@@ -3783,68 +2833,6 @@ void _D3DPERF_SetMarker(uint color, const char* name, ...)
 
 void _D3DPERF_EndEvent()
 {
-}
-
-#elif defined(ENF_DX9) 
-void _D3DPERF_BeginEvent(uint color, const char* name, ...)
-{
-	if(D3DPERF_GetStatus() == 0)
-		return;
-
-	char buff[256];
-	ushort wbuff[256];
-	va_list argptr;
-
-	va_start (argptr, name);
-	vsprintf (buff, name, argptr);
-	va_end (argptr);
-	for(uint n = 0; ; n++)
-	{
-		wbuff[n] = (short)buff[n];
-		if(buff[n] == 0)
-			break;
-	}
-	D3DPERF_BeginEvent(color, (LPCWSTR)wbuff);
-}
-
-
-//-----------------------------------------------------------------------
-void _D3DPERF_BeginEvent(uint color, const wchar_t* name)
-{
-	if(D3DPERF_GetStatus() == 0)
-		return;
-
-	D3DPERF_BeginEvent(color, (LPCWSTR)name);
-}
-
-//-----------------------------------------------------------------------
-void _D3DPERF_SetMarker(uint color, const char* name, ...)
-{
-	if(D3DPERF_GetStatus() == 0)
-		return;
-
-	char buff[256];
-	ushort wbuff[256];
-	va_list argptr;
-
-	va_start (argptr, name);
-	vsprintf (buff, name, argptr);
-	va_end (argptr);
-	for(uint n = 0; ; n++)
-	{
-		wbuff[n] = (short)buff[n];
-		if(buff[n] == 0)
-			break;
-	}
-	D3DPERF_SetMarker(color, (LPCWSTR)wbuff);
-}
-
-//-----------------------------------------------------------------------
-void _D3DPERF_EndEvent()
-{
-	if(D3DPERF_GetStatus() == 0)
-		return;
-	D3DPERF_EndEvent();
 }
 
 #elif defined(ENF_PS3)
@@ -5668,9 +4656,7 @@ void Renderer::DrawIndexedPrimitive(PrimitiveType Type, int BaseVertexIndex, uin
 #ifdef ENF_DEVELOPER
 	m_Stats.AddIndexedPrimitive(NumVertices, PrimitiveCount);
 #endif
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	m_pd3dDevice->DrawIndexedPrimitive((D3DPRIMITIVETYPE)Type, BaseVertexIndex, MinIndex,NumVertices, StartIndex, PrimitiveCount);
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 
 	uint commitMask = m_iCommitMask;
 	//commitMask = 0xffffffff;
@@ -5744,13 +4730,7 @@ void Renderer::DrawQuad(uint StartVertex)
 	#endif
 #endif
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	#ifdef ENF_RENDERQUADS
-		m_pd3dDevice->DrawPrimitive(D3DPT_QUADLIST, StartVertex, 1);
-	#else
-		m_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, StartVertex, 2);
-	#endif
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	if(m_iCommitMask)
 		CommitStates(NULL, 0, 0);
 
@@ -5793,13 +4773,7 @@ void Renderer::DrawQuads(uint StartVertex, uint PrimitiveCount)
 	#endif
 #endif
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	#ifdef ENF_RENDERQUADS
-		m_pd3dDevice->DrawPrimitive(D3DPT_QUADLIST, StartVertex, PrimitiveCount);
-	#else
-		m_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, StartVertex, PrimitiveCount * 2);
-	#endif
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	if(m_iCommitMask)
 		CommitStates(NULL, 0, 0);
 
@@ -5837,9 +4811,7 @@ void Renderer::DrawPrimitive(PrimitiveType Type, uint StartVertex, uint Primitiv
 	m_Stats.AddPrimitive(Type, PrimitiveCount);
 #endif
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	m_pd3dDevice->DrawPrimitive((D3DPRIMITIVETYPE)Type, StartVertex, PrimitiveCount);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	if(m_iCommitMask)
 		CommitStates(NULL, 0, 0);
 
@@ -5911,7 +4883,7 @@ ENF_INLINEFUNC uint GCMBlendFactor(RenderBlendFactor fac)
 #endif
 
 
-#if defined(ENF_DX9) || defined(ENF_OGL) || defined(ENF_PS3)
+#if defined(ENF_OGL) || defined(ENF_PS3)
 void Renderer::_SetRenderState(RenderState state, uint value)
 {
 	m_iRenderStateValue[(int)state] = value;
@@ -5919,10 +4891,7 @@ void Renderer::_SetRenderState(RenderState state, uint value)
 	m_Stats.RSChanges++;
 #endif
 
-#if defined(ENF_DX9)
-
-	m_pd3dDevice->SetRenderState((D3DRENDERSTATETYPE)state, value);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 
 	static const uint shiftCW_R = GetLowestBit(COLORWRITEENABLE_RED);
 	static const uint shiftCW_G = GetLowestBit(COLORWRITEENABLE_GREEN);
@@ -6133,29 +5102,7 @@ void Renderer::_SetBlendState(uint rtindex, BlendState blendState)
 	m_Stats.BSChanges++;
 #endif
 
-#ifdef ENF_XENON
-
-	BlendState state = blendState;
-	state.EnableHighPrec = 0;
-
-	m_pd3dDevice->GpuSetBlendControl(rtindex, &state.XState);
-
-	BOOL highPrecAlpha = ENF_DIAG_RBOOL(DM_XBOX_HIGHPREC_ALPHA);
-	m_pd3dDevice->SetRenderState(D3DRS_HIGHPRECISIONBLENDENABLE, blendState.EnableHighPrec && highPrecAlpha);
-
-#elif defined(ENF_DX9)
-
-	m_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-
-#ifdef ENF_SEPARATE_ALPHABLEND_ENABLE
-	m_pd3dDevice->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, false);
-#endif
-
-	m_pd3dDevice->SetRenderState(D3DRS_SRCBLEND , blendState.SrcBlend);
-	m_pd3dDevice->SetRenderState(D3DRS_BLENDOP , blendState.BlendOp);
-	m_pd3dDevice->SetRenderState(D3DRS_DESTBLEND , blendState.DestBlend);
-
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	#ifdef ENF_DEVELOPER
 		if(m_CurrentFB.colorFormat == CELL_GCM_SURFACE_F_W32Z32Y32X32 || m_CurrentFB.colorFormat == CELL_GCM_SURFACE_F_X32)
 		{
@@ -6197,34 +5144,7 @@ void Renderer::_SetDepthStencilState(DepthStencilStateHandle state, uint stencil
 
 	m_iDepthStencilState = state;
 
-#if defined(ENF_XENON) || defined(ENF_DX9)
-	m_pd3dDevice->SetRenderState_Inline(D3DRS_ZENABLE, def.DepthEnable);
-	m_pd3dDevice->SetRenderState_Inline(D3DRS_ZWRITEENABLE, def.DepthWriteEnable);
-	m_pd3dDevice->SetRenderState_Inline(D3DRS_ZFUNC, GetDepthFunc((RenderCmpFunc)def.DepthFunc));
-	m_pd3dDevice->SetRenderState_Inline(D3DRS_STENCILENABLE, def.StencilEnable);
-	if(def.StencilEnable)
-	{
-		m_pd3dDevice->SetRenderState_Inline(D3DRS_STENCILFAIL, def.FrontStencilFailOp);
-		m_pd3dDevice->SetRenderState_Inline(D3DRS_STENCILZFAIL, def.FrontStencilDepthFailOp);
-		m_pd3dDevice->SetRenderState_Inline(D3DRS_STENCILPASS, def.FrontStencilPassOp);
-		m_pd3dDevice->SetRenderState_Inline(D3DRS_STENCILFUNC, def.FrontStencilFunc);
-		if(def.TwoSidedStencilEnable)
-		{
-			m_pd3dDevice->SetRenderState_Inline(D3DRS_CCW_STENCILFAIL, def.FrontStencilFailOp);
-			m_pd3dDevice->SetRenderState_Inline(D3DRS_CCW_STENCILZFAIL, def.FrontStencilDepthFailOp);
-			m_pd3dDevice->SetRenderState_Inline(D3DRS_CCW_STENCILPASS, def.FrontStencilPassOp);
-			m_pd3dDevice->SetRenderState_Inline(D3DRS_CCW_STENCILFUNC, def.FrontStencilFunc);
-		}
-		m_pd3dDevice->SetRenderState_Inline(D3DRS_STENCILMASK, def.StencilReadMask);
-		m_pd3dDevice->SetRenderState_Inline(D3DRS_STENCILWRITEMASK, def.StencilWriteMask);
-
-		if(m_iStencilRef != stencilRef)
-		{
-			m_iStencilRef = stencilRef;
-			m_pd3dDevice->SetRenderState_Inline(D3DRS_STENCILREF, stencilRef);
-		}
-	}
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	if(def.StencilEnable)
 	{
 		GCM_CALL(cellGcmSetStencilTestEnable)(gCellGcmCurrentContext, CELL_GCM_TRUE);
@@ -6602,7 +5522,7 @@ void Renderer::Flip(bool fakeFlip)
 //-----------------------------------------------------------------------
 bool Renderer::CheckThread()
 {
-#if defined(WIN32) || defined(ENF_XENON)
+#if defined(WIN32)
 	IL_INT32 threadId = m_ThreadLock;
 	return (threadId == 0 || threadId == (uint)::GetCurrentThreadId());
 #else
@@ -6613,7 +5533,7 @@ bool Renderer::CheckThread()
 //-----------------------------------------------------------------------
 void Renderer::ThreadLock()
 {
-#if defined(WIN32) || defined(ENF_XENON)
+#if defined(WIN32)
 	IL_INT32 threadId = IL_EXCHANGE(m_ThreadLock, (IL_INT32)::GetCurrentThreadId());
 	enf_rlsassert(threadId == 0);
 #endif
@@ -6622,7 +5542,7 @@ void Renderer::ThreadLock()
 //-----------------------------------------------------------------------
 void Renderer::ThreadUnlock()
 {
-#if defined(WIN32) || defined(ENF_XENON)
+#if defined(WIN32)
 	IL_INT32 threadId = IL_EXCHANGE(m_ThreadLock, 0);
 	enf_rlsassert(threadId == (IL_INT32)::GetCurrentThreadId());
 #endif

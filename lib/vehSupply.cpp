@@ -110,8 +110,27 @@ ResourceSupply::ResourceSupply( EntityAI *vehicle, bool fullCreate)
     AddMagazineCargoCount(vehicle, item.magazine, item.count);
   }
   
-  _itemsCargo.SetWidth(type->GetItemsCargoWidth());
-  _itemsCargo.SetHeight(type->GetItemsCargoHeight());
+  int cargoWidth = type->GetItemsCargoWidth();
+  int cargoHeight = type->GetItemsCargoHeight();
+
+  // SourceDayZ: every land vehicle, helicopter and boat gets a 500 slot cargo
+  // grid (5 columns x 100 rows). The player can open the vehicle inventory
+  // (Gear action) and store items inside it, both on foot and while seated.
+  if (type->IsKindOf("LandVehicle") || type->IsKindOf("Air") || type->IsKindOf("Ship"))
+  {
+    cargoWidth = 5;
+    cargoHeight = 100;
+  }
+
+  _itemsCargo.SetWidth(cargoWidth);
+  _itemsCargo.SetHeight(cargoHeight);
+
+  RptF
+  (
+    "SDZ cargo: %s -> %dx%d (kind LandVehicle=%d Air=%d Ship=%d)",
+    cc_cast(type->GetName()), cargoWidth, cargoHeight,
+    type->IsKindOf("LandVehicle"), type->IsKindOf("Air"), type->IsKindOf("Ship")
+  );
 }
 
 // used for serialization only 
@@ -686,7 +705,21 @@ if (unit == GWorld->FocusOn() && veh->Position().Distance2(parent->Position()) <
 
   if (iAmSoldier) return;
 
-  if (type->CanStoreWeapons() && (inCargo || (soldier && !unit->GetPerson()->IsActionInProgress(MFReload))))
+  // SourceDayZ: allow opening the vehicle inventory also while seated inside it
+  // (driver/pilot/gunner/commander), not only when walking next to it.
+  bool inThisVehicle = unit->GetVehicleIn() == parent;
+
+  // SourceDayZ: some mod vehicles (e.g. the helicopter mod) do not define
+  // itemsCargoSize in their config, so CanStoreWeapons() reports false even
+  // though the engine gives them a 5x100 cargo grid. Treat vehicles as
+  // storable so the Gear action exists.
+  bool canStore = type->CanStoreWeapons();
+  if (!canStore)
+  {
+    canStore = type->IsKindOf("LandVehicle") || type->IsKindOf("Air") || type->IsKindOf("Ship");
+  }
+
+  if (canStore && (inCargo || inThisVehicle || (soldier && !unit->GetPerson()->IsActionInProgress(MFReload))))
   {
     if (!dyn_cast<InventoryItem>(parent))
     {
@@ -695,6 +728,13 @@ if (unit == GWorld->FocusOn() && veh->Position().Distance2(parent->Position()) <
       if (index >= 0) action._memoryPoints.Add(index);
       if (inCargo) action.showWindow = false;
       add(action);
+
+      static EntityAI *s_lastGearLogged = NULL;
+      if (s_lastGearLogged != parent)
+      {
+        s_lastGearLogged = parent;
+        RptF("SDZ gear action: %s (inThisVehicle=%d soldier=%d)", cc_cast(type->GetName()), inThisVehicle, soldier);
+      }
     }
   }
 }
@@ -1116,13 +1156,21 @@ bool EntityAI::ForEachOwnedItem(const std::function<bool(InventoryItem *)> &func
 
 bool EntityAI::CanMoveItem(int index, const InventoryItem *item) const
 {
-  if (index >= 0) return false; // no slots
+  if (!_supply) return false;
+  // SourceDayZ: allow indexed moves inside the vehicle cargo grid (5x100).
+  if (index >= 0) return _supply->GetItemsCargo().CanAddItem(item, index) == index;
   return CanAddOwnedItem(item);
 }
 
 void EntityAI::MoveItem(int index, InventoryItem *item)
 {
-  Assert(index < 0);
+  if (!_supply) return;
+  // SourceDayZ: indexed move inside the vehicle cargo grid (5x100).
+  if (index >= 0)
+  {
+    _supply->GetItemsCargo().AddItem(this, item, index);
+    return;
+  }
   AddOwnedItem(item);
 }
 

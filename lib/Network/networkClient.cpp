@@ -1,6 +1,5 @@
 #include "../wpch.hpp"
 #include "networkImpl.hpp"
-#include "networkQueueUtils.hpp"
 #if _ENABLE_STEAM_IDENTITY && defined(_WIN64)
 #include <Steamworks/steam_api.h>
 #endif
@@ -453,7 +452,6 @@ NetworkClient::NetworkClient(NetworkManager *parent, RString address, RString pa
   _clientState = NCSCreated;
   _serverState = NSSSelectingMission;
   _serverTimeout = INT_MAX;
-  _initScriptRun = false;
 
   _connectionQuality = CQGood;
   _connectionDesync = CDGood;
@@ -592,7 +590,6 @@ NetworkClient::NetworkClient(NetworkManager *parent, NetworkServer *server, int 
   _clientState = NCSCreated;
   _serverState = NSSSelectingMission;
   _serverTimeout = INT_MAX;
-  _initScriptRun = false;
 
   _connectionQuality = CQGood;
   _connectionDesync = CDGood;
@@ -8421,8 +8418,7 @@ void NetworkClient::SendMessages()
   const int nBytesMaxGuaranteed = nBytesMax;
 
   int maxSize = MaxSizeGuaranteed;
-  int firstGuaranteedUnsent = 0;
-  while (firstGuaranteedUnsent < _messageQueue.Size())
+  while (_messageQueue.Size() > 0)
   {
     if (nMsg >= nMsgMaxGuaranteed || nBytes >= nBytesMaxGuaranteed)
     {
@@ -8438,14 +8434,14 @@ void NetworkClient::SendMessages()
       break;
     }
 
-    NetworkMessage *msg = _messageQueue[firstGuaranteedUnsent]->msg;
+    NetworkMessage *msg = _messageQueue[0]->msg;
     int size = msg->size;
     if (size >= maxSize)
     {
       RefR<NetMessage, RefCountSafe> resultMsg;
-      SendMsgRemote(TO_SERVER, msg, _messageQueue[firstGuaranteedUnsent]->type, NMFGuaranteed|NMFStatsAlreadyDone, &resultMsg, NULL);
-      _messageQueue[firstGuaranteedUnsent]->SetFence(resultMsg);
-      firstGuaranteedUnsent++;
+      SendMsgRemote(TO_SERVER, msg, _messageQueue[0]->type, NMFGuaranteed|NMFStatsAlreadyDone, &resultMsg, NULL);
+      _messageQueue[0]->SetFence(resultMsg);
+      _messageQueue.Delete(0);
       nMsg++;
       nBytes += size;
     }
@@ -8453,20 +8449,19 @@ void NetworkClient::SendMessages()
     {
       int totalSize = 0;
       int i;
-      for (i=firstGuaranteedUnsent; i<_messageQueue.Size(); i++)
+      for (i=0; i<_messageQueue.Size(); i++)
       {
         NetworkMessage *msg = _messageQueue[i]->msg;
         int size = msg->size;
         if (totalSize + size > maxSize) break;
         totalSize += size;
       }
-      SendMsgQueue(TO_SERVER, _messageQueue, firstGuaranteedUnsent, i, NMFGuaranteed);
-      firstGuaranteedUnsent = i;
+      SendMsgQueue(TO_SERVER, _messageQueue, 0, i, NMFGuaranteed);
+      _messageQueue.Delete(0, i);
       nMsg++;
       nBytes += totalSize;
     }
   }
-  if (firstGuaranteedUnsent > 0) _messageQueue.Delete(0, firstGuaranteedUnsent);
 
   AUTO_STATIC_ARRAY(UpdateLocalObjectInfo, objects, 256);
 
@@ -8621,18 +8616,17 @@ DoNotSendUpdates:
     PROFILE_SCOPE_EX(UOngC, network)
     // send nonguaranteed enqueued messages
     maxSize = MaxSizeNonguaranteed;
-    int firstNonGuaranteedUnsent = 0;
     int next = 0; // index of next object to update
     bool empty = false;
     while (true)
     {
       // enforce send last message
-      if (!empty || firstNonGuaranteedUnsent >= _messageQueueNonGuaranteed.Size())
+      if (!empty || _messageQueueNonGuaranteed.Size() <= 0)
       {
         if (nMsg >= nMsgMax || nBytes >= nBytesMax) break;
       }
 
-      if (firstNonGuaranteedUnsent >= _messageQueueNonGuaranteed.Size())
+      if (_messageQueueNonGuaranteed.Size() <= 0)
       {
         empty = true;
         // starving, try to create further message
@@ -8641,14 +8635,14 @@ DoNotSendUpdates:
         // local communication - message was already sent
         if (_parent->IsServer())
         {
-          DoAssert(firstNonGuaranteedUnsent >= _messageQueueNonGuaranteed.Size());
+          DoAssert(_messageQueueNonGuaranteed.Size() == 0);
           nMsg++;
           continue;
         }
 
         // DoAssert(_messageQueueNonGuaranteed.Size() > 0);
         // Temporary FIX:
-        if (firstNonGuaranteedUnsent >= _messageQueueNonGuaranteed.Size())
+        if (_messageQueueNonGuaranteed.Size() == 0)
         {
   RptF("PrepareNextUpdate - no message was prepared - next %d, object 0x%x", oldNext, &objects[oldNext]);
   PrepareNextUpdate(objects, oldNext);        
@@ -8657,7 +8651,7 @@ DoNotSendUpdates:
         }
       }
     
-      NetworkMessageQueueItem *item = _messageQueueNonGuaranteed[firstNonGuaranteedUnsent];
+      NetworkMessageQueueItem *item = _messageQueueNonGuaranteed[0];
       int size = item->msg->size;
       // enforce send last message
       if (size >= maxSize || nMsg >= nMsgMax || nBytes >= nBytesMax)
@@ -8665,7 +8659,7 @@ DoNotSendUpdates:
         RefR<NetMessage, RefCountSafe> resultMsg;
         SendMsgRemote(TO_SERVER, item->msg, item->type, NMFStatsAlreadyDone, &resultMsg, item->dependOn);
         //item->SetFence(resultMsg); //nonguaranteed messages could not raise a fence
-        firstNonGuaranteedUnsent++;
+        _messageQueueNonGuaranteed.Delete(0);
         nMsg++;
         nBytes += size;
       }
@@ -8675,45 +8669,46 @@ DoNotSendUpdates:
         int i;
         for (i=0; true; i++)
         {
-          int queueIndex = firstNonGuaranteedUnsent + i;
-          if (queueIndex >= _messageQueueNonGuaranteed.Size())
+          if (i >= _messageQueueNonGuaranteed.Size())
           {
             empty = true;
             // starving, try to create further message
             if (!PrepareNextUpdate(objects, next)) break;
             DoAssert(!_parent->IsServer());
-            DoAssert(queueIndex < _messageQueueNonGuaranteed.Size());
+            DoAssert(i < _messageQueueNonGuaranteed.Size());
           }
         
-          NetworkMessageQueueItem &item = *_messageQueueNonGuaranteed[queueIndex];
+          NetworkMessageQueueItem &item = *_messageQueueNonGuaranteed[i];
           int size = item.msg->size;
           if (totalSize + size > maxSize) break;
           totalSize += size;
         }
 
-        int queueEnd = firstNonGuaranteedUnsent + i;
-        int normalCount = CompactNetworkMessageQueueRange(
-          _messageQueueNonGuaranteed, firstNonGuaranteedUnsent, queueEnd,
-          [this,&nMsg](NetworkMessageQueueItem *item)
-          {
-            // Send dependent messages immediately and keep their queue order.
+        for (int j=0; j<i; j++)
+        {
+          NetworkMessageQueueItem &item = *_messageQueueNonGuaranteed[j];
+
+          if (item.dependOn)
+          { //it depends on previous guaranteed update and cannot be agregated. We sent it immediately by setting begin
             RefR<NetMessage, RefCountSafe> resultMsg;
-            SendMsgRemote(TO_SERVER, item->msg, item->type, NMFStatsAlreadyDone, &resultMsg, item->dependOn);
+            SendMsgRemote(TO_SERVER, item.msg, item.type, NMFStatsAlreadyDone, &resultMsg, item.dependOn);
             //item.SetFence(resultMsg);  //nonguaranteed messages could not raise a fence
+            _messageQueueNonGuaranteed.Delete(j);
+            i--; //one less items to process
+            j--; //the same index contains new data
             nMsg++;
           }
-        );
+        }
 
-        if (normalCount>0) //it may happen there were only messages with dependOn set
+        if (i>0) //it may happen there were only messages with dependOn set
         {
-          SendMsgQueue(TO_SERVER, _messageQueueNonGuaranteed, firstNonGuaranteedUnsent, firstNonGuaranteedUnsent + normalCount, NMFNone);
-          firstNonGuaranteedUnsent += normalCount;
+          SendMsgQueue(TO_SERVER, _messageQueueNonGuaranteed, 0, i, NMFNone);
+          _messageQueueNonGuaranteed.Delete(0, i);
           nMsg++;
         }
         nBytes += totalSize;
       }
     }
-    if (firstNonGuaranteedUnsent > 0) _messageQueueNonGuaranteed.Delete(0, firstNonGuaranteedUnsent);
     DoAssert(!empty || _messageQueueNonGuaranteed.Size() == 0);
 
   //  int sumError = 0; // messages not sent total error

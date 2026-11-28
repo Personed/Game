@@ -7,9 +7,9 @@ matching role directory.
 ## Runtime contract
 
 - Client: x64 `DayZ.exe`, `Addons/`, `dta/`, `Keys/dayz.bikey`, and
-  Direct3D 9 shader sources in `bin/ShaderSources_3_0/`. The client writes
+  Direct3D 11 shader sources in `bin/ShaderSources_4_0/`. The client writes
   generated shader caches under its local profile. Install Microsoft's
-  DirectX End-User Runtimes (June 2010) for the legacy D3DX9 and audio DLLs.
+  DirectX End-User Runtimes (June 2010) for the D3DX11 and audio DLLs.
 - Server: x64 `DayZServer.exe`, `Addons/`, `dta/`, `Keys/dayz.bikey`,
   `MPMissions/dayz_Auto.ChernarusPlus/`, and root `serverDZ.cfg`. The server
   uses the Windows allocator by default. The root files

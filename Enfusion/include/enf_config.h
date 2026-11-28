@@ -110,7 +110,6 @@ const unsigned int MAX_FILENAME_LENGTH	= 256;
 #endif
 #ifndef ENF_OGL
 	//#define ENF_STEREO_VISION
-	#define ENF_DX9
 #endif
 	#define ENF_SSE
 #endif
@@ -134,7 +133,7 @@ const unsigned int MAX_FILENAME_LENGTH	= 256;
 #endif
 
 
-#if defined(ENF_DX9) || defined(ENF_PS3)
+#if defined(ENF_PS3)
 	#define ENF_HWINSTANCING
 #endif
 

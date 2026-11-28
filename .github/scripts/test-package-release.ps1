@@ -48,7 +48,7 @@ function Write-PackageFixture([string]$Role) {
   New-Item -ItemType Directory -Path $binaryRoot -Force | Out-Null
   if ($Role -eq 'client') {
     Write-FakePe (Join-Path $binaryRoot 'DayZ.exe') 0x8664
-    $shaderRoot = Join-Path $fixture 'lib\d3d9\ShaderSources_3_0'
+    $shaderRoot = Join-Path $fixture 'lib\d3d11\ShaderSources_4_0'
     New-Item -ItemType Directory -Path $shaderRoot -Force | Out-Null
     foreach ($shader in @('VS.hlsl', 'PS.hlsl', 'FPShaders.hlsl')) {
       [System.IO.File]::WriteAllText((Join-Path $shaderRoot $shader), 'fixture')
@@ -158,7 +158,7 @@ try {
   }
   Write-FakePe $serverExe 0x8664
 
-  $shader = Join-Path $fixture 'lib\d3d9\ShaderSources_3_0\PS.hlsl'
+  $shader = Join-Path $fixture 'lib\d3d11\ShaderSources_4_0\PS.hlsl'
   [System.IO.File]::WriteAllBytes($shader, (New-Object byte[] 0))
   $negativeArguments.Role = 'client'
   $negativeArguments.BinaryDirectory = Join-Path $fixture 'binaries\client'
@@ -169,7 +169,7 @@ try {
     throw 'The packager accepted an empty shader source.'
   }
   catch {
-    if ($_.Exception.Message -notmatch 'Missing or empty Direct3D 9 shader source: PS\.hlsl') { throw }
+    if ($_.Exception.Message -notmatch 'Missing or empty Direct3D 11 shader source: PS\.hlsl') { throw }
   }
   [System.IO.File]::WriteAllText($shader, 'fixture')
 

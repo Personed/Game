@@ -37,37 +37,18 @@ class PUBLIC_API DeviceResource: public BaseItem, public RefCountObject
 	friend class Renderer;
 
 private:
-#if defined(ENF_DEVELOPER) || defined(ENF_DX9)
+#if defined(ENF_DEVELOPER)
 	DeviceResource*			m_pNext;
 #endif
 	IRenderer*					m_pDevice;
 	uint							m_iID;
 
 protected:
-#ifdef ENF_DX9
-	bool							m_bManaged;
-#endif
 	virtual void Swap(DeviceResource* other)
 	{
 		enf_swap(m_iID, other->m_iID);
-#ifdef ENF_DX9
-		enf_swap(m_bManaged, other->m_bManaged);
-#endif
 	}
 
-#ifdef ENF_DX9
-	virtual void BeforeReset()
-	{
-		if(!m_bManaged)
-		{
-			Free();
-			m_iID += 2; //force update on dynamic resources
-		}
-	}
-
-	virtual ERESULT AfterReset();
-
-#endif
 
 	/*!
 	Virtual method. Must be implemented in all inherited classes. It has to allocate
@@ -80,13 +61,10 @@ protected:
 	}
 
 	DeviceResource(IRenderer *dev):
-#if defined(ENF_DEVELOPER) || defined(ENF_DX9)
+#if defined(ENF_DEVELOPER)
 		m_pNext(NULL),
 #endif
 		m_pDevice(dev),
-#ifdef ENF_DX9
-		m_bManaged(true),
-#endif
 		m_iID(1)
 	{
 	}
@@ -137,9 +115,7 @@ class PUBLIC_API RenderQuery: public DeviceResource
 	friend class IRenderer;
 
 private:
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	IDirect3DQuery9*			m_pQuery;
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 	GLuint						m_iQuery;
 #endif
 
@@ -216,15 +192,11 @@ class PUBLIC_API IndexBuffer: public RenderBuffer
 	friend class IRenderer;
 
 private:
-#if defined(ENF_DX9)
-	IDirect3DIndexBuffer9*	m_pIB;
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 #endif
 
-#ifndef ENF_XENON
 	uint							m_iLength;
 	IndexBufferFormat			m_Format;
-#endif
 
 	IndexBuffer(IRenderer *dev, IndexBufferFormat fmt, uint flags, uint len);
 
@@ -312,9 +284,7 @@ private:
 
 	uint		m_iStride;
 	uint		m_iLength;
-#ifdef ENF_DX9
-	IDirect3DVertexBuffer9*	m_pVB;
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 	GLuint						m_VB;
 #endif
 
@@ -502,81 +472,6 @@ public:
 };
 
 //-----------------------------------------------------------------------
-#ifdef ENF_DX9
-/*!
-The SwapChain allows rendering to various regions of various windows without
-need to Reset main rendering device or Resizing of main window. Ideal for
-tools, editors, viewers etc.
-*/
-class PUBLIC_API SwapChain: public DeviceResource
-{
-	friend class Renderer;
-	friend class IRenderer;
-
-private:
-	IDirect3DSwapChain9*	m_pSwapChain;
-	IDirect3DSurface9*	m_pDepthBuffer;
-	uint	m_iWidth;
-	uint	m_iHeight;
-	void*	m_hWindow;
-
-	ERESULT Allocate();
-	void Free();
-
-	SwapChain(IRenderer* dev);
-public:
-	ENF_DECLARE_ITEM(SwapChain, DeviceResource);
-
-	IDirect3DSurface9* GetBackBuffer();
-
-	size_t GetMemorySize() const
-	{
-		return m_pDepthBuffer == NULL ? 0 : (GetWidth() * GetHeight() * 4);
-	}
-
-	/*!
-	Gets actual rendertarget width.
-	\return
-	Actual width
-	*/
-	uint GetWidth() const
-	{
-		return m_iWidth;
-	}
-
-	/*!
-	Gets actual rendertarget height.
-	\return
-	Actual height
-	*/
-	uint GetHeight() const
-	{
-		return m_iHeight;
-	}
-
-	/*!
-	Resizes just this rendertarget and assigns window to render to
-	\param window
-	Window to which we will render to
-	\param width
-	New rendertarget width
-	\param height
-	New rendertarget height
-	\return
-	Result code. EE_OK if successfull.
-	*/
-	ERESULT Reset(void* window, uint width, uint height);
-
-	/*!
-	Paints actual rendertarget.
-	\param destrect
-	If not NULL, it defines region to repaint
-	\param hwindow
-	Window we will render to
-	*/
-	void Present(const RRect* destrect, void* hwindow);
-};
-#endif
 
 //@}
 }

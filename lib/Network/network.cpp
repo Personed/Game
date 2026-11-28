@@ -37,8 +37,6 @@
 //#endif
 
 // #if defined(_WIN32) 
-//   #include <dxerr9.h>
-//   #pragma comment(lib,"dxerr9")
 // #endif
 
 //#define _SECURE_LIB 0
@@ -5193,17 +5191,6 @@ void NetworkManager::DBLoad(RString baseURL, int playerId, GameDataCode *code)
 {
   if (_server) _server->DBLoad(baseURL, playerId, code);
   else _spStorage.DBLoad(baseURL, playerId, GetPublicKey(), Glob.header.GetPlayerName(), code); // single player fall-back
-}
-
-void NetworkManager::DBLoad(RString baseURL, int playerId, RString playerUID, GameDataCode *code)
-{
-  if (_server) _server->DBLoad(baseURL, playerId, playerUID, code);
-  else _spStorage.DBLoad(baseURL, playerId, playerUID, Glob.header.GetPlayerName(), code); // single player fall-back
-}
-
-void NetworkManager::PlayerGUIDIsValid(int player, const CSteamID &ownerId)
-{
-  if (_server) _server->PlayerGUIDIsValid(player, ownerId);
 }
 
 #if 0 // _PROFILE

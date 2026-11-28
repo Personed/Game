@@ -693,8 +693,6 @@ MCLASS_PASS(MatParticleSprite)
 
 	#if defined(ENF_XENON)
 		SET_VSH_CONST(CV_INSTANCE_PARAM, Vector4(mesh->m_iNumVertices, mesh->m_iFirstVertex, 0, 0));
-	#elif defined (ENF_DX9)
-		g_pRender->SetStreamSourceFreqOp(1, SFO_DIVIDE, 1);
 	#endif
 
 	#ifdef ENF_PS3
@@ -992,9 +990,7 @@ MCLASS_PASS(MatParticleStreak)
 	g_pRender->SetStreamSource(1, mesh->m_pVB[0], instanceoffs, mesh->m_iStride[0]);
 	g_pRender->SetIndices(m_pStreakIB);
 
-	#if defined (ENF_DX9)
-		g_pRender->SetStreamSourceFreqOp(1, SFO_DIVIDE, 1);
-	#elif defined (ENF_XENON)
+	#if defined(ENF_XENON)
 		SET_VSH_CONST(CV_INSTANCE_PARAM, Vector4(mesh->m_iNumVertices, mesh->m_iFirstVertex, 0, 0));
 	#endif
 

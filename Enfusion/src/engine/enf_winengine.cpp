@@ -452,11 +452,6 @@ int WinEngine::UpdateFrame(bool inscene)
 //-----------------------------------------------------------------------------
 void WinEngine::Destroy()
 {
-	if(m_pVideoStream)
-	{
-		m_pVideoStream->Close();
-		SAFE_DELETE(m_pVideoStream);
-	}
 	Engine::Destroy();
 
 	#ifdef ENF_DONE
@@ -826,25 +821,7 @@ int WinEngine::Create(uint adapterid, uint width, uint height, bool windowed)
 	if(velem->QueryIntAttribute("fsaa", &fsaa) == TIXML_SUCCESS && fsaa != 0)
 	{
 		static const FSAAType fsaatypes[] = {
-#ifdef ENF_DX9
-			FSAATYPE_NONE,
-			FSAATYPE_NONE,
-			FSAATYPE_2_SAMPLES,
-			FSAATYPE_3_SAMPLES,
-			FSAATYPE_4_SAMPLES,
-			FSAATYPE_5_SAMPLES,
-			FSAATYPE_6_SAMPLES,
-			FSAATYPE_7_SAMPLES,
-			FSAATYPE_8_SAMPLES,
-			FSAATYPE_9_SAMPLES,
-			FSAATYPE_10_SAMPLES,
-			FSAATYPE_11_SAMPLES,
-			FSAATYPE_12_SAMPLES,
-			FSAATYPE_13_SAMPLES,
-			FSAATYPE_14_SAMPLES,
-			FSAATYPE_15_SAMPLES,
-			FSAATYPE_16_SAMPLES
-#elif defined(ENF_XENON)
+#if defined(ENF_XENON)
 			FSAATYPE_NONE,
 			FSAATYPE_2_SAMPLES,
 			FSAATYPE_4_SAMPLES
@@ -897,18 +874,6 @@ int WinEngine::Create(uint adapterid, uint width, uint height, bool windowed)
 	if( FAILED( hr = m_pRender->Create() ))
 	{
 		//most common errors
-		#ifdef ENF_DX9
-			if(hr == D3DERR_DRIVERINTERNALERROR)
-			{
-				 InternalError("Direct3D driver internal error");
-				 return false;
-			}
-			else if(hr == D3DERR_OUTOFVIDEOMEMORY)
-			{
-				 InternalError("Out of video memory!\nPlease close other applications.");
-				 return false;
-			}
-		#endif
 		
 		InternalError("Device error: %x", hr);
 		return false;
@@ -992,93 +957,6 @@ int WinEngine::Create(uint adapterid, uint width, uint height, bool windowed)
 	return true;
 }
 
-#ifdef ENF_DX9
-	VideoStream* CreateVFWStream();
-#endif
-
-//-----------------------------------------------------------------------
-void WinEngine::CloseVideo()
-{
-#ifdef ENF_DX9
-	m_dFixedTimeSlice = -1.0f;
-	if(m_pVideoStream == NULL)
-		return;
-	m_pVideoStream->Close();
-#endif
-}
-
-//-----------------------------------------------------------------------
-uint WinEngine::OpenVideo(IDirect3DSurface9* surface, const char* filename, const char* codec, uint flags, float framerate)
-{
-#ifdef 	ENF_DONE
-	#ifdef ENF_DX9
-		if(m_pVideoStream == NULL)
-			m_pVideoStream = CreateVFWStream();
-
-		return m_pVideoStream->Open(surface, filename, codec, flags, framerate);
-
-	#else
-		return 0;
-	#endif
-#else
-	return 0;
-#endif
-
-}
-
-//-----------------------------------------------------------------------
-uint WinEngine::OpenVideo(IDirect3DSurface9* surface, const char* filename)
-{
-#ifdef 	ENF_DONE
-#ifdef ENF_DX9
-	uint flags = 0;
-	char codec[8] = "xvid";
-	float framerate = 30;
-
-	TiXmlElement* vrec = GetSettingsElement("videorecorder");
-	CStr acodec = vrec->Attribute("codec");
-	CStr ahalf = vrec->Attribute("halfsize");
-	CStr aconfig = vrec->Attribute("config");
-	CStr aframerate = vrec->Attribute("framerate");
-
-	if(!acodec.IsEmpty())
-		strncpy(codec, acodec.cstr(), 4);
-	if(ahalf == "1")
-		flags |= VSF_HALFSIZE;
-	if(aconfig == "1")
-		flags |= VSF_CONFIG;
-	
-	framerate = enf_limit(aframerate.ToFloat(30.0f), 0.0f, 60.0f);
-
-	char tempname[MAX_FILENAME_LENGTH] = "$profile:video.avi";
-
-	if(CStr(filename).IsEmpty())
-	{
-		if(GetFileSystem()->GetFreeFileName("$profile:video%03d.avi", tempname, 500))
-			filename = tempname;
-	}
-
-	if(OpenVideo(surface, filename, codec, flags, framerate))
-	{
-		m_dFixedTimeSlice = 1000.0f / framerate;
-		return true;
-	}
-#endif
-#endif
-	return false;
-}
-
-//-----------------------------------------------------------------------
-void WinEngine::AppendVideoFrame(double currenttime)
-{
-#ifdef 	ENF_DONE
-	if(m_pVideoStream == NULL)
-		return;
-//	m_pVideoStream->AppendFrame(currenttime);
-	m_pVideoStream->AppendFrame(-1);
-	::Sleep(30);
-#endif
-}
 
 //-----------------------------------------------------------------------
 WinEngine* CreateWinEngine(CStr appname, CStr cliparams, void* instance, bool wbmode, size_t staticPoolSize)

@@ -2,7 +2,6 @@
 #include "inventory.hpp"
 #include "recipe.hpp"
 #include <lib/proxyWeapon.hpp>
-#include <lib/vehSupply.hpp>
 #include <lib/world.hpp>
 #include <lib/gameStateExt.hpp>
 #include <lib/drawText.hpp>
@@ -2286,7 +2285,6 @@ TMError InventoryItem::TransferMsg(NetworkMessageContext &ctx)
         InventoryItem *item = _attachments[i];
         if (item) item->ItemMoveOut(this);
       }
-
     }
   }
 

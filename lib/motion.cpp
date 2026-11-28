@@ -17,9 +17,6 @@ Implementation file for movement diagram
 #include "global.hpp"
 #include "paramFileExt.hpp"
 #include "paramArchiveExt.hpp"
-// Tabela de velocidades externa: mantida apenas como referencia.
-#define USE_ANIMS_SPEED_FIX 0
-#include "animsSpeedFix.hpp"
 
 #if 0 // _PROFILE
 # pragma optimize( "", off )
@@ -51,55 +48,6 @@ MotionPath::~MotionPath()
 
 DEFINE_FAST_ALLOCATOR(ActionMap)
 
-/*!
-  DAYZ-PATCH (upDegree): o config de animacoes usa nomes no campo upDegree
-  (ex.: upDegree="ManPosNoWeapon"; ver anims/CfgMovesMaleSdr2). O codigo
-  original fazia "e >> \"upDegree\"" direto para int; ParamRawValue::GetInt()
-  nao resolve nomes e devolve 0, deixando todos os ActionMap com upDegree=0.
-  Com isso MotionType::GetMove() nunca encontrava o move do ManPos atual
-  (ManPosNoWeapon=12, ManPosStand=10...) e o personagem ficava em <none>:
-  animava, mas sem translacao.
-  A tabela segue a ordem do enum ManPos (soldierOld.hpp:818-838).
-*/
-static int DecodeUpDegree(RStringB value)
-{
-  static const char *names[] =
-  {
-    "Dead",         // ManPosDead
-    "Weapon",       // ManPosWeapon
-    "BinocLying",   // ManPosBinocLying
-    "LyingNoWeapon",// ManPosLyingNoWeapon
-    "Lying",        // ManPosLying
-    "HandGunLying", // ManPosHandGunLying
-    "Crouch",       // ManPosCrouch
-    "HandGunCrouch",// ManPosHandGunCrouch
-    "Combat",       // ManPosCombat
-    "HandGunStand", // ManPosHandGunStand
-    "Stand",        // ManPosStand
-    "Swimming",     // ManPosSwimming
-    "NoWeapon",     // ManPosNoWeapon
-    "Binoc",        // ManPosBinoc
-    "BinocStand",   // ManPosBinocStand
-  };
-  const char *text = value;
-  if (!text || !*text) return 0;
-
-  // aceita "ManPosXxx" e "Xxx", sem diferenciar maiusculas/minusculas
-  const char *shortName = text;
-  if (!strnicmp(text, "ManPos", 6)) shortName = text + 6;
-  for (int i = 0; i < (int)(sizeof(names) / sizeof(*names)); i++)
-  {
-    if (!strcmpi(shortName, names[i])) return i;
-  }
-
-  // valores numericos (inclusive -1 usado por NoActions) continuam validos
-  char first = text[0];
-  if ((first >= '0' && first <= '9') || first == '-') return atoi(text);
-
-  RptF("Unknown upDegree '%s'", text);
-  return 0;
-}
-
 ActionMap::ActionMap(const ActionMapName &name)
 {
   _name = name;
@@ -107,7 +55,7 @@ ActionMap::ActionMap(const ActionMapName &name)
   ParamEntryVal e = *_name.entry;
 
   _turnSpeed = e >> "turnSpeed";
-  _upDegree = DecodeUpDegree(e >> "upDegree");
+  _upDegree = e >> "upDegree";
   _limitFast = e >> "limitFast";
   _useFastMove = e >> "useFastMove";
 
@@ -314,20 +262,6 @@ MoveInfoBase::MoveInfoBase( MotionType *motion, ParamEntryPar entry )
   _actions = motion->NewActionMap(actionMaps>>actionsName);
 
   _speed = entry>>"speed";
-  // ANIMS-SPEED-FIX: desativado. O config que acompanha o anims.pbo ja traz as
-  // velocidades nativas dos RTMs do 0.45; a tabela externa declarava valores
-  // 2-3x maiores e fazia a passada tocar acelerada, principalmente com arma na
-  // mao. A cadencia final agora e limitada em Man::SimulateAnimations.
-#if USE_ANIMS_SPEED_FIX
-  {
-    float fixedSpeed = GetAnimsSpeedFix((const char *)entry.GetName());
-    if (fixedSpeed>0)
-    {
-      RptF("ANIMS-SPEEDFIX: %s cfg=%.3f -> %.3f", (const char *)entry.GetName(), _speed, fixedSpeed);
-      _speed = fixedSpeed;
-    }
-  }
-#endif
   if (_speed<0) _speed=-1/_speed;
 	
 	ParamEntryPtr fpsParam = entry.FindEntry("fps");

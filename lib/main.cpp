@@ -106,9 +106,7 @@ static RString GSteamGameServerName;
 #endif
 
 #include "system/enf_timer.h"
-#if !defined(_WIN64)
-  #include "d3d9/engdd9.hpp"
-#else
+#if defined(_WIN64)
   #include "textbank.hpp"
   #include <Es/ReportStack/reportStack.hpp>
   #include <El/FreeOnDemand/memFreeReq.hpp>
@@ -583,6 +581,9 @@ static bool JavaExportInterface = false;
 */
 
 int D3DAdapter = -1;
+#if _ENABLE_DX11
+int D3D11Adapter = -1;
+#endif
 bool WinXP = false;
 
 #if _ENABLE_REPORT
@@ -767,9 +768,6 @@ static bool LoadAddons = true;
 static bool NoSplash=false;
 static bool GenerateShaders=false;
 bool DisableShaderGeneration=false;
-#if !defined(_WIN64)
-static bool ForceDX9=false;
-#endif
 bool EnableSM3=true;
 static bool DoPause=false;
 static bool DoRestore=false;
@@ -790,9 +788,6 @@ static bool CanRender; // everything is initialized
 extern bool LandEditor;
 static bool NoSplash=false;
 static bool GenerateShaders=false;
-#if !defined(_WIN64)
-static bool ForceDX9=false;
-#endif
 static bool DoCreateServer=true;
 static bool LoadAddons = true;
 static bool UseOpenAL = false;
@@ -4165,9 +4160,7 @@ static void SingleArgument( const char *beg, const char *end )
     static const char noSplashStr[]="nosplash";
     static const char generateShadersStr[]="generateshaders";
     static const char disableShaderGenerationStr[]="disableShaderGeneration";
-#if !defined(_WIN64)
-    static const char forceDX9Str[]="forceDX9";
-#endif
+    static const char forceDX11Str[]="forceDX11";
     static const char enableSM3Str[]="sm3";
     static const char forceSM2Str[]="sm2";
     static const char noLimitTreeLODsStr[]="noLimitTreeLODs";
@@ -4370,8 +4363,11 @@ static void SingleArgument( const char *beg, const char *end )
     }
 #ifdef _WIN32
     else if (IsOption(beg,end,disableShaderGenerationStr)) DisableShaderGeneration=true;
-#if !defined(_WIN64)
-    else if (IsOption(beg,end,forceDX9Str)) ForceDX9=true;
+#if _ENABLE_DX11
+    else if (IsOption(beg,end,forceDX11Str))
+    {
+      // Retained for launcher compatibility; this client now always uses DX11.
+    }
 #endif
     else if (IsOption(beg,end,enableSM3Str)) EnableSM3=true;
     else if (IsOption(beg,end,forceSM2Str)) EnableSM3=false;
@@ -12331,14 +12327,7 @@ it sometimes caused false warnings and premature server termination.
 
       avoidUserInput = AUITrue;
 
-      #if _ENABLE_DX10
-        if (ForceDX9)
-          GEngine=CreateEngineD3D9(pars);
-        else
-          GEngine=CreateEngineD3DT(pars);
-      #else
-        GEngine=CreateEngineD3D9(pars);
-      #endif
+      GEngine=CreateEngineD3D11(pars);
         if (GenerateShaders)
         {
     #if defined(_WIN32) 
@@ -12350,11 +12339,7 @@ it sometimes caused false warnings and premature server termination.
 
         if (!GEngine)
         {
-#if defined(_WIN64)
           ErrorMessage("Error creating Direct3D 11 Graphical engine");
-#else
-          ErrorMessage("Error creating Direct3D 9 Graphical engine");
-#endif
           exit(1);
         }
   

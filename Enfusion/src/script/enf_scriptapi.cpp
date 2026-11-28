@@ -3314,7 +3314,7 @@ void NMETHOD StartVideo(const char* name)
 {
 	if(!g_bGrabVideo)
 	{
-		if(GetEngine()->OpenVideo(NULL, name))
+		if(GetEngine()->OpenVideo(name))
 			g_bGrabVideo = true;
 	}
 }

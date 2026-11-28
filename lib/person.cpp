@@ -31,10 +31,9 @@ Person::Person(const EntityAIType *name, bool fullCreate)
 _weaponsState(*this),
 #pragma warning(pop)
 _sensorRowID(-1),_remotePlayer(1),_getOutReady(false),
-_disableDamageFromObjUntil(Glob.time)
+_disableDamageFromObjUntil(Glob.time),
+_handsTransferInProgress(false)
 {
-	_handsTransferInProgress = false;
-	_takeInHandsDeadline = Glob.time;
 	_info._rank = RankPrivate;
 	_info._experience = 0;
 	_info._initExperience = 0;
@@ -560,41 +559,9 @@ TMError Person::TransferMsg(NetworkMessageContext &ctx)
             item->ItemMoveOut(this);
           }
         }
-
-        // The network inventory slots are authoritative. _itemInHands is a
-        // separate local pointer and is not transferred as part of this
-        // generic update; without reconciling it, an item moved to clothing
-        // can remain rendered in Hands on the receiving client.
-        InventoryItem *replicatedHands = _inventorySlots[ISHands];
-        if (_itemInHands != replicatedHands)
-        {
-          if (_itemInHands && !replicatedHands)
-          {
-            // Let Man run its normal Disarm transition. Clearing only the
-            // pointer fixes the inventory display but can leave the local
-            // player in the armed/held-item pose after a server-side move.
-            RemoveItemInHands();
-          }
-          else
-          {
-            if (_itemInHands)
-            {
-              _itemInHands->SwitchOn(false);
-              _itemInHands->SwitchOff();
-            }
-            _itemInHands = replicatedHands;
-          }
-        }
       }
 
       TRANSF_REF(itemInHandsWanted)
-
-      // Entering the world with an item already in the hands slot arrives as
-      // an authoritative update with no pending local request. Without this,
-      // Man::ProcessItemToHands treats the restored hands item as a request to
-      // disarm and restarts the TakeInHands action every frame.
-      if (!ctx.IsSending() && _itemInHands && !_itemInHandsWanted)
-        _itemInHandsWanted = _itemInHands;
 
       if (_brain)
       {
@@ -1013,8 +980,9 @@ bool Person::RemoveOwnedItem(InventoryItem *item)
   // remove from hands
   if (item == _itemInHands)
   {
-    // Keep the normal disarm animation, but don't let HandleItemInHands put
-    // the same object straight back into inventory before this move completes.
+    // Keep the normal disarm animation, but do not let HandleItemInHands
+    // put the same item straight back into the inventory before the
+    // drop/transfer completes.
     _handsTransferInProgress = true;
     RemoveItemInHands();
     _handsTransferInProgress = false;
@@ -1127,16 +1095,7 @@ void Person::MoveItem(int index, InventoryItem *item)
   if (index >= 0)
     PutInSlot((InventorySlotId)index, item); // slot and content check inside
   else
-  {
-    // Detach through the current hierarchy owner. RemoveItem() can invoke the
-    // Hands stow callback, which may auto-store the same object while this
-    // generic transfer is in progress and leave UI/world state inconsistent.
-    Entity *parent = item ? item->GetHierarchyParent() : NULL;
-    if (parent && !parent->RemoveOwnedItem(item)) return;
-
-    if (!AddItem(item) && parent)
-      parent->AddOwnedItem(item); // restore the previous owner if placement failed
-  }
+    AddItem(item);
 }
 
 void Person::ForEachChildren(const std::function<bool(const NetworkObject *)> &func) const
@@ -1290,7 +1249,7 @@ bool Person::CanAddItem(const InventoryItem *item) const
   if (type)
   {
     int slot = type->GetInventorySlot();
-    if (slot >= 0 && slot < NInventorySlotId && slot != ISHands && _inventorySlots[slot] == NULL) return true;
+    if (slot >= 0 && slot < NInventorySlotId && _inventorySlots[slot] == NULL) return true;
     if (slot == ISShoulder && _inventorySlots[ISShoulder2] == NULL) return true;
   }
 
@@ -1317,7 +1276,7 @@ bool Person::AddItem(InventoryItem *item)
     int slot = type->GetInventorySlot();
     if (slot == ISShoulder && _inventorySlots[ISShoulder] && !_inventorySlots[ISShoulder2])
       slot = ISShoulder2;
-    if (slot >= 0 && slot < NInventorySlotId && slot != ISHands && _inventorySlots[slot] == NULL)
+    if (slot >= 0 && slot < NInventorySlotId && _inventorySlots[slot] == NULL)
     {
       // move in world
       item->ItemMoveOut(this);
@@ -1716,23 +1675,7 @@ void Person::HandleItemInHands(InventoryItem *item)
 
 void Person::TakeItemToHands(InventoryItem *item)
 {
-  if (!item) return;
-
   HandleItemInHands(item);
-
-  // Hands is a dedicated inventory slot. Detach an item from its previous
-  // slot/container before placing it there so the UI cannot show one item in
-  // Hands and in a shirt/pants/cargo slot at the same time.
-  if (_inventorySlots[ISHands] != item)
-  {
-    Entity *parent = item->GetHierarchyParent();
-    if (parent && !parent->RemoveOwnedItem(item)) return;
-
-    // HandleItemInHands may have moved the previous item back into inventory.
-    // Do not overwrite anything if that transition failed to free the slot.
-    if (_inventorySlots[ISHands] || !PutInSlot(ISHands, item)) return;
-  }
-
   // simplified implementation without handling of animations
   _itemInHands = item;
 }
@@ -1750,9 +1693,6 @@ void Person::RemoveItemInHandsThrow()
 
 void Person::RemoveItemInHands()
 {
-  // Prevent ProcessItemToHands from restoring the same item after it has
-  // been transferred from Hands into another inventory slot.
-  _itemInHandsWanted = NULL;
   HandleItemInHands(nullptr);
   // simplified implementation without handling of animations
   _itemInHands = NULL;
@@ -1806,181 +1746,30 @@ void Person::SimulateWeaponInputs(InputInterface *input, AIBrain *unit, const Tu
       void ShowShortcuts();
       ShowShortcuts();
 
-      UseItemShortcut(i - UAItemFirst);
+      int index = i - UAItemFirst;
+      const InventoryItemType *type = GetItemShortcut(index);
+      if (type)
+      {
+        InventoryItem *bound = _shortcutItems[index];
+        if (bound && FindItem(bound) && bound->Type() == type)
+        {
+          bound->UseFromInventory(this);
+          continue;
+        }
+        // find item of this type
+        ForEachItem([this, type](InventoryItem *item) -> bool
+        {
+          if (item->Type() == type)
+          {
+            item->UseFromInventory(this);
+            return true; // done
+          }
+          return false; // continue
+        });
+      }
     }
   }
   base::SimulateWeaponInputs(input,unit,context);
-}
-
-int Person::GetItemOriginIndex(EntityAI *parent, InventoryItem *item)
-{
-  if (!parent || !item) return -1;
-
-  if (InventoryItem *container = dyn_cast<InventoryItem>(parent))
-  {
-    int n = container->NAttachments();
-    for (int i=0; i<n; i++)
-    {
-      if (container->GetAttachment(i) == item) return i;
-    }
-    ResourceSupply *supply = container->GetSupply();
-    if (supply)
-    {
-      int index = supply->GetItemsCargo().GetItems().Find(item);
-      if (index >= 0) return n + index;
-    }
-    return -1;
-  }
-
-  if (Person *person = dyn_cast<Person>(parent))
-  {
-    for (int i=0; i<NInventorySlotId; i++)
-    {
-      if (person->GetInSlot((InventorySlotId)i) == item) return i;
-    }
-    return -1;
-  }
-
-  return -1;
-}
-
-void Person::UseItemShortcut(int index)
-{
-  // slots beyond what the current clothing provides are inactive
-  if (index < 0 || index >= GetAvailableItemShortcuts()) return;
-
-  const InventoryItemType *type = GetItemShortcut(index);
-  if (!type) return;
-
-  InventoryItem *inHands = GetItemInHands();
-
-  // the same key with the item already in hands puts it back
-  if (inHands && inHands->Type() == type)
-  {
-    if (!StowShortcutItem(inHands)) RemoveItemInHands();
-    return;
-  }
-
-  InventoryItem *found = _shortcutItems[index];
-  if (found && (!FindItem(found) || found->Type() != type || found == inHands)) found = NULL;
-  if (!found) ForEachItem([&](InventoryItem *item) -> bool
-  {
-    if (item != inHands && item->Type() == type)
-    {
-      found = item;
-      return true;
-    }
-    return false;
-  });
-  if (!found) return;
-
-  // remember the current place before anything moves
-  EntityAI *originParent = dyn_cast<EntityAI>(found->GetHierarchyParent());
-  int originIndex = GetItemOriginIndex(originParent, found);
-
-  // put whatever is currently in hands back to its own origin first, so
-  // switching shortcuts never leaves two items in hands or loses a slot
-  if (inHands && inHands != found)
-  {
-    StowShortcutItem(inHands); // falls through to the old AddItem path below
-  }
-
-  for (int i=0; i<NItemShortcuts; i++)
-  {
-    if (_shortcutOrigins[i].item == found || _shortcutOrigins[i].item == inHands)
-    {
-      _shortcutOrigins[i].item = NULL;
-      _shortcutOrigins[i].parent = NULL;
-      _shortcutOrigins[i].index = -1;
-    }
-  }
-  _shortcutOrigins[index].item = found;
-  _shortcutOrigins[index].parent = originParent;
-  _shortcutOrigins[index].index = originIndex;
-
-  found->UseFromInventory(this);
-}
-
-bool Person::StowShortcutItem(InventoryItem *item)
-{
-  if (!item) return false;
-
-  EntityAI *parent = NULL;
-  int index = -1;
-  bool recorded = false;
-  for (int i=0; i<NItemShortcuts; i++)
-  {
-    ShortcutOrigin &origin = _shortcutOrigins[i];
-    if (origin.item == item)
-    {
-      parent = origin.parent;
-      index = origin.index;
-      recorded = true;
-      origin.item = NULL;
-      origin.parent = NULL;
-      origin.index = -1;
-    }
-  }
-
-  // item was not pulled out of the inventory through a shortcut
-  if (!recorded) return false;
-
-  // leave the hands slot cleanly (same low level steps as HandleItemInHands)
-  if (_inventorySlots[ISHands] == item)
-  {
-    item->SwitchOn(false);
-    item->SwitchOff();
-
-    _inventorySlots[ISHands] = NULL;
-    item->UpdateShape(NULL);
-    item->CancelHierarchyParent(this);
-  }
-  if (_itemInHandsWanted == item) _itemInHandsWanted = NULL;
-  if (_itemInHands == item) _itemInHands = NULL;
-
-  // back to the exact place it was taken from
-  if (parent)
-  {
-    parent->MoveItem(index, item);
-    if (item->GetHierarchyParent() == parent) return true;
-
-    // exact place is no longer valid - try any free space in the same owner
-    if (index >= 0)
-    {
-      parent->MoveItem(-1, item);
-      if (item->GetHierarchyParent() == parent) return true;
-    }
-  }
-
-  if (AddItem(item)) return true;
-
-  // last resort: drop it so it does not disappear
-  Vector3Val pos = FutureVisualState().Position();
-  Vector3Val dir = FutureVisualState().Direction();
-  item->ItemDrop(this, pos, dir);
-  return true;
-}
-
-int Person::GetAvailableItemShortcuts() const
-{
-  // Like modern DayZ the quickbar grows with what the survivor is wearing:
-  // one base slot plus one for each worn piece of clothing, max 5.
-  int slots = 1;
-
-  static const InventorySlotId wornSlots[] =
-  {
-    ISHeadgear, ISBody, ISLegs, ISVest, ISBack
-  };
-
-  for (int i=0; i<lenof(wornSlots); i++)
-  {
-    if (GetInSlot(wornSlots[i])) slots++;
-  }
-
-  if (slots > NMaxVisibleShortcuts) slots = NMaxVisibleShortcuts;
-  if (slots < 1) slots = 1;
-
-  return slots;
 }
 
 const InventoryItemType *Person::GetItemShortcut(int index) const
@@ -1998,8 +1787,6 @@ void Person::SetItemShortcut(int index, const InventoryItemType *itemType)
   void ShowShortcuts();
   if (index >= 0 && index < NItemShortcuts) _shortcutItems[index] = NULL;
 
-  int available = GetAvailableItemShortcuts();
-
   if (index<0)
   {
     // find first free slot to add
@@ -2008,7 +1795,7 @@ void Person::SetItemShortcut(int index, const InventoryItemType *itemType)
     {
       if (!_itemShortcuts[i])
       {
-        if (slot<0 && i<available) slot = i;
+        if (slot<0) slot = i;
       }
       else if (_itemShortcuts[i]->GetType()==itemType)
       { // do not add a shortcut if the type already has it
@@ -2025,8 +1812,6 @@ void Person::SetItemShortcut(int index, const InventoryItemType *itemType)
   {
     if (itemType)
     {
-      // do not allow shortcuts in slots the current clothing does not provide
-      if (index >= available) return;
       if (!_itemShortcuts[index] || _itemShortcuts[index]->Type() != itemType) ShowShortcuts();
       _itemShortcuts[index] = itemType->CreateUIObject();
     }

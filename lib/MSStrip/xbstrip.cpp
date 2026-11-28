@@ -22,12 +22,7 @@
 
 #include <assert.h>
 
-#if defined(_XBOX)
-#include <xtl.h>
-#else
 #include <limits.h>
-#include <D3D9.h>
-#endif
 
 
 // Cache size to optimize for.  The actual cache size is 24, but it is in 

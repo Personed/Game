@@ -1391,9 +1391,6 @@ public:
   /// set if z-priming 1st pass was done
   virtual void SetZPrimingDone(int cb, bool zPrimingDone) {}
 
-  /// set if the main depth buffer was primed by the last priming pass
-  virtual void SetMainDepthPrimed(bool mainDepthPrimed) {}
-
   //@{ performance capture
   /// debug marker for shader debugger
   virtual void SetDebugMarker(int id, const char *text){}

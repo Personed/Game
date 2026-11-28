@@ -59,10 +59,6 @@ protected:
 			}
 			break;
 
-#ifdef ENF_DX9
-		case TEXFMT_DXT2:
-		case TEXFMT_DXT4:
-#endif
 		case TEXFMT_DXT3:
 		case TEXFMT_DXT5:
 			{
@@ -230,10 +226,6 @@ ENF_INLINE void RepackData(const ImageInfo& imginfo, uchar *data, uint size)
 	{
 		//case TEXFMT_CTX1:	/*no not swap CTX1, they are already in correct order*/
 		case TEXFMT_DXT1:
-		#ifdef ENF_DX9
-			case TEXFMT_DXT2:
-			case TEXFMT_DXT4:
-		#endif
 		case TEXFMT_DXT3:
 		case TEXFMT_DXT5:			
 #ifndef ENF_PS3

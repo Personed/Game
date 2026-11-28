@@ -6471,32 +6471,6 @@ void CItemBase::SetItemShortcut(int index, const InventoryItem *item)
     player->SetItemShortcutInstance(index, const_cast<InventoryItem *>(item));
 }
 
-static bool ItemContainsInventoryItem(const InventoryItem *container, const InventoryItem *item)
-{
-  if (!container || !item) return false;
-  if (container == item) return true;
-
-  bool found = false;
-  container->ForEachItem([&found, item](const InventoryItem *child) -> bool
-  {
-    if (child == item)
-    {
-      found = true;
-      return true;
-    }
-    return false;
-  });
-  return found;
-}
-
-static void RemoveMovedItemFromHands(Person *owner, InventoryItem *item)
-{
-  if (!owner || !item) return;
-  InventoryItem *inHands = owner->GetItemInHands();
-  if (ItemContainsInventoryItem(item, inHands))
-    owner->RemoveItemInHands();
-}
-
 void CItemBase::DropItem(Person *owner, InventoryItem *item)
 {
   if (!GetNetworkManager().IsServerOwner())
@@ -6507,8 +6481,24 @@ void CItemBase::DropItem(Person *owner, InventoryItem *item)
     Entity *parent = item->GetHierarchyParent();
     if (parent) parent->RemoveOwnedItem(item);
 
-    // dropped item nor any contained item can stay in hands
-    RemoveMovedItemFromHands(owner, item);
+    // dropped item nor any contained item cannot stay in hands
+    if (owner)
+    {
+      const InventoryItem *inHands = owner->GetItemInHands();
+      if (inHands)
+      {
+        if (inHands == item) owner->RemoveItemInHands();
+        else item->ForEachItem([&owner, &inHands](const InventoryItem *child) -> bool
+        {
+          if (child == inHands)
+          {
+            owner->RemoveItemInHands();
+            return true;
+          }
+          return false;
+        });
+      }
+    }
 
     Vector3Val pos = owner->FutureVisualState().Position();
     Vector3Val dir = owner->FutureVisualState().Direction();
@@ -6526,13 +6516,9 @@ void CItemBase::MoveItem(EntityAI *target, int index, InventoryItem *item)
   else
   {
     Entity *parent = item->GetHierarchyParent();
-    Person *handsOwner = dyn_cast<Person>(parent);
-    const bool movedFromHands = handsOwner && handsOwner->GetItemInHands() == item;
     if (parent) parent->RemoveOwnedItem(item);
 
     target->MoveItem(index, item);
-    if (movedFromHands)
-      GetNetworkManager().UpdateObject(handsOwner, NMCUpdateGeneric);
   }
 }
 
@@ -6608,14 +6594,6 @@ void CItemBase::OnMouseMove(float x, float y, bool active)
     }
   }
   else OnMouseHold(x, y, active);
-}
-
-void CItemBase::BeginDrag()
-{
-  if (!_moving || _dragging) return;
-  if (_parent) _parent->OnDrag(this);
-  _dragging = true;
-  _moving = false;
 }
 
 
@@ -6743,6 +6721,14 @@ bool PlaceItemInRectangle(Matrix4 &result, const InventoryItem *item, float x, f
 
   // orientation of the model
   Matrix3 orient = type->GetInventoryOrientation();
+
+  // SourceDayZ: when the player rotates an item in the inventory (SPACE), the
+  // icon itself must rotate 90 degrees to match the new footprint.
+  if (item->IsInventoryRotated())
+  {
+    Matrix3 rotZ(MRotationZ, 0.5f * H_PI);
+    orient = rotZ * orient;
+  }
 
   // calculate scale and offset by the object bounding box
   const Vector3 *bb = type->BoundingBox();
@@ -6881,39 +6867,11 @@ CItemShortcut::CItemShortcut(ControlsContainer *parent, int idc, ParamEntryPar c
   }
 }
 
-int CItemShortcut::GetVisibleCount() const
-{
-  if (!GWorld) return 0;
-  Person *ui = GWorld->PlayerOn();
-  if (!ui) return 0;
-  return ui->GetAvailableItemShortcuts();
-}
-
-void CItemShortcut::UpdateLayout()
-{
-  int count = GetVisibleCount();
-  if (count <= 0) return;
-  if (_index < 0 || _index >= count) return; // hidden slot keeps its old place
-
-  // keep the visible quickbar centered on screen
-  const float gap = _w * (0.010f / 0.047f);
-  const float total = count * _w + (count - 1) * gap;
-  _x = 0.5f - total * 0.5f + _index * (_w + gap);
-}
-
-bool CItemShortcut::IsInside(float x, float y) const
-{
-  const_cast<CItemShortcut *>(this)->UpdateLayout();
-  if (_index < 0 || _index >= GetVisibleCount()) return false;
-  return x >= _x && x <= _x + _w && y >= _y && y <= _y + _h;
-}
-
 InventoryItem *CItemShortcut::GetItem()
 {
   if (!GWorld) return NULL;
   Person *ui = GWorld->PlayerOn();
   if (!ui) return NULL;
-  if (_index < 0 || _index >= ui->GetAvailableItemShortcuts()) return NULL;
 
   return ui->GetItemShortcutObject(_index);
 }
@@ -6934,12 +6892,11 @@ bool CItemShortcut::IsContained(InventoryItem *item)
 
 bool CItemShortcut::CanAddItem(InventoryItem *item, float x, float y)
 {
-  return _index >= 0 && _index < GetVisibleCount();
+  return true;
 }
 
 void CItemShortcut::AddItem(InventoryItem *item, float x, float y)
 {
-  if (_index < 0 || _index >= GetVisibleCount()) return;
   SetItemShortcut(_index, item);
 }
 
@@ -6977,13 +6934,26 @@ void CItemShortcut::ToggleShortcuts()
 
 void CItemShortcut::OnDraw(float alpha)
 {
-  UpdateLayout();
-  if (_index < 0 || _index >= GetVisibleCount()) return;
-
   if (_igui)
   {
-    if (IsInventoryOpened()) return;
-    if (!GWorld || !GWorld->UI()->IsHUDShown()) return;
+    if (IsInventoryOpened())
+    {
+      ShowShortcuts();
+      return;
+    }
+
+    // fading
+    float age = Glob.uiTime - _lastTime;
+    
+    if (age >= _endDim) return;
+    
+    if (age > _startDim)
+    {
+      // interpolate dim
+      float factor = (age - _startDim) * (1.0f / (_endDim - _startDim));
+      // update alpha
+      alpha *= 1.0 - factor;
+    }
   }
 
   InventoryItem *item = GetItem();
@@ -7011,16 +6981,26 @@ void CItemShortcut::OnDraw(float alpha)
 
 void CItemShortcut::OnDrawBackGround(UIViewport *vp, float alpha)
 {
-  UpdateLayout();
-  if (_index < 0 || _index >= GetVisibleCount()) return;
-
   if (_igui)
   {
     if (IsInventoryOpened()) return;
+
+    // fading
+    float age = Glob.uiTime - _lastTime;
+    
+    if (age >= _endDim) return;
+    
+    if (age > _startDim)
+    {
+      // interpolate dim
+      float factor = (age - _startDim) * (1.0f / (_endDim - _startDim));
+      // update alpha
+      alpha *= 1.0 - factor;
+    }
   }
 
   if (!GWorld) return;
-  if (_igui && !GWorld->UI()->IsHUDShown()) return;
+  if (!GWorld->UI()->IsHUDShown()) return;
 
   Person *ui = GWorld->PlayerOn();
   if (!ui) return;
@@ -7058,16 +7038,26 @@ void CItemShortcut::OnDrawBackGround(UIViewport *vp, float alpha)
 
 void CItemShortcut::OnDrawForeGround(UIViewport *vp, float alpha)
 {
-  UpdateLayout();
-  if (_index < 0 || _index >= GetVisibleCount()) return;
-
   if (_igui)
   {
     if (IsInventoryOpened()) return;
+
+    // fading
+    float age = Glob.uiTime - _lastTime;
+    
+    if (age >= _endDim) return;
+    
+    if (age > _startDim)
+    {
+      // interpolate dim
+      float factor = (age - _startDim) * (1.0f / (_endDim - _startDim));
+      // update alpha
+      alpha *= 1.0 - factor;
+    }
   }
 
   if (!GWorld) return;
-  if (_igui && !GWorld->UI()->IsHUDShown()) return;
+  if (!GWorld->UI()->IsHUDShown()) return;
 
   Person *ui = GWorld->PlayerOn();
   if (!ui) return;
@@ -7084,15 +7074,19 @@ void CItemShortcut::OnDrawForeGround(UIViewport *vp, float alpha)
   TextDrawAttr attr(_size, _font, color, true);
   Rect2DFloat clipRect(_x, _y, _w, _h);
 
-  // key label and item count only - keep the shortcut slots clean like the HUD
+  float width = _w - offsetX;
+  float top = _y + _h - _size - offsetY;
   if (count > 0)
   {
     vp->DrawText(Point2DFloat(_x + offsetX, _y + offsetY), clipRect, attr, cc_cast(_shortcut));
     BString<16> buffer;
     sprintf(buffer, "%d", count);
     float tw = vp->GetTextWidth(attr, cc_cast(buffer));
-    vp->DrawText(Point2DFloat(_x + _w - tw - offsetX, _y + offsetY), clipRect, attr, cc_cast(buffer));
+    vp->DrawText(Point2DFloat(_x + _w - tw - offsetX, top), clipRect, attr, cc_cast(buffer));
+    width -= tw + 4 * offsetY;
   }
+  clipRect.w = width;
+  vp->DrawText(Point2DFloat(_x + offsetX, top), clipRect, attr, cc_cast(type->GetShortName()));
 }
 
 static int AttachmentsCount(InventoryItem *container)
@@ -7139,6 +7133,15 @@ public:
 
   float GetHeight(CItemBase *ctrl, InventoryItem *container, InventoryStorage *cargo, bool expanded);
   float GetSBWidth() const {return _sbWidth;}
+  float GetGridW() const {return _gridW;}
+  float GetGridH() const {return _gridH;}
+  float GetTextSize() const {return _size;}
+  Font *GetFont() const {return _font;}
+  PackedColor GetTextColor() const {return _textColor;}
+  float GetTextBorder() const {return _textBorder;}
+  PackedColor GetHeaderBgColor() const {return _bgHeaderColor;}
+  PackedColor GetItemBgColor() const {return _bgItemColor;}
+  PackedColor GetNoItemBgColor() const {return _bgNoItemColor;}
 
   bool DrawObjects(ControlsContainer *parent, CItemBase *ctrl, InventoryItem *container, InventoryStorage *cargo, float top, bool expanded, float alpha);
   bool DrawForeground(CItemBase *ctrl, UIViewport *vp, InventoryItem *container, InventoryStorage *cargo, Person *person, float top, bool expanded, float alpha);
@@ -7898,6 +7901,10 @@ protected:
   OLink(EntityAI) _target;
   OLinkArray(InventoryItem) _cache;
 
+  // SourceDayZ: vehicle cargo header (name / slots / collapse button)
+  bool _targetExpanded;
+  float _targetFullH;
+
   //! scroll bar used by control
   CScrollBar _scrollbar;
 
@@ -7931,6 +7938,22 @@ private:
     const std::function<bool(int index, InventoryItem *item, float left, float top)> &funcSimple,
     const std::function<bool(int index, InventoryItem *container, InventoryStorage *cargo, float top, bool expanded)> &funcContainer
     );
+
+  // SourceDayZ: grid view for big cargo storages (vehicle trunk with 500 slots)
+  InventoryStorage *GetTargetCargo();
+  float TargetCellSize(const InventoryStorage *cargo) const;
+  float TargetGridTop() const {return _y + _titleH;}
+  float TargetGridHeight() const {return _h > _titleH ? _h - _titleH : 0.0f;}
+  int TargetRowsVisible(const InventoryStorage *cargo) const;
+  int TargetFirstRow(const InventoryStorage *cargo) const;
+  int TargetCargoIndex(const InventoryStorage *cargo, float x, float y) const;
+  Rect2DFloat TargetToggleRect() const;
+  void SetTargetExpanded(bool expanded);
+  void DrawTargetCargoHeader(UIViewport *vp, InventoryStorage *cargo, float alpha);
+  void DrawTargetCargoGrid(UIViewport *vp, InventoryStorage *cargo, float alpha);
+  void DrawTargetCargoItems(InventoryStorage *cargo, float alpha);
+  void DrawTargetCargoForeground(UIViewport *vp, InventoryStorage *cargo, float alpha);
+  DragItemInfo GetTargetCargoInfo(const InventoryStorage *cargo, float x, float y);
 };
 
 CItemContainer::CItemContainer(ControlsContainer *parent, int idc, ParamEntryPar cls, Person *person, EntityAI *target) : base(parent, idc, cls)
@@ -7941,6 +7964,10 @@ CItemContainer::CItemContainer(ControlsContainer *parent, int idc, ParamEntryPar
 
   _titleW = cls >> "titleW";
   _titleH = cls >> "titleH";
+
+  // SourceDayZ: vehicle cargo starts expanded and remembers its full height
+  _targetExpanded = true;
+  _targetFullH = _h;
 
   _scrollbar.SetPosition
   (
@@ -8025,6 +8052,13 @@ void CItemContainer::OnDraw(float alpha)
   // if needed, Update can be called less often
   Update();
 
+  InventoryStorage *targetCargo = GetTargetCargo();
+  if (targetCargo)
+  {
+    if (_targetExpanded) DrawTargetCargoItems(targetCargo, alpha);
+    return;
+  }
+
   DisplayInventory *display = dynamic_cast<DisplayInventory *>(_parent.GetLink());
 
   ForEachSlot(
@@ -8048,6 +8082,13 @@ void CItemContainer::OnDraw(float alpha)
 
 void CItemContainer::OnDrawForeGround(UIViewport *vp, float alpha)
 {
+  InventoryStorage *targetCargo = GetTargetCargo();
+  if (targetCargo)
+  {
+    if (_targetExpanded) DrawTargetCargoForeground(vp, targetCargo, alpha);
+    return;
+  }
+
   ForEachSlot(
     [this, vp, alpha](int index, InventoryItem *item, float left, float top) -> bool
     {
@@ -8062,6 +8103,18 @@ void CItemContainer::OnDrawForeGround(UIViewport *vp, float alpha)
 
 void CItemContainer::OnDrawBackGround(UIViewport *vp, float alpha)
 {
+  InventoryStorage *targetCargo = GetTargetCargo();
+  if (targetCargo)
+  {
+    if (_targetExpanded) _scrollbar.OnDraw(vp, alpha);
+
+    base::OnDrawBackGround(vp, alpha);
+
+    DrawTargetCargoHeader(vp, targetCargo, alpha);
+    if (_targetExpanded) DrawTargetCargoGrid(vp, targetCargo, alpha);
+    return;
+  }
+
   _scrollbar.OnDraw(vp, alpha);
 
   base::OnDrawBackGround(vp, alpha);
@@ -8092,6 +8145,17 @@ void CItemContainer::OnLButtonDown(float x, float y)
   _moving = false;
   _dragging = false;
 
+  InventoryStorage *targetCargo = GetTargetCargo();
+  if (targetCargo)
+  {
+    Rect2DFloat btn = TargetToggleRect();
+    if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h)
+    {
+      SetTargetExpanded(!_targetExpanded);
+      return;
+    }
+  }
+
   if (_scrollbar.IsInside(x, y))
   {
     if (_scrollbar.IsEnabled()) _scrollbar.OnLButtonDown(x, y);
@@ -8107,6 +8171,12 @@ void CItemContainer::OnLButtonUp(float x, float y)
   if (_scrollbar.IsLocked())
   {
     _scrollbar.OnLButtonUp(x, y);
+  }
+
+  if (GetTargetCargo())
+  {
+    base::OnLButtonUp(x, y);
+    return;
   }
 
   if (!_dragging)
@@ -8140,6 +8210,7 @@ void CItemContainer::OnLButtonDblClick(float x, float y)
 void CItemContainer::OnMouseZChanged(float dz)
 {
   if (dz == 0) return;
+  if (!_targetExpanded && GetTargetCargo()) return;
 
   int pos = _scrollbar.GetPos();
   _scrollbar.SetPos(dz > 0 ? pos - 1 : pos + 1);
@@ -8147,6 +8218,19 @@ void CItemContainer::OnMouseZChanged(float dz)
 
 void CItemContainer::Update()
 {
+  InventoryStorage *targetCargo = GetTargetCargo();
+  if (targetCargo)
+  {
+    const float sbHeight = _targetExpanded ? TargetGridHeight() : 0.0f;
+    _scrollbar.SetPosition(_x + _w - _ui.GetSBWidth(), TargetGridTop(), _ui.GetSBWidth(), sbHeight);
+
+    int rows = TargetRowsVisible(targetCargo);
+    int pos = toIntFloor(_scrollbar.GetPos() + 0.5f);
+    _scrollbar.SetRangeAndPos(0, targetCargo->GetHeight(), rows, pos);
+    _scrollbar.Enable(_targetExpanded);
+    return;
+  }
+
   OLinkArray(InventoryItem) items;
   // find items in source
   if (_target)
@@ -8264,8 +8348,372 @@ void CItemContainer::Update()
   _scrollbar.SetRangeAndPos(0, count, 1, pos); 
 }
 
+// ---------------------------------------------------------------------------
+// SourceDayZ: grid view for big cargo storages (vehicle trunk, 5 x 100 slots)
+// ---------------------------------------------------------------------------
+
+InventoryStorage *CItemContainer::GetTargetCargo()
+{
+  if (!_target) return NULL;
+
+  // Item targets (vests, backpacks, ...) keep the original list layout.
+  Object *obj = _target;
+  if (dyn_cast<InventoryItem>(obj)) return NULL;
+
+  // Bodies use their own slot list, not a cargo grid.
+  const EntityAIType *type = _target->GetType();
+  if (type && type->IsPerson()) return NULL;
+
+  ResourceSupply *supply = _target->GetSupply();
+  if (!supply) return NULL;
+
+  InventoryStorage &cargo = supply->GetItemsCargo();
+  if (cargo.GetWidth() <= 0 || cargo.GetHeight() <= 0) return NULL;
+
+  // Small containers fit the old list better; only big grids use cells.
+  if (cargo.GetWidth() * cargo.GetHeight() < 24) return NULL;
+
+  static Object *s_lastLogged = NULL;
+  if (s_lastLogged != obj)
+  {
+    s_lastLogged = obj;
+    RptF("SDZ cargo grid: %dx%d", cargo.GetWidth(), cargo.GetHeight());
+  }
+  return &cargo;
+}
+
+float CItemContainer::TargetCellSize(const InventoryStorage *cargo) const
+{
+  if (!cargo) return _ui.GetGridW();
+  int cols = cargo->GetWidth();
+  if (cols <= 0) return _ui.GetGridW();
+  float size = (_w - _ui.GetSBWidth()) / cols;
+  if (size < 0.005f) size = 0.005f;
+  return size;
+}
+
+int CItemContainer::TargetRowsVisible(const InventoryStorage *cargo) const
+{
+  if (!cargo || !_targetExpanded) return 0;
+  float size = TargetCellSize(cargo);
+  if (size <= 0) return 0;
+
+  int rows = toIntFloor(TargetGridHeight() / size + 0.001f);
+  if (rows < 1) rows = 1;
+  if (rows > cargo->GetHeight()) rows = cargo->GetHeight();
+  return rows;
+}
+
+int CItemContainer::TargetFirstRow(const InventoryStorage *cargo) const
+{
+  if (!cargo) return 0;
+
+  int rows = TargetRowsVisible(cargo);
+  int maxRow = cargo->GetHeight() - rows;
+  if (maxRow < 0) maxRow = 0;
+
+  int first = toIntFloor(_scrollbar.GetPos() + 0.5f);
+  if (first < 0) first = 0;
+  if (first > maxRow) first = maxRow;
+  return first;
+}
+
+int CItemContainer::TargetCargoIndex(const InventoryStorage *cargo, float x, float y) const
+{
+  if (!cargo || !_targetExpanded) return -1;
+  const float top = TargetGridTop();
+  if (y < top || y >= top + TargetGridHeight()) return -1;
+
+  const float cell = TargetCellSize(cargo);
+  const int cols = cargo->GetWidth();
+  if (cols <= 0 || cell <= 0) return -1;
+  if (x < _x || x >= _x + cols * cell) return -1;
+
+  int col = toIntFloor((x - _x) / cell);
+  int row = TargetFirstRow(cargo) + toIntFloor((y - top) / cell);
+  if (col < 0 || col >= cols) return -1;
+  if (row < 0 || row >= cargo->GetHeight()) return -1;
+  return row * cols + col;
+}
+
+Rect2DFloat CItemContainer::TargetToggleRect() const
+{
+  const float width = _w - _ui.GetSBWidth();
+  const float size = _titleH;
+  const float right = _x + width - _ui.GetTextBorder();
+  return Rect2DFloat(right - size, _y, size, _titleH);
+}
+
+void CItemContainer::SetTargetExpanded(bool expanded)
+{
+  if (_targetExpanded == expanded) return;
+  _targetExpanded = expanded;
+  _h = expanded ? _targetFullH : _titleH;
+  if (!expanded) _scrollbar.SetPos(0);
+}
+
+void CItemContainer::DrawTargetCargoHeader(UIViewport *vp, InventoryStorage *cargo, float alpha)
+{
+  if (!cargo) return;
+
+  const int w = GLOB_ENGINE->Width2D();
+  const int h = GLOB_ENGINE->Height2D();
+
+  const float width = _w - _ui.GetSBWidth();
+  const float border = _ui.GetTextBorder();
+  const float size = _ui.GetTextSize();
+
+  Rect2DPixel clip(CX(_x), CY(_y), CW(width), CH(_titleH));
+  Rect2DFloat clipF(_x, _y, width, _titleH);
+
+  // header background
+  Draw2DParsExt pars;
+  pars.mip = GEngine->TextBank()->UseMipmap(NULL, 0, 0);
+  pars.SetColor(_ui.GetHeaderBgColor());
+  pars.Init();
+  vp->Draw2D(pars, Rect2DPixel(CX(_x), CY(_y), CW(width), CH(_titleH)), clip);
+
+  // border
+  vp->DrawLine(Line2DPixel(CX(_x), CY(_y), CX(_x + width), CY(_y)), _borderColor, _borderColor, clip);
+  vp->DrawLine(Line2DPixel(CX(_x), CY(_y), CX(_x), CY(_y + _titleH)), _borderColor, _borderColor, clip);
+  vp->DrawLine(Line2DPixel(CX(_x + width), CY(_y), CX(_x + width), CY(_y + _titleH)), _borderColor, _borderColor, clip);
+  vp->DrawLine(Line2DPixel(CX(_x), CY(_y + _titleH), CX(_x + width), CY(_y + _titleH)), _borderColor, _borderColor, clip);
+
+  TextDrawAttr attr(size, _ui.GetFont(), _ui.GetTextColor(), true);
+  const float textY = _y + 0.5f * (_titleH - size);
+
+  // open / minimize button
+  Rect2DFloat btn = TargetToggleRect();
+  Rect2DPixel btnClip(CX(btn.x), CY(btn.y), CW(btn.w), CH(btn.h));
+  Rect2DFloat btnClipF(btn.x, btn.y, btn.w, btn.h);
+
+  Draw2DParsExt btnPars;
+  btnPars.mip = GEngine->TextBank()->UseMipmap(NULL, 0, 0);
+  btnPars.SetColor(_ui.GetItemBgColor());
+  btnPars.Init();
+  vp->Draw2D(btnPars, Rect2DPixel(CX(btn.x), CY(btn.y), CW(btn.w), CH(btn.h)), btnClip);
+  vp->DrawLine(Line2DPixel(CX(btn.x), CY(btn.y), CX(btn.x + btn.w), CY(btn.y)), _borderColor, _borderColor, btnClip);
+  vp->DrawLine(Line2DPixel(CX(btn.x), CY(btn.y + btn.h), CX(btn.x + btn.w), CY(btn.y + btn.h)), _borderColor, _borderColor, btnClip);
+  vp->DrawLine(Line2DPixel(CX(btn.x), CY(btn.y), CX(btn.x), CY(btn.y + btn.h)), _borderColor, _borderColor, btnClip);
+  vp->DrawLine(Line2DPixel(CX(btn.x + btn.w), CY(btn.y), CX(btn.x + btn.w), CY(btn.y + btn.h)), _borderColor, _borderColor, btnClip);
+
+  RString symbol = _targetExpanded ? "-" : "+";
+  float symbolW = vp->GetTextWidth(attr, symbol);
+  vp->DrawText(Point2DFloat(btn.x + 0.5f * (btn.w - symbolW), btn.y + 0.5f * (btn.h - size)), btnClipF, attr, symbol);
+
+  // slot count
+  RString slots = GetSpaceText(*cargo) + " slots";
+  float slotsW = vp->GetTextWidth(attr, slots);
+  float slotsX = btn.x - slotsW - 2.0f * border;
+  vp->DrawText(Point2DFloat(slotsX, textY), clipF, attr, slots);
+
+  // vehicle name
+  RString name = _target ? _target->GetDisplayName() : RString();
+  if (!name.IsEmpty())
+  {
+    Rect2DFloat nameClip(_x + border, _y, slotsX - _x - 2.0f * border, _titleH);
+    if (nameClip.w > 0.0f)
+      vp->DrawText(Point2DFloat(_x + border, textY), nameClip, attr, name);
+  }
+}
+
+void CItemContainer::DrawTargetCargoGrid(UIViewport *vp, InventoryStorage *cargo, float alpha)
+{
+  if (!cargo) return;
+
+  const int w = GLOB_ENGINE->Width2D();
+  const int h = GLOB_ENGINE->Height2D();
+
+  const float cell = TargetCellSize(cargo);
+  const int cols = cargo->GetWidth();
+  const int rows = cargo->GetHeight();
+  const int first = TargetFirstRow(cargo);
+  const int visibleRows = TargetRowsVisible(cargo);
+  const float width = _w - _ui.GetSBWidth();
+  const float top = TargetGridTop();
+  const float bottom = top + TargetGridHeight();
+
+  Rect2DPixel clip(CX(_x), CY(top), CW(width), CH(TargetGridHeight()));
+
+  Draw2DParsExt pars;
+  pars.mip = GEngine->TextBank()->UseMipmap(NULL, 0, 0);
+  pars.Init();
+
+  // empty cells
+  pars.SetColor(_ui.GetNoItemBgColor());
+  for (int r=0; r<visibleRows; r++)
+  {
+    float rowTop = top + r * cell;
+    for (int c=0; c<cols; c++)
+    {
+      float left = _x + c * cell;
+      vp->Draw2D(pars, Rect2DPixel(CX(left), CY(rowTop), CW(cell), CH(cell)), clip);
+    }
+  }
+
+  // occupied cells
+  const RefArray<InventoryItem> &items = cargo->GetItems();
+  const int total = intMin(items.Size(), cols * rows);
+  pars.SetColor(_ui.GetItemBgColor());
+  for (int i=0; i<total; i++)
+  {
+    const InventoryItem *item = items[i];
+    if (!item || !item->Type()) continue;
+
+    int r = i / cols;
+    int c = i % cols;
+    if (r < first || r >= first + visibleRows) continue;
+
+    int iw = item->GetInventoryWidth();
+    int ih = item->GetInventoryHeight();
+    float left = _x + c * cell;
+    float itemTop = top + (r - first) * cell;
+    vp->Draw2D(pars, Rect2DPixel(CX(left), CY(itemTop), CW(iw * cell), CH(ih * cell)), clip);
+  }
+
+  // grid lines
+  for (int c=0; c<=cols; c++)
+  {
+    float x = _x + c * cell;
+    if (x > _x + width) x = _x + width;
+    vp->DrawLine(Line2DPixel(CX(x), CY(top), CX(x), CY(bottom)), _borderColor, _borderColor, clip);
+  }
+  for (int r=0; r<=visibleRows; r++)
+  {
+    float y = top + r * cell;
+    if (y > bottom) y = bottom;
+    vp->DrawLine(Line2DPixel(CX(_x), CY(y), CX(_x + width), CY(y)), _borderColor, _borderColor, clip);
+  }
+}
+
+void CItemContainer::DrawTargetCargoItems(InventoryStorage *cargo, float alpha)
+{
+  if (!cargo) return;
+
+  DisplayInventory *display = dynamic_cast<DisplayInventory *>(_parent.GetLink());
+  const float cell = TargetCellSize(cargo);
+  const int cols = cargo->GetWidth();
+  const int first = TargetFirstRow(cargo);
+  const int visibleRows = TargetRowsVisible(cargo);
+  const float gridTop = TargetGridTop();
+  const float bottom = gridTop + TargetGridHeight();
+  const RefArray<InventoryItem> &items = cargo->GetItems();
+  const int total = intMin(items.Size(), cols * cargo->GetHeight());
+
+  for (int i=0; i<total; i++)
+  {
+    InventoryItem *item = items[i];
+    if (!item || !item->Type()) continue;
+
+    int r = i / cols;
+    int c = i % cols;
+    if (r < first || r >= first + visibleRows) continue;
+
+    int iw = item->GetInventoryWidth();
+    int ih = item->GetInventoryHeight();
+    float left = _x + c * cell;
+    float top = gridTop + (r - first) * cell;
+    if (top + ih * cell > bottom + 0.001f) continue;
+
+    Color color(0, 0, 0, -1.0f);
+    if (display)
+    {
+      if (display->GetDraggedItem() == item) color = ColorItemDragged;
+      else if (display->GetSwappedItem() == item) color = ColorItemSwapped;
+    }
+    DrawItem(item, left, top, iw * cell, ih * cell, _z, alpha, color);
+  }
+}
+
+void CItemContainer::DrawTargetCargoForeground(UIViewport *vp, InventoryStorage *cargo, float alpha)
+{
+  if (!cargo) return;
+
+  const int w = GLOB_ENGINE->Width2D();
+  const int h = GLOB_ENGINE->Height2D();
+
+  const float cell = TargetCellSize(cargo);
+  const int cols = cargo->GetWidth();
+  const int first = TargetFirstRow(cargo);
+  const int visibleRows = TargetRowsVisible(cargo);
+  const RefArray<InventoryItem> &items = cargo->GetItems();
+  const int total = intMin(items.Size(), cols * cargo->GetHeight());
+  const float width = _w - _ui.GetSBWidth();
+  const float size = _ui.GetTextSize();
+  const float gridTop = TargetGridTop();
+
+  Rect2DPixel clip(CX(_x), CY(gridTop), CW(width), CH(TargetGridHeight()));
+  Rect2DFloat clipF(_x, gridTop, width, TargetGridHeight());
+  ClippedViewport vpClipped(vp, clipF);
+
+  for (int i=0; i<total; i++)
+  {
+    InventoryItem *item = items[i];
+    if (!item || !item->Type()) continue;
+
+    int r = i / cols;
+    int c = i % cols;
+    if (r < first || r >= first + visibleRows) continue;
+
+    RefR<INode> text = item->GetQuantity();
+    if (!text) continue;
+
+    SetTextAttribute(text, "shadow", "1");
+    Rect2DFloat rect(0, 0, item->GetInventoryWidth() * cell, item->GetInventoryHeight() * cell);
+    float h = GetTextHeight(text, rect, size);
+    float w = GetTextWidthFloat(text, size);
+    rect.x = _x + c * cell + rect.w - w;
+    rect.y = gridTop + (r - first) * cell + rect.h - h;
+    DrawText(vpClipped, text, rect, size);
+  }
+}
+
+DragItemInfo CItemContainer::GetTargetCargoInfo(const InventoryStorage *cargo, float x, float y)
+{
+  DragItemInfo info;
+  info._item = NULL;
+  if (!cargo || !_targetExpanded) return info;
+
+  const float gridTop = TargetGridTop();
+  if (y < gridTop || y >= gridTop + TargetGridHeight()) return info;
+
+  const float cell = TargetCellSize(cargo);
+  const int cols = cargo->GetWidth();
+  if (cols <= 0 || cell <= 0) return info;
+  if (x < _x || x >= _x + cols * cell) return info;
+
+  int col = toIntFloor((x - _x) / cell);
+  int row = TargetFirstRow(cargo) + toIntFloor((y - gridTop) / cell);
+  if (col < 0 || col >= cols) return info;
+  if (row < 0 || row >= cargo->GetHeight()) return info;
+
+  const RefArray<InventoryItem> &items = cargo->GetItems();
+  const int total = intMin(items.Size(), cols * cargo->GetHeight());
+  for (int i=0; i<total; i++)
+  {
+    const InventoryItem *item = items[i];
+    if (!item || !item->Type()) continue;
+
+    int r = i / cols;
+    int c = i % cols;
+    int iw = item->GetInventoryWidth();
+    int ih = item->GetInventoryHeight();
+    if (row >= r && row < r + ih && col >= c && col < c + iw)
+    {
+      info._item = unconst_cast(item);
+      info._offsetX = x - (_x + c * cell);
+      info._offsetY = y - (gridTop + (r - TargetFirstRow(cargo)) * cell);
+      return info;
+    }
+  }
+  return info;
+}
+
 DragItemInfo CItemContainer::GetItemInfo(float x, float y)
 {
+  InventoryStorage *targetCargo = GetTargetCargo();
+  if (targetCargo) return GetTargetCargoInfo(targetCargo, x, y);
+
   DragItemInfo info;
   info._item = NULL;
 
@@ -8291,6 +8739,9 @@ DragItemInfo CItemContainer::GetItemInfo(float x, float y)
 
 bool CItemContainer::IsContained(InventoryItem *check)
 {
+  InventoryStorage *targetCargo = GetTargetCargo();
+  if (targetCargo && targetCargo->FindItem(check)) return true;
+
   for (int j=0; j<_cache.Size(); j++)
   {
     InventoryItem *item = _cache[j];
@@ -8312,6 +8763,15 @@ bool CItemContainer::IsContained(InventoryItem *check)
 
 bool CItemContainer::CanAddItem(InventoryItem *item, float x, float y)
 {
+  InventoryStorage *targetCargo = GetTargetCargo();
+  if (targetCargo)
+  {
+    if (item == _target) return false;
+    int index = TargetCargoIndex(targetCargo, x, y);
+    if (index < 0) return false;
+    return CanMoveItem(_target, index, item);
+  }
+
   InventoryItem *result = NULL;
   int resultIndex = -1;
 
@@ -8342,6 +8802,16 @@ bool CItemContainer::CanAddItem(InventoryItem *item, float x, float y)
 
 void CItemContainer::AddItem(InventoryItem *item, float x, float y)
 {
+  InventoryStorage *targetCargo = GetTargetCargo();
+  if (targetCargo)
+  {
+    if (item == _target) return;
+    int index = TargetCargoIndex(targetCargo, x, y);
+    if (index >= 0 && CanMoveItem(_target, index, item))
+      MoveItem(_target, index, item);
+    return;
+  }
+
   InventoryItem *result = NULL;
   int resultIndex = -1;
 
@@ -8461,7 +8931,6 @@ bool CItemContent::ForEachSlot(
     // together in the inventory before clothing containers.
     int j = order == ISShoulder + 1 ? ISShoulder2 :
       (order > ISShoulder + 1 && order <= ISShoulder2 ? order - 1 : order);
-    if (j == ISHands) continue;
     InventoryItem *item = _person->GetInSlot((InventorySlotId)j);
     if (!item) continue;
 
@@ -8496,7 +8965,6 @@ bool CItemContent::ForEachSlot(
   {
     int j = order == ISShoulder + 1 ? ISShoulder2 :
       (order > ISShoulder + 1 && order <= ISShoulder2 ? order - 1 : order);
-    if (j == ISHands) continue;
     InventoryItem *container = _person->GetInSlot((InventorySlotId)j);
     if (!container) continue;
 
@@ -8524,7 +8992,6 @@ void CItemContent::OnDraw(float alpha)
   int countSimple = 0, countContainers = 0;
   for (int j=0; j<NInventorySlotId; j++)
   {
-    if (j == ISHands) continue; // do not count the Hands panel as inventory
     InventoryItem *container = _person->GetInSlot((InventorySlotId)j);
     if (!container) continue;
 
@@ -8691,7 +9158,6 @@ bool CItemContent::IsContained(InventoryItem *check)
 {
   for (int j=0; j<NInventorySlotId; j++)
   {
-    if (j == ISHands) continue;
     InventoryItem *item = _person->GetInSlot((InventorySlotId)j);
     if (!item) continue;
     if (item == check) return true;
@@ -9106,10 +9572,6 @@ bool CItemInHands::IsContained(InventoryItem *check)
 bool CItemInHands::CanAddItem(InventoryItem *newItem, float x, float y)
 {
   if (!_person) return false;
-
-  DisplayInventory *display = dynamic_cast<DisplayInventory *>(_parent.GetLink());
-  CItemBase *vicinity = display ? dynamic_cast<CItemBase *>(display->GetCtrl(IDC_INVENTORY_CONTAINER)) : NULL;
-  const bool fromVicinity = vicinity && vicinity->IsContained(newItem);
 
   const Person * const p = _person;
   const Man * const m = dynamic_cast<const Man *>(p);
@@ -9758,8 +10220,72 @@ void CItemPreview::OnMouseMove(float x, float y, bool active)
   }
 }
 
+// SourceDayZ: find the closest vehicle cargo so pressing G next to a vehicle
+// opens its 5x100 grid even when the action system does not provide a Gear
+// action (mod vehicles without itemsCargoSize/supply point).
+class FindNearestSupplyVehicle
+{
+public:
+  struct Result
+  {
+    OLink(EntityAI) best;
+    float bestDist2;
+  };
+
+  Result *_result;
+  Vector3 _pos;
+
+  FindNearestSupplyVehicle(Result &result, Vector3Par pos)
+    : _result(&result)
+  {
+    _pos = pos;
+  }
+
+  bool operator()(Entity *entity) const
+  {
+    EntityAI *ai = dyn_cast<EntityAI>(entity);
+    if (!ai) return false;
+    const EntityAIType *type = ai->GetType();
+    if (!type) return false;
+    if (!type->IsKindOf("LandVehicle") && !type->IsKindOf("Air") && !type->IsKindOf("Ship")) return false;
+    if (!ai->GetSupply()) return false;
+
+    float dist2 = ai->FutureVisualState().Position().DistanceXZ2(_pos);
+    if (dist2 < _result->bestDist2)
+    {
+      _result->bestDist2 = dist2;
+      _result->best = ai;
+    }
+    return false;
+  }
+};
+
 Display *CreateInventoryDialog(ControlsContainer *parent, AIBrain *me, EntityAI *source)
 {
+  // SourceDayZ: G while standing next to a vehicle (or sitting inside it) opens
+  // the vehicle cargo in the VICINITY panel instead of an empty player gear.
+  if (!source && me)
+  {
+    EntityAI *veh = me->GetVehicleIn();
+    if (!veh)
+    {
+      Person *person = me->GetPerson();
+      if (person)
+      {
+        FindNearestSupplyVehicle::Result result;
+        result.bestDist2 = Square(12.0f);
+        FindNearestSupplyVehicle find(result, person->FutureVisualState().Position());
+        GWorld->ForEachVehicle(find);
+        veh = result.best;
+      }
+    }
+    if (veh && veh->GetSupply())
+    {
+      source = veh;
+      RptF("SDZ open nearby vehicle: %s", cc_cast(veh->GetType() ? veh->GetType()->GetName() : "?"));
+    }
+  }
+
   return new DisplayInventory(parent, me, source);
 }
 
@@ -9775,7 +10301,7 @@ void CItemBase::DrawTooltip(UIViewport *vp, float x, float y)
 
 intptr_t CItemBase::GetTooltipArea(float x, float y)
 {
-  return (intptr_t)(GetItemInfo(x, y)._item);
+  return reinterpret_cast<intptr_t>(GetItemInfo(x, y)._item);
 }
 
 bool IsInventoryOpened()
@@ -9896,65 +10422,38 @@ DisplayInventory::~DisplayInventory()
 
 bool DisplayInventory::OnKeyDown(int dikCode)
 {
-  if (dikCode == DIK_SPACE)
+  if (dikCode != DIK_SPACE) return Display::OnKeyDown(dikCode);
+
+  InventoryItem *item = _dragItem;
+  Person *person = _unit ? _unit->GetPerson() : NULL;
+  if (!item)
   {
-    InventoryItem *item = _dragItem;
-    CItemBase *selectedControl = NULL;
-    // Space is also the default-button key in ControlsContainer. Always consume
-    // it here so that an item that cannot rotate (or a missed drag state) does
-    // not activate the inventory's Close button.
-    if (!item)
+    const float x = 0.5f + GInput.cursorX * 0.5f;
+    const float y = 0.5f + GInput.cursorY * 0.5f;
+    const int itemControls[] = {IDC_INVENTORY_HANDS, IDC_INVENTORY_CONTAINER, IDC_INVENTORY_CONTENT};
+    for (int i = 0; i < lenof(itemControls) && !item; i++)
     {
-      const float x = 0.5f + GInput.cursorX * 0.5f;
-      const float y = 0.5f + GInput.cursorY * 0.5f;
-      // The held-item panel can contain the dragged item, its attachments, or
-      // items inside its cargo. Include it in the same cursor hit test as the
-      // two inventory grids so Space works when the shoe is selected there.
-      const int itemControls[] = {IDC_INVENTORY_HANDS, IDC_INVENTORY_CONTAINER, IDC_INVENTORY_CONTENT};
-      for (int i = 0; i < lenof(itemControls) && !item; i++)
+      CItemBase *control = dynamic_cast<CItemBase *>(GetCtrl(itemControls[i]));
+      if (control && control->IsInside(x, y))
       {
-        CItemBase *control = dynamic_cast<CItemBase *>(GetCtrl(itemControls[i]));
-        if (control && control->IsInside(x, y))
-        {
-          item = control->GetItemInfo(x, y)._item;
-          if (item) selectedControl = control;
-        }
+        item = control->GetItemInfo(x, y)._item;
       }
     }
-    // Start the drag on Space if the item is held under the pointer but has
-    // not yet crossed the regular mouse-movement threshold.
-    Person *person = _unit ? _unit->GetPerson() : NULL;
-    const bool itemInHands = person && item && person->GetItemInHands() == item;
-    if (!_dragItem && item && !itemInHands && selectedControl && GInput.mouseL)
-    {
-      selectedControl->BeginDrag();
-      item = _dragItem;
-    }
-    if (_dragItem)
-    {
-      // While dragging, rotate only the preview. The selected orientation is
-      // sent with the move request when the item is dropped.
-      if (!itemInHands && _dragItem->Type() && _dragItem->Type()->GetItemWidth() != _dragItem->Type()->GetItemHeight())
-        _dragRotated = !_dragRotated;
-    }
-    else if (!itemInHands && item && item->Type() && item->GetInventoryWidth() != item->GetInventoryHeight())
-      CItemBase::RotateInventoryItem(_unit ? _unit->GetPerson() : NULL, item);
-    return true;
   }
-  return Display::OnKeyDown(dikCode);
+  const bool itemInHands = person && item && person->GetItemInHands() == item;
+  if (_dragItem)
+  {
+    if (!itemInHands && _dragItem->Type() && _dragItem->Type()->GetItemWidth() != _dragItem->Type()->GetItemHeight())
+      _dragRotated = !_dragRotated;
+  }
+  else if (!itemInHands && item && item->Type() && item->GetInventoryWidth() != item->GetInventoryHeight())
+    CItemBase::RotateInventoryItem(person, item);
+  return true;
 }
 
-// Shared by World::DoKeyDown and ControlsContainer::OnKeyDown so Space always
-// reaches the live inventory, including when its dialog is nested under a
-// different display instead of being stored as World::_userDlg.
 bool HandleInventorySpaceKey()
 {
-  if (GActiveInventoryDisplay == NULL || !DisplayInventory::IsOpened())
-    return false;
-
-  // Keyboard auto-repeat sends multiple key-down events while Space is held.
-  // Rotating on every repeat can toggle a 2x1 item back to its original
-  // orientation before the player sees the result.
+  if (GActiveInventoryDisplay == NULL || !DisplayInventory::IsOpened()) return false;
   if (!GInventorySpaceKeyDown)
   {
     GInventorySpaceKeyDown = true;
@@ -9970,10 +10469,6 @@ void ReleaseInventorySpaceKey()
 
 Control *DisplayInventory::OnCreateCtrl(int type, int idc, ParamEntryPar cls)
 {
-  // ui.pbo's legacy ButtonDropHands is destructive (moves null to hands).
-  // The matching ButtonBackground2 is a separate red RscText in ControlsBackground,
-  // so omit both controls to remove the icon and its red square.
-  if (idc == 198 || stricmp(cls.GetName(), "ButtonBackground2") == 0) return NULL;
 
   // Ignore the legacy hands-drop button and its red background control.
   // Dropping the hands item is handled by inventory drag-and-drop instead.
@@ -10267,8 +10762,6 @@ bool SwapItems(InventoryItem *item1, InventoryItem *item2, Person *owner)
   return true;
 }
 
-// Temporarily expose the drag-preview orientation to the existing cargo
-// validation code, then restore the item's authoritative orientation.
 class InventoryRotationPreviewScope
 {
 private:
@@ -10286,10 +10779,6 @@ public:
   {
     if (_item && _item->GetHierarchyParent() == _originalParent)
       _item->SetInventoryRotated(_original);
-  }
-  void Commit()
-  {
-    if (_item) _original = _item->IsInventoryRotated();
   }
 };
 
@@ -10511,9 +11000,8 @@ bool DisplayInventory::OnDrop(IControl *dragCtrl, IControl *dropCtrl, float x, f
               // remove from the old owner
               Entity *parent = item->GetHierarchyParent();
               if (parent) DoVerify(parent->RemoveOwnedItem(item));
-
+    
               info._item->AddOwnedItem(item);
-              rotationPreview.Commit();
             }
             return true;
           }
@@ -10536,10 +11024,6 @@ bool DisplayInventory::OnDrop(IControl *dragCtrl, IControl *dropCtrl, float x, f
       {
         // do not break layout by removing item first
         dst->AddItem(item, x, y);
-        // shortcut cells only assign the shortcut without moving the item,
-        // so the previewed rotation must not become authoritative there
-        if (dstShortcut < 0)
-          rotationPreview.Commit();
         return true;
       }
     }
@@ -10679,6 +11163,8 @@ void DisplayInventory::DrawDragInfo(float x, float y, unsigned char enabled, Ref
   GEngine->DrawLine(Line2DFloat(dragX, dragY + dragH, dragX, dragY), dragColorLine, dragColorLine);
 
   Color color(0, 0, 0, -1.0f);
+  // SourceDayZ: the dragged icon must follow the SPACE rotation preview too.
+  InventoryRotationPreviewScope rotationPreview(_dragItem, _dragRotated);
   CItemBase::DrawItem(_dragItem, dragX, dragY, dragW, dragH, _dragZ, 1.0f, color);
 }
 

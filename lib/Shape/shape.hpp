@@ -481,8 +481,6 @@ struct ObjectInstanceInfo
   Object *_parentObject;
   //! Flag to determine the sprite size is to be limited
   bool _limitSpriteSize;
-  //! index of the scene light grid cell this instance belongs to (-1 = none)
-  int _lightGridIndex;
 };
 TypeIsSimple(ObjectInstanceInfo)
 

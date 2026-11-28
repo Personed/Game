@@ -93,10 +93,10 @@ endif
 
 #  linker:
 
-# export LDFLAGS= -static -static-libgcc
-# export LDFLAGS= -static-libgcc
+//export LDFLAGS= -static -static-libgcc
+//export LDFLAGS= -static-libgcc
 export LDFLAGS= -m32 -shared-libgcc -Wl,--hash-style=sysv
-# export LD_RUN_PATH=armalib
+//export LD_RUN_PATH=armalib
 
 #  sub-targets:
 

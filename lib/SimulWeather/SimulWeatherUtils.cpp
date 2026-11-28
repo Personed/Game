@@ -9,7 +9,7 @@
 #if _ARMA3_SIMUL_WEATHER
 
 #include "SimulWeatherUtils.hpp"
-#include "../lib/d3d9/engdd9.hpp"
+#include "../d3dCommon/d3dCommon.hpp"
 #include "SimulSkyRendererBase.hpp"
 #include "SimulCloudRendererBase.hpp"
 

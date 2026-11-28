@@ -151,10 +151,6 @@ class XWAVStreamContext
 		if(m_Fmt.m_Format.wFormatTag == WAVE_FORMAT_ADPCM)
 			return false;
 #endif
-#ifdef ENF_DX9
-		if(m_Fmt.m_Format.wFormatTag == WAVE_FORMAT_XMA2)
-			return false;
-#endif
 
 		m_Fmt.m_Format.nSamplesPerSec = LE_INT(m_Fmt.m_Format.nSamplesPerSec);
 		m_Fmt.m_Format.nChannels = LE_SHORT(m_Fmt.m_Format.nChannels);

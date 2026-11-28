@@ -23,11 +23,7 @@ whether to generate shader combinations for offline compiling
 #endif
 
 
-#if defined(ENF_DX9) 
-	#ifdef ENF_SHADER_COMPILER
-		#include <d3dx9shader.h>
-	#endif
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 	#include <cg/cgGL.h>
 #endif
 
@@ -143,7 +139,7 @@ public:
 	{
 		SString<> res;
 
-		#if defined(ENF_XENON) || defined(ENF_DX9)
+		#if defined(ENF_XENON)
 			//res  = "fxc ";
 			res += "/T";
 			res += m_Profile;
@@ -223,12 +219,8 @@ public:
 	{
 		bool correct = false;
 
-		#if defined(ENF_DX9) || defined(ENF_OGL)
-			#ifdef ENF_DX9
-				VFile* f = GetEngine()->GetFileSystem()->Open("shaders/DX9.lst", FILEMODE_WRITE);
-			#else
+		#if defined(ENF_OGL)
 				VFile* f = GetEngine()->GetFileSystem()->Open("shaders/OGL.lst", FILEMODE_WRITE);
-			#endif
 
 			if(f)
 			{
@@ -301,15 +293,7 @@ VertexShader::VertexShader(IRenderer* dev, const ShaderDef* def):	RenderShader(d
 void VertexShader::Free()
 {
 	enf_rlsassert(GetDevice()->CheckThread());
-#if defined(ENF_DX9) 
-	if(m_pShader)
-	{
-		GetDevice()->ReleaseReferences(this);
-		int c = ((IDirect3DVertexShader9 *)m_pShader)->Release();
-		enf_assert(c == 0);
-		m_pShader = NULL;
-	}
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 	if(m_pShader)
 	{
 		cgGLUnloadProgram((CGprogram)m_pShader);
@@ -332,11 +316,7 @@ bool VertexShader::Load(CInputStream& stream)
 
 		if(stream.Read(ptr, len) == len)
 		{
-			#if defined(ENF_DX9) 
-				HRESULT hr = GetDevice()->GetDXDevice()->CreateVertexShader( (DWORD*)ptr, (IDirect3DVertexShader9**)&m_pShader);
-				return hr == D3D_OK;
-
-			#elif defined(ENF_OGL)
+			#if defined(ENF_OGL)
 				ptr[len] = 0;
 			
 				CGprofile profile = cgGLGetLatestProfile(CG_GL_VERTEX);
@@ -366,15 +346,7 @@ bool VertexShader::Load(CInputStream& stream)
 void PixelShader::Free()
 {
 	enf_rlsassert(GetDevice()->CheckThread());
-#if defined(ENF_DX9) 
-	if(m_pShader)
-	{
-		GetDevice()->ReleaseReferences(this);
-		int c = ((IDirect3DPixelShader9 *)m_pShader)->Release();
-		enf_assert(c == 0);
-		m_pShader = NULL;
-	}
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 	if(m_pShader)
 	{
 		cgGLUnloadProgram((CGprogram)m_pShader);
@@ -413,11 +385,7 @@ bool PixelShader::Load(CInputStream& stream)
 		ubyte* ptr = ALLOCA(ubyte, len + 1);
 		if(stream.Read(ptr, len) == len)
 		{
-			#if defined(ENF_DX9) 
-				HRESULT hr = GetDevice()->GetDXDevice()->CreatePixelShader( (DWORD*)ptr, (IDirect3DPixelShader9**)&m_pShader);
-				return hr == D3D_OK;
-
-			#elif defined(ENF_OGL)
+			#if defined(ENF_OGL)
 				ptr[len] = 0;
 				CGprofile profile = cgGLGetLatestProfile(CG_GL_FRAGMENT);
 				CGprogram prog = cgCreateProgram( GetDevice()->GetCGContext(), 
@@ -469,93 +437,7 @@ typedef Pair<CStr, SDateTime> SourceFile;
 Set<SourceFile> FileDates;
 FlushableObjectAgent< Set<SourceFile> > FileDatesAgent(&FileDates);
 
-#if defined(ENF_DX9) 
-class DXInclude: public ID3DXInclude
-{
-private:
-	static const uint MAX_DEPTH = 32;
-	SString<MAX_FILENAME_LENGTH> m_strCDir[MAX_DEPTH];
-	uint m_iDepth;
-
-public:
-	DXInclude(const char* cdir):
-		m_iDepth(0)
-	{
-		m_strCDir[m_iDepth++] = cdir;
-	}
-	HRESULT _stdcall Close(LPCVOID pData);
-	HRESULT _stdcall Open(D3DXINCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID * ppData, UINT * pBytes);
-};
-
-//-----------------------------------------------------------------------
-HRESULT DXInclude::Close(LPCVOID pData)
-{
-	enf_assert(m_iDepth > 0);
-	m_iDepth--;
-	return S_OK;
-}
-
-//-----------------------------------------------------------------------
-ENF_INLINE const char* GetCDir(char* fname)
-{
-	char* sep = strrchr(fname, '/');
-	if(sep) *sep = 0;
-
-	return fname;
-}
-
-//-----------------------------------------------------------------------
-HRESULT DXInclude::Open(D3DXINCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
-{
-
-	ShaderFile* sfile;
-	if(ShaderFileCacheHash.Find(pFileName, sfile))
-	{
-		*ppData = sfile->source;
-		*pBytes = sfile->size;
-		m_iDepth++;
-		return S_OK;
-	}
-
-	void* ptr = NULL;
-	size_t size = 0;
-
-	//1st try it in current dir
-	char cdir[MAX_FILENAME_LENGTH];
-
-	enf_assert(m_iDepth > 0);
-	strcpy(cdir, m_strCDir[m_iDepth - 1].cstr());
-	strcat(cdir, "/");
-	strcat(cdir, pFileName);
-
-	if(GetEngine()->GetFileSystem()->Load(cdir, &ptr, &size))
-	{
-		m_strCDir[m_iDepth++] = GetCDir(cdir);
-		*ppData = ptr;
-		*pBytes = size;
-	}
-	else if(GetEngine()->GetFileSystem()->Load(pFileName, &ptr, &size)) //2nd try absolute path 
-	{
-		strcpy(cdir, pFileName);
-		m_strCDir[m_iDepth++] = GetCDir(cdir);
-		*ppData = ptr;
-		*pBytes = size;
-	}
-	else
-	{
-		enf::LogF(LL_ERROR, "Can't open '%s'", cdir);
-		return S_FALSE;
-	}
-	sfile = ENF_NEW ShaderFile;
-	sfile->name = pFileName;
-	sfile->source = (char*)ptr;
-	sfile->size = size;
-	ShaderFileCache.Insert(sfile);
-	ShaderFileCacheHash.Insert(sfile->name.cstr(), sfile);
-	return S_OK;
-}
-
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 const char* g_cgIncludeDir = 0;
 void CGIncludeCallback( CGcontext context, const char *filename )
 {
@@ -628,24 +510,6 @@ uint CRC32(const char* data, size_t size)
 
 
 //-----------------------------------------------------------------------
-#if defined(ENF_DX9) 
-	ENF_INLINEFUNC void GetMacrosString(SString<>& deferr, const SArray<D3DXMACRO, 100>& macros)
-	{
-		for (uint i = 0; i < macros.GetCardinality() && macros[i].Name; i++)
-		{
-			deferr += "/D ";
-			deferr += macros[i].Name;
-
-			if (macros[i].Definition)
-			{
-				deferr += "=";
-				deferr += macros[i].Definition;
-			}
-
-			deferr += " ";
-		}
-	}
-#else
 	ENF_INLINEFUNC void GetMacrosString(SString<>& deferr, SArray<const char*, 64>& args)
 	{
 		for (uint i = 0; i < args.GetCardinality() && args[i]; i++)
@@ -654,7 +518,6 @@ uint CRC32(const char* data, size_t size)
 			deferr += " ";
 		}
 	}
-#endif
 
 //-----------------------------------------------------------------------
 bool IRenderer::LoadShader(RenderShader* sh, const ShaderDef& def)
@@ -804,125 +667,7 @@ bool IRenderer::LoadShader(RenderShader* sh, const ShaderDef& def)
 			const DefineSet& dset = sh->GetDefines();
 			ProfileType profile = def.GetProfile();
 
-#if defined(ENF_DX9) 
-			SArray<D3DXMACRO, 100> macros;
-
-			for(uint n = 0; n < dset.GetCardinality(); n++)
-			{
-				D3DXMACRO macro;
-				macro.Name = dset[n].Name.cstr();
-				macro.Definition = dset[n].Value.cstr();
-				macros.Insert(macro);
-			}
-
-			{
-				static const D3DXMACRO dx9define = {"DX9", NULL};
-				static const D3DXMACRO compr = {"COMPRESSED", NULL};
-				static const D3DXMACRO vsdefine = {"__VS__", NULL};
-				static const D3DXMACRO psdefine = {"__PS__", NULL};
-				static const D3DXMACRO testFade = {"CROSSFADE", NULL};
-				macros.Insert(dx9define);
-				macros.Insert(compr);
-
-				if(IsPixelShader(profile))
-					macros.Insert(psdefine);
-				if(IsVertexShader(profile))
-					macros.Insert(vsdefine);
-#ifdef ENF_LOD_CROSSFADE
-				macros.Insert(testFade);
-#endif
-			}
-			static const D3DXMACRO enddefine = {NULL, NULL};
-			macros.Insert(enddefine);
-
-			static const char* profilenames[] = {
-				"",
-				"vs_2_0",
-				"vs_2_a",
-				"vs_3_0",
-				"ps_2_0",
-				"ps_2_a",
-				"ps_3_0"
-			};
-
-			DXInclude include(cdir);
-			DWORD flags = 0;
-			ComPtr<ID3DXBuffer> pShader;
-			ComPtr<ID3DXBuffer> pErrors;
-
-			#ifdef _DEBUG
-				flags |= D3DXSHADER_OPTIMIZATION_LEVEL1;
-				flags |= D3DXSHADER_DEBUG;
-			#else
-				#ifdef ENF_DEVELOPER
-					flags |= D3DXSHADER_OPTIMIZATION_LEVEL1;
-				#else
-					flags |= D3DXSHADER_OPTIMIZATION_LEVEL3;
-				#endif
-			#endif
-
-			if (OfflineCache.UseOfflineCache())
-				OfflineCache.AddFlags(flags);
-
-			HRESULT hr = S_OK;
-			
-			if (correctlyLoaded)
-			{
-				hr = D3DXCompileShader(
-					(LPCSTR)ptr,
-					len,
-					macros.GetArray(), 
-					&include,
-					"main",
-					profilenames[def.GetProfile()],
-					flags,
-					pShader.Init(),
-					pErrors.Init(),
-					NULL //LPD3DXCONSTANTTABLE * ppConstantTable
-					);
-			}
-
-			//warnings are not taken as errors but we need to know the combination of macros
-			SString<> deferr;
-			GetMacrosString(deferr, macros);
-
-			if (OfflineCache.UseOfflineCache())
-			{
-				OfflineCache.AddMacros(deferr);
-				OfflineCache.AddProfile(profilenames[def.GetProfile()]);
-			}
-
-			if(hr == S_OK)
-			{
-				if (correctlyLoaded)
-				{
-					//need to close, otherwise write will fail
-					if(shaderFile != NULL)
-					{
-						shaderFile->Close();
-						shaderFile = NULL;
-					}
-
-					VFile* outf = GetEngine()->GetFileSystem()->Open(fullname.cstr(), FILEMODE_WRITE);
-					if(outf)
-					{
-						LogF(LL_NORMAL, "Recompile OK. Writing variant %s", deferr.cstr());
-						outf->Write(pShader->GetBufferPointer(), pShader->GetBufferSize());
-						outf->Close();
-					}
-					else
-					{
-						LogF(LL_ERROR, "Recompile OK, but writing failed for variant %s", deferr.cstr());
-					}
-				}
-			}
-			else
-			{
-				enf::LogF(LL_ERROR, "Can't compile shader '%s' for variant %s", srcname.cstr(), deferr.cstr());
-				if(pErrors)
-					enf::LogF(LL_ERROR, (const char*)pErrors->GetBufferPointer());
-			}
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 			g_cgIncludeDir = cdir;
 
 			cgSetCompilerIncludeCallback(m_cgContext, &CGIncludeCallback );

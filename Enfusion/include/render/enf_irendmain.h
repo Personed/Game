@@ -104,10 +104,7 @@ protected:
 
 	struct RTStack
 	{
-#if defined(ENF_DX9) 
-		_D3DSurface*	m_pDepth;
-		_D3DSurface*	m_pRender;
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 		GLuint			m_pDepth;
 		GLuint			m_pRender;
 		GLuint			m_iFB;
@@ -118,11 +115,9 @@ protected:
 		uint				m_iRTHeight;
 		RenderViewport	m_Viewport;
 
-		RTStack():
-#if defined(ENF_DX9) 
-			m_pDepth(NULL), m_pRender(NULL), m_iRTWidth(0), m_iRTHeight(0)
-#elif defined(ENF_OGL)
-		m_pDepth(0),
+		RTStack()
+#if defined(ENF_OGL)
+		: m_pDepth(0),
 		m_pRender(0),
 		m_iFB(0), m_iRB(0), m_iDB(0)
 #endif
@@ -236,10 +231,6 @@ public:
 		void CaptureStereoImage();
 	#endif
 
-#ifdef ENF_DX9
-	SwapChain* CreateSwapChain(void* window, uint width, uint height);
-	void PushRenderTarget(uint rtindex, const SwapChain* sw);
-#endif
 	void SetRenderTarget(uint rtindex, RenderTarget *rt, uint face = 0, uint flags = 0);
 	void PushRenderTarget(uint rtindex, RenderTarget *rt, uint face = 0, uint flags = 0);
 	void PopRenderTarget(uint rtindex);

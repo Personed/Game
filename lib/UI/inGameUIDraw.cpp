@@ -790,7 +790,7 @@ extern void PositionToAA11(Vector3Val pos, char *buffer);
 
 #if _VBS3
   //used for TempMax, ContrastMax
-  #include "../d3d9/ShaderSources_3_0/common.h"
+  #include "../d3d11/ShaderSources_4_0/common.h"
 #endif
 
 #if _VBS3_LASE_LEAD

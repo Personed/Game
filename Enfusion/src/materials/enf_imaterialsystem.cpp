@@ -423,42 +423,12 @@ void IMaterialSystem::SetBias(float bias)
 
 	if(bias != 0)
 	{
-		#if defined(ENF_DX9)
-			if(g_pRender->GetCaps().RasterCaps & D3DPRASTERCAPS_SLOPESCALEDEPTHBIAS)
-			{
-				static float depth = 0.000001f;
-
-				float currdepth;
-				if (g_pRender->IsFloatingPointDepthBuffer())
-				{
-					currdepth = -depth;
-				}
-				else
-				{
-					currdepth = depth;
-				}
-
-				float b = currdepth * bias;
-				SET_RS( RS_DEPTHBIAS, F2DW(b));
-				SET_RS( RS_SLOPESCALEDEPTHBIAS, F2DW(bias > 0 ? 1.0f : -1.0f));
-			}
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 		#endif
 	}
 	else
 	{
-		#if defined(ENF_DX9)
-			if(g_pRender->GetCaps().RasterCaps & D3DPRASTERCAPS_SLOPESCALEDEPTHBIAS)
-			{
-				SET_RS( RS_DEPTHBIAS, F2DW(0.0f));
-				SET_RS( RS_SLOPESCALEDEPTHBIAS, F2DW(0.0f));
-			}
-			else
-				if(g_pRender->GetCaps().RasterCaps & D3DPRASTERCAPS_DEPTHBIAS)
-				{
-					SET_RS( RS_DEPTHBIAS, F2DW(0));
-				}
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 		#endif
 	}
 }
@@ -870,9 +840,6 @@ bool IMaterialSystem::OnChangeSettings(TiXmlElement* xmlnode)
 	
 	CStr cmaxaniso = video->FindOrCreateAttribute("maxaniso", "1");
 	maxaniso = enf_max((uint)cmaxaniso.ToInt(), 1U);
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	maxaniso = enf_min(enf_min(maxaniso, (uint)rend->GetCaps().MaxAnisotropy), 15u);
-#endif
 	TiXmlElement* render = xmlnode->FindOrCreateChildElement("render");
 
 	static const float scales[] = {0.4f, 0.7f, 1.0f, 1.5f, 2.0f};
@@ -882,40 +849,11 @@ bool IMaterialSystem::OnChangeSettings(TiXmlElement* xmlnode)
 
 	SetScalar(MV_OBJECT_LOD_SCALE, objectLODScale);
 
-#if defined(ENF_DX9)
-	//prepare Linear 'constants' according capabilities
-	RenderTextureFilterState MinLinear = (rend->GetCaps().TextureFilterCaps & D3DPTFILTERCAPS_MINFLINEAR) ? TEXF_LINEAR : TEXF_POINT;
-	RenderTextureFilterState MagLinear = (rend->GetCaps().TextureFilterCaps & D3DPTFILTERCAPS_MAGFLINEAR) ? TEXF_LINEAR : TEXF_POINT;
-
-	//prepare MipFilter 'constants' according capabilities
-	RenderTextureFilterState MipLinear = (rend->GetCaps().TextureFilterCaps & D3DPTFILTERCAPS_MIPFLINEAR) ?  TEXF_LINEAR : TEXF_POINT;
-
-	RenderTextureFilterState MagAnisotropy, MinAnisotropy;
-	//prepare Anisotropy 'constants' according capabilities
-	if(rend->GetCaps().TextureFilterCaps & D3DPTFILTERCAPS_MAGFANISOTROPIC)
-	{
-		MagAnisotropy = TEXF_ANISOTROPIC;
-	}
-	else
-	{
-		MagAnisotropy = (rend->GetCaps().TextureFilterCaps & D3DPTFILTERCAPS_MAGFLINEAR) ? TEXF_LINEAR : TEXF_POINT;
-	}
-
-	if(rend->GetCaps().TextureFilterCaps & D3DPTFILTERCAPS_MINFANISOTROPIC)
-	{
-		MinAnisotropy = TEXF_ANISOTROPIC;
-	}
-	else
-	{
-		MinAnisotropy = (rend->GetCaps().TextureFilterCaps & D3DPTFILTERCAPS_MINFLINEAR) ? TEXF_LINEAR : TEXF_POINT;
-	}
-#else
 	RenderTextureFilterState MinLinear = TEXF_LINEAR;
 	RenderTextureFilterState MagLinear = TEXF_LINEAR;
 	RenderTextureFilterState MipLinear = TEXF_LINEAR;
 	RenderTextureFilterState MagAnisotropy = TEXF_ANISOTROPIC;
 	RenderTextureFilterState MinAnisotropy = TEXF_ANISOTROPIC;
-#endif
 
 	//fill the filters
 	uint	minFilters[FILTER_MAX_VALUE];
@@ -959,7 +897,7 @@ bool IMaterialSystem::OnChangeSettings(TiXmlElement* xmlnode)
 		mipFilters[FILTER_TERRAIN_NORMALMAP] = MipLinear;
 	}
 
-#if defined(ENF_XENON) || defined(ENF_PS3) 
+#if defined(ENF_PS3)
 	maxAniso[FILTER_DIFFUSEMAP] = 1;
 	maxAniso[FILTER_NORMALMAP] = 4;
 	maxAniso[FILTER_TERRAIN_NORMALMAP] = 2;
@@ -1066,51 +1004,7 @@ Texture* IMaterialSystem::GetCurrentRender()
 
 	if(rt && m_iLastValidRender == -1)
 	{
-#if defined(ENF_XENON) || defined(ENF_DX9)
-		ComPtr<IDirect3DSurface9> ssurf = g_pRender->GetRenderTargetSurface(0);
-
-		D3DVIEWPORT9 vp;
-		g_pRender->GetDXDevice()->GetViewport(&vp);
-
-		RECT rect, trect;
-		D3DSURFACE_DESC desc;
-
-		ssurf->GetDesc(&desc);
-		
-		rect.left = vp.X;
-		rect.top = vp.Y;
-		rect.right = vp.Width + vp.X;
-		rect.bottom = vp.Height + vp.Y;
-
-		trect.left = trect.top = 0;
-		trect.right = rt->GetWidth();
-		trect.bottom = rt->GetHeight();
-
-#ifdef ENF_XENON
-		D3DRECT drect;
-		uint align = D3DRESOLVEALIGNMENT - 1;
-		drect.x1 = rect.left & (~7);
-		drect.x2 = enf_min(((uint)(rect.right + 7) & (~7)), rt->GetWidth());
-		drect.y1 = rect.top & (~7);
-		drect.y2 = enf_min(((uint)(rect.bottom + 7) & (~7)), rt->GetHeight());
-
-		D3DPOINT pt;
-		pt.x = drect.x1;
-		pt.y = drect.y1;
-
-		enf_assert(drect.x2 > drect.x1 && drect.y2 > drect.y1);
-
-		if(drect.x2 > drect.x1 && drect.y2 > drect.y1)
-		{
-			HRESULT hr = g_pRender->GetDXDevice()->Resolve(D3DRESOLVE_RENDERTARGET0|D3DRESOLVE_ALLFRAGMENTS,
-				&drect, rt->GetD3DTexture(), &pt, 0, 0, NULL, 0, 0, NULL);
-		}
-#else
-		ComPtr<IDirect3DSurface9> dsurf = rt->GetSurface(0);
-		HRESULT hr = g_pRender->GetDXDevice()->StretchRect(ssurf, &rect, dsurf, &rect, (D3DTEXTUREFILTERTYPE)TEXF_POINT);
-#endif
-
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 		g_pRender->CheckCommandBuffer(256);
 
 		CellGcmSurface rend = g_pRender->GetCurrentSurface();

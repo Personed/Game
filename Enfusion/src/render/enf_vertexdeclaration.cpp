@@ -19,9 +19,6 @@ namespace enf
 void VertexDeclaration::Begin()
 {
 	Declaration[0].Stream = DECL_END;
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	m_pDeclaration = NULL;
-#endif
 	HashCode = 0;
 	Stride[0] = Stride[1] = Stride[2] = Stride[3] = 0;
 
@@ -37,20 +34,7 @@ void VertexDeclaration::Begin()
 //-----------------------------------------------------------------------
 void Renderer::SetVertexDeclaration(IVertexDeclaration pdecl)
 {
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	if(pdecl == NULL)
-	{
-		m_pd3dDevice->SetVertexDeclaration(NULL);
-		return;
-	}
-
-	uint index = static_cast<uint>(reinterpret_cast<uint64>(pdecl)) - 1;
-	enf_assert(index < m_pVertexDeclarations.GetCardinality());
-
-	const VertexDeclaration& decl = *m_pVertexDeclarations[index];
-
-	m_pd3dDevice->SetVertexDeclaration(decl.m_pDeclaration);
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	if(m_iVertexDeclaration != (uint)pdecl)
 	{
 		m_iCommitMask |= GCMCM_VERTEXDECLARATION;
@@ -120,132 +104,7 @@ IVertexDeclaration IRenderer::CreateVertexDeclaration(const VertexDeclaration& d
 
 	VertexDeclaration* newdecl = NULL;
 
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	IDirect3DVertexDeclaration9* pdecl;
-	D3DVERTEXELEMENT9 elems[256];
-	uint numelems = 0;
-
-	for(uint n = 0; n < VertexDeclaration::MAX_DECLARATION; n++)
-	{
-		const VertexDeclaration::VertexElement& elem = decl.Declaration[n];
-
-		elems[numelems].Stream = elem.Stream;
-
-		if(END_ELEMENT(elem))
-		{
-			elems[numelems].Stream = 0xFF;
-			elems[numelems].Offset = 0;
-			elems[numelems].Type = D3DDECLTYPE_UNUSED;
-			elems[numelems].Method = 0;
-			elems[numelems].Usage = 0;
-			elems[numelems].UsageIndex = 0;
-			break;
-		}
-
-		elems[numelems].Offset = elem.Offset;
-		elems[numelems].Method = D3DDECLMETHOD_DEFAULT;
-		elems[numelems].UsageIndex = elem.UsageIndex;
-
-		switch(elem.Usage)
-		{
-		case VSDU_POSITION:
-			elems[numelems].Usage = D3DDECLUSAGE_POSITION;
-			break;
-		case VSDU_NORMAL:
-			elems[numelems].Usage = D3DDECLUSAGE_NORMAL;
-			break;
-		case VSDU_TANGENT:
-			elems[numelems].Usage = D3DDECLUSAGE_TANGENT;
-			break;
-		case VSDU_BINORMAL:
-			elems[numelems].Usage = D3DDECLUSAGE_BINORMAL;
-			break;
-		case VSDU_COLOR:
-			elems[numelems].Usage = D3DDECLUSAGE_COLOR;
-			break;
-		case VSDU_TEXCOORD:
-			elems[numelems].Usage = D3DDECLUSAGE_TEXCOORD;
-			break;
-		case VSDU_WEIGHTS:
-			elems[numelems].Usage = D3DDECLUSAGE_BLENDWEIGHT;
-			break;
-		case VSDU_INDICES:
-			elems[numelems].Usage = D3DDECLUSAGE_BLENDINDICES;
-			break;
-		case VSDU_PSIZE:
-			elems[numelems].Usage = D3DDECLUSAGE_PSIZE;
-			break;
-		}
-
-		switch(elem.Type)
-		{
-		case VSDT_FLOAT1:
-			elems[numelems].Type = D3DDECLTYPE_FLOAT1;
-			break;
-		case VSDT_FLOAT2:
-			elems[numelems].Type = D3DDECLTYPE_FLOAT2;
-			break;
-		case VSDT_FLOAT3:
-			elems[numelems].Type = D3DDECLTYPE_FLOAT3;
-			break;
-		case VSDT_FLOAT4:
-			elems[numelems].Type = D3DDECLTYPE_FLOAT4;
-			break;
-		case VSDT_COLOR:
-			elems[numelems].Type = D3DDECLTYPE_D3DCOLOR;
-			break;
-		case VSDT_UBYTE4:
-			elems[numelems].Type = D3DDECLTYPE_UBYTE4;
-			break;
-		case VSDT_SHORT2:
-			elems[numelems].Type = D3DDECLTYPE_SHORT2;
-			break;
-		case VSDT_SHORT4:
-			elems[numelems].Type = D3DDECLTYPE_SHORT4;
-			break;
-		case VSDT_UBYTE4N:
-			elems[numelems].Type = D3DDECLTYPE_UBYTE4N;
-			break;
-		case VSDT_SHORT2N:
-			elems[numelems].Type = D3DDECLTYPE_SHORT2N;
-			break;
-		case VSDT_SHORT4N:
-			elems[numelems].Type = D3DDECLTYPE_SHORT4N;
-			break;
-		case VSDT_USHORT2N:
-			elems[numelems].Type = D3DDECLTYPE_USHORT2N;
-			break;
-		case VSDT_USHORT4N:
-			elems[numelems].Type = D3DDECLTYPE_USHORT4N;
-			break;
-		case VSDT_UDEC3:
-			elems[numelems].Type = D3DDECLTYPE_UDEC3;
-			break;
-		case VSDT_DEC3N:
-			elems[numelems].Type = D3DDECLTYPE_DEC3N;
-			break;
-		case VSDT_FLOAT16_2:
-			elems[numelems].Type = D3DDECLTYPE_FLOAT16_2;
-			break;
-		case VSDT_FLOAT16_4:
-			elems[numelems].Type = D3DDECLTYPE_FLOAT16_4;
-			break;
-		}
-		numelems++;
-	}
-	if(m_pd3dDevice->CreateVertexDeclaration(elems, &pdecl) != D3D_OK)
-		return NULL;
-
-	newdecl = ENF_NEW VertexDeclaration();
-
-	//copy declaration
-	*newdecl = decl;
-	newdecl->m_pDeclaration = pdecl;
-
-	m_pVertexDeclarations.Insert(newdecl);
-
-	return reinterpret_cast<IVertexDeclaration>(static_cast<uint64>(m_pVertexDeclarations.GetCardinality()));
-#elif defined(ENF_PS3)
+#if defined(ENF_PS3)
 	newdecl = ENF_NEW VertexDeclaration();
 
 	//copy declaration
@@ -483,9 +342,6 @@ VertexDeclaration::VertexDeclaration()
 //-----------------------------------------------------------------------
 VertexDeclaration::~VertexDeclaration()
 {
-#if defined(ENF_DX9) || defined(ENF_XENON)
-	SAFE_RELEASE(m_pDeclaration);
-#endif
 }
 
 //-----------------------------------------------------------------------

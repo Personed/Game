@@ -42,16 +42,8 @@ void VCache::Advance()
 	m_pIB[m_iActive]->Reset();
 
 	//it's worthless on xbox
-	#ifdef ENF_DX9
-		m_pIB[m_iActive]->Lock(0, 0, RES_LOCK_DISCARD);
-		m_pIB[m_iActive]->Unlock();
-	#endif
 
 	m_pVB[m_iActive]->Reset();
-	#ifdef ENF_DX9
-		m_pVB[m_iActive]->Lock(0, 0, RES_LOCK_DISCARD);
-		m_pVB[m_iActive]->Unlock();
-	#endif
 }
 
 //-----------------------------------------------------------------------------

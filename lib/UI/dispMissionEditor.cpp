@@ -9587,7 +9587,7 @@ GameValue MapSetEditorObjectScope(const GameState *state, GameValuePar oper1, Ga
           GameVarSpace local(state->GetContext(), false);        
           int edhandle = state->BeginContext(&local);
           int lochandle = state->BeginContext(map->GetVariables());
-          GameValue result = state->Evaluate(RString(allObjs->Get(i).operator GameStringType()), GameState::EvalContext::_default, GWorld->GetMissionNamespace()); // mission namespace
+          GameValue result = state->Evaluate(RString(allObjs->Get(i)), GameState::EvalContext::_default, GWorld->GetMissionNamespace()); // mission namespace
           state->EndContext(lochandle);
           state->VarSetLocal("_x", result, true);
           if (!state->EvaluateBool(condition, GameState::EvalContext::_default, GWorld->GetMissionNamespace())) // mission namespace

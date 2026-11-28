@@ -100,7 +100,7 @@ void Camera::Adjust( Engine *engine )
 
   // while we are actually rendering into a engine->Width(), engine->Height() window,
   // the vertices will be transformed back into -1-+1 window anyway
-  // the transformation is done using WidthBB / WidthHH (see EngineDD9::AddVertices)
+  // the transformation is done using WidthBB / WidthHH (see the renderer's AddVertices)
   
   // TODO: use -1 ... +1 for addressing
   

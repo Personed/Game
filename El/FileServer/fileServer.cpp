@@ -4459,7 +4459,7 @@ void FileServerST::UpdateByThread(int threadName)
   ProcessHandlers(threadName);
   if (threadName==0)
   { // main thread processing
-    // caution: destroying texture may take TextBankD3D9._textureMemoryCS
+    // caution: destroying a texture may take the texture-memory critical section
     // if another thread already holds the CS, deadlock might be possible
    FileServerRefToDestroyMainThread.ForEach(DestroyRef());
   }

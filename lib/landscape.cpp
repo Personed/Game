@@ -5936,16 +5936,8 @@ void Landscape::PrimeDepthBuffer(GridRectangle &groundPrimed, Scene &scene, Scen
   // Calculate the land grid rectangle in a near distance
   GridRectangle rectGroundDepth;
   GetGridRectangleAligned(rectGroundDepth, scene, distanceLimit, GetLandGrid(), _segCache->_landSegmentSize, _segCache->_landSegmentAlign);
-
-  // the region counts as primed only when this pass actually writes the main
-  // depth buffer - the z-only pass, or any priming pass when FSAA is off
-  // (shared depth buffer); with FSAA on, the SSSM depth-map pass renders into
-  // a separate target and must leave the caller's rect explicitly empty,
-  // since a default-constructed GridRectangle has undefined bounds
-  if (zOnly || GEngine->GetFSAA() == 0)
-    groundPrimed = rectGroundDepth;
-  else
-    groundPrimed = GridRectangle(0, 0, 0, 0);
+  
+  groundPrimed = rectGroundDepth;
 
   // set default depth range for normal rendering
   GEngine->SetDepthRange(DepthBorderCommonMin,DepthBorderCommonMax);
@@ -6008,10 +6000,6 @@ void Landscape::PrimeDepthBuffer(GridRectangle &groundPrimed, Scene &scene, Scen
     GEngine->SetZPrimingDone(-1,false);
     // End depth rendering
     GEngine->EndDepthMapRendering(zOnly);
-    // Main depth buffer is primed only by the z-only pass (or by the shared
-    // depth buffer when FSAA is off). The main scene pass uses ZFUNC EQUAL
-    // and skips alpha test only when this is true.
-    GEngine->SetMainDepthPrimed(zOnly || GEngine->GetFSAA()==0);
 
     //GEngine->RenderStencilShadows();
   }
@@ -6140,7 +6128,7 @@ void Landscape::DrawRect(
 #endif
 
   // Rendering of SB - the final place to work on XBOX should be somewhere else (see the label), but expect asserts or float traps
-  // of uninitialized variables when moving there (because EngineDD9::InitDraw was not called before)
+  // of uninitialized variables when moving there (because the render engine's InitDraw was not called before)
   // Last observation: I tried to move it there and all seem to be working (maybe the formed problems expired)
   // Label: PLACEFORSBRENDERING
   //DrawRectShadowBuffer(drawContext, scene);
@@ -11074,14 +11062,6 @@ void Landscape::Init(ParamEntryPar cls)
   // clutters
   _clutterGrid = cls >> "clutterGrid";
   _clutterDist = cls >> "clutterDist";
-  // GFX PATCH: draw ground clutter (grass/bushes) much farther than the retail
-  // world config asks for. Retail ChernarusPlus values draw grass only ~100-200 m
-  // away; the video reference shows grass up to the horizon.
-  // Effective distance = _clutterDist * 3.5355f / sqrt(terrainGrid), so with
-  // terrainGrid=8 this multiplies the visible grass radius by this factor.
-  _clutterDist *= 3.0f;
-  LogF("GFX-CLUTTER: clutterGrid=%.1f clutterDist=%.1f terrainGrid=%.1f eff=%.1f",
-    (float)_clutterGrid, (float)_clutterDist, GetTerrainGrid(), EffectiveClutterDist(GetTerrainGrid()));
 
   _noDetailDist = cls >> "noDetailDist";
   _fullDetailDist = cls >> "fullDetailDist";

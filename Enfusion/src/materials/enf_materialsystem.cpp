@@ -159,22 +159,13 @@ void MaterialSystem::DrawIndexedInstancedMesh(const IMesh* mesh, uint numInstanc
 {
 	if(ENF_DIAG_RBOOL(DM_REND_NORENDER))
 	{
-#ifdef ENF_XENON
+#if defined(ENF_XENON)
 		g_pRender->DrawIndexedPrimitive((PrimitiveType)mesh->m_Type,
 			mesh->m_iFirstVertex,
 			0,
 			0,
 			mesh->m_iFirstIndex,
 			mesh->m_iPrimitiveCount * numInstances);
-#elif defined(ENF_DX9)
-		g_pRender->SetStreamSourceFreqOp(0, SFO_MODULO, numInstances);
-
-		g_pRender->DrawIndexedPrimitive((PrimitiveType)mesh->m_Type,
-			mesh->m_iFirstVertex,
-			0,
-			mesh->m_iNumVertices,
-			mesh->m_iFirstIndex,
-			mesh->m_iPrimitiveCount);
 #elif defined(ENF_PS3)
 		g_pRender->SetStreamSourceFreqOp(0, SFO_MODULO, mesh->m_iNumVertices);
 		g_pRender->SetStreamSourceFreqOp(1, SFO_DIVIDE, mesh->m_iNumVertices);
@@ -199,11 +190,8 @@ void MaterialSystem::DrawInstancedMesh(const IMesh* mesh, uint numInstances, boo
 	if(ENF_DIAG_RBOOL(DM_REND_NORENDER))
 	{
 		enf_assert(mesh->m_pIB == NULL);
-#ifdef ENF_XENON
+#if defined(ENF_XENON)
 		g_pRender->DrawPrimitive((PrimitiveType)mesh->m_Type, mesh->m_iFirstVertex, mesh->m_iPrimitiveCount * numInstances);
-#elif defined(ENF_DX9)
-		g_pRender->SetStreamSourceFreqOp(0, SFO_MODULO, numInstances);
-		g_pRender->DrawPrimitive((PrimitiveType)mesh->m_Type, mesh->m_iFirstVertex, mesh->m_iPrimitiveCount);
 #elif defined(ENF_PS3)
 		g_pRender->SetStreamSourceFreqOp(0, SFO_MODULO, mesh->m_iNumVertices);
 		g_pRender->SetStreamSourceFreqOp(1, SFO_DIVIDE, mesh->m_iNumVertices);

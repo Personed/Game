@@ -2664,6 +2664,27 @@ void InGameUI::ProcessActions(AIBrain *unit)
           _actions.Refresh(true);
       }
     }
+    // SourceDayZ: the Gear key (TAB by default) must also open the vehicle
+    // cargo while seated inside a vehicle. In MP the server does not send
+    // the vehicle's Gear action when the vehicle is owned by the client
+    // (ResourceSupply::GetActions skips non-local vehicles), so the action
+    // list has no ATGear and the shortcut loop below would do nothing.
+    {
+      Transport *vehIn = unit->GetVehicleIn();
+      if (vehIn && !GWorld->UserDialog() && vehIn->GetSupply() &&
+          !vehIn->IsDamageDestroyed() && GInput.GetActionToDo(UAGear))
+      {
+        Display *CreateInventoryDialog(ControlsContainer *parent, AIBrain *me, EntityAI *source);
+        Display *dlg = CreateInventoryDialog(NULL, unit, vehIn);
+        if (dlg && GWorld->SetUserDialog(dlg))
+        {
+          extern bool GUAGearActive;
+          GUAGearActive = false;
+          RptF("SDZ gear key in vehicle: %s", cc_cast(vehIn->GetType() ? vehIn->GetType()->GetName() : "?"));
+        }
+      }
+    }
+
     // shortcuts
     for (int i=0; i<_actions.Size(); i++)
     {
@@ -2794,6 +2815,17 @@ void InGameUI::ProcessActions(AIBrain *unit)
         const UIAction &action = _targetActions.Get(i);
         if (!action.action) continue;
         Object *target = action.action->GetTarget();
+
+        // SourceDayZ: allow Gear on the focused vehicle even when the addon
+        // config has no supply memory point (the accessibility check would use
+        // the hull center and reject the action).
+        if (action.action->GetType() == ATGear && target == _cursorObject &&
+            person && person->FutureVisualState().Position().DistanceXZ2(_cursorObjectPos) < Square(5.0f))
+        {
+          actions.Add(action);
+          continue;
+        }
+
         if (target)
         {
           Object::ProtectedVisualState<const ObjectVisualState> vsTarget = target->FutureVisualStateScope();
@@ -2931,11 +2963,6 @@ void DisplayUnitInfo::InitControls()
   ammoMode = NULL;
   counterMeasuresAmmo = NULL;
   counterMeasuresMode = NULL;
-  statusThirst = NULL;
-  statusHunger = NULL;
-  statusTemperature = NULL;
-  statusBlood = NULL;
-  statusHealth = NULL;
 
 #if _HELISIM_ROTORLIB
   airSpeedIndicator = NULL;

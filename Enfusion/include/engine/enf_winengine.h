@@ -52,10 +52,6 @@ public:
 	int Create(uint adapter, uint width, uint height, bool windowed);
 	int UpdateFrame(bool inscene);
 	
-	virtual void CloseVideo();
-	virtual uint OpenVideo(IDirect3DSurface9* surface, const char* filename, const char* codec, uint flags, float framerate);
-	virtual uint OpenVideo(IDirect3DSurface9* surface, const char* filename);
-	virtual void AppendVideoFrame(double currenttime);
 	void Input(uint flags);
 
 	uint MsgProc( void* hWnd, uint uMsg, uint wParam, uint lParam );

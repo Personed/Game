@@ -15,6 +15,7 @@ Ground clutter handling
 #include <El/Common/perfProf.hpp>
 #include <El/PerlinNoise/perlinNoise.hpp>
 #include <Es/Types/scopeLock.hpp>
+#include <Es/Threads/multisync.hpp>
 #include <El/Multicore/jobs.hpp>
 #include "fileLocator.hpp"
 #include "gridEventLogger.hpp"
@@ -574,6 +575,9 @@ Alpha could be then used to simulate clutter density. This would be probably fas
 */
 class GroundClutterPosMap: public RefCount, public LinkBidirWithFrameStore, public CountInstances<GroundClutterPosMap>
 {
+  // Calculate() and the memory pressure callback can run on different worker
+  // threads. Protect the lazily generated arrays from concurrent Unload().
+  mutable CriticalSection _dataLock;
   mutable InitVal<bool> _loaded;
   
   mutable Array2D<PosPair> _pos;
@@ -582,6 +586,8 @@ class GroundClutterPosMap: public RefCount, public LinkBidirWithFrameStore, publ
   int _x,_z;
   int _layer;
   SurfaceCharacter _surf;
+
+  void GenerateLocked() const;
   
   public:
   GroundClutterPosMap(int x, int z, int layer, RandomGenerator &randGen, const SurfaceCharacter &surf);
@@ -591,13 +597,13 @@ class GroundClutterPosMap: public RefCount, public LinkBidirWithFrameStore, publ
 
   void Unload() const
   {
+    ScopeLockSection lock(_dataLock);
     _loaded=false;
     _pos.Clear();
     _isHere.Clear();
   }
   
-  int IsHere(int x, int z) const {Assert(_loaded);return _isHere(x,z);}
-  const PosPair &GetPos(int x, int z) const {Assert(_loaded);return _pos(x,z);}
+  bool GetCellData(int x, int z, PosPair &pos, int &isHere) const;
   int GetXRange() const {return _x;}
   int GetZRange() const {return _z;}
   
@@ -1692,6 +1698,12 @@ GroundClutterPosMap::GroundClutterPosMap(
 
 void GroundClutterPosMap::Generate() const
 {
+  ScopeLockSection lock(_dataLock);
+  GenerateLocked();
+}
+
+void GroundClutterPosMap::GenerateLocked() const
+{
   if (_loaded) return;
   
   PROFILE_SCOPE_EX(grGen,*);
@@ -1700,7 +1712,7 @@ void GroundClutterPosMap::Generate() const
   int layer = _layer;
   RandomGenerator &randGen = GLandscape->GetRandGen();
   const SurfaceCharacter &surf = _surf;
-  
+
   _pos.Dim(x,z);
   _isHere.Dim(x,z);
   
@@ -1732,6 +1744,20 @@ void GroundClutterPosMap::Generate() const
 
   }
   _loaded=true;
+}
+
+bool GroundClutterPosMap::GetCellData(int x, int z, PosPair &pos,
+  int &isHere) const
+{
+  ScopeLockSection lock(_dataLock);
+  GenerateLocked();
+  if (x < 0 || x >= _pos.GetXRange() || z < 0 ||
+      z >= _pos.GetYRange() || x >= _isHere.GetXRange() ||
+      z >= _isHere.GetYRange())
+    return false;
+  pos = _pos.Get(x, z);
+  isHere = _isHere.GetValue(x, z);
+  return true;
 }
 
 /// texture source 
@@ -1784,7 +1810,6 @@ GroundClutterTextureSource::GroundClutterTextureSource(GroundClutterPosMap *posM
 :base(PacARGB8888,size.w,size.h,size.mipmaps),
 _posMap(posMap)
 {
-
 }
 
 static float ClutterHeightIgnored = 0.10f;
@@ -1833,12 +1858,14 @@ bool GroundClutterTextureSource::GetMipmapData(void *mem, const PacLevelMem &mip
         // perform looped access as needed, + is needed to avoid mod of negative number
         int zWrap = (zz+zRange)%zRange;
         int xWrap = (xx+xRange)%xRange;
-        int isHere = _posMap->IsHere(xWrap,zWrap);
+        PosPair cellPos;
+        int isHere;
+        if (!_posMap->GetCellData(xWrap,zWrap,cellPos,isHere)) continue;
         if (isHere<0) continue;
         if (CheckClutterIgnored(GLandscape,isHere)) continue;
         // check center position
-        float xGrid = xWrap + _posMap->GetPos(xWrap,zWrap).x;
-        float zGrid = zWrap + _posMap->GetPos(xWrap,zWrap).z;
+        float xGrid = xWrap + cellPos.x;
+        float zGrid = zWrap + cellPos.z;
         
 
         // compute x and z distance considering wrapping
@@ -1881,6 +1908,7 @@ bool GroundClutterTextureSource::GetMipmapData(void *mem, const PacLevelMem &mip
 class GroundClutterPosMapWithTex: public GroundClutterPosMap
 {
   Ref<Texture> _tex;
+  bool _used;
 
   typedef GroundClutterPosMap base;
 
@@ -1890,6 +1918,8 @@ class GroundClutterPosMapWithTex: public GroundClutterPosMap
   );
   ~GroundClutterPosMapWithTex(){}
 
+  void InitTexture();
+
   Texture *GetTexture() const {return _tex;}
   void Destroy() {_tex.Free();}
 };
@@ -1898,10 +1928,19 @@ GroundClutterPosMapWithTex::GroundClutterPosMapWithTex(
   int x, int z, int layer, RandomGenerator &randGen, const SurfaceCharacter &surf, bool used
 )
 :base(x,z,layer,randGen,surf)
+,_used(used)
 {
-  // GlobLoadTexture will take ownership over src
-  if (used)
+  // Do not create a texture source here. This object has RefCount zero until
+  // the caller stores the returned pointer in GroundClutterPosMaps::_maps.
+  // The source owns a Ref back to this map, so constructing it here can
+  // release and destroy the map before its constructor's caller gets it.
+}
+
+void GroundClutterPosMapWithTex::InitTexture()
+{
+  if (_used && !_tex)
   {
+    // The caller must first hold this object in a Ref.
     ITextureSource *src = new GroundClutterTextureSource(this,TextureSizeFromPosMap(this));
     _tex = GlobLoadTexture(src);
   }
@@ -2518,8 +2557,11 @@ bool GroundClutterCache::Calculate(
         posMap->Generate();
         _posMap.AddOrRefresh(posMap);
         
-        float xIn = xxx*clutterStep + posMap->GetPos(xxx,zzz).x*clutterStep - (xx-xxBeg)*terrainGrid;
-        float zIn = zzz*clutterStep + posMap->GetPos(xxx,zzz).z*clutterStep - (zz-zzBeg)*terrainGrid;
+        PosPair cellPos;
+        int isHere;
+        if (!posMap->GetCellData(xxx,zzz,cellPos,isHere)) continue;
+        float xIn = xxx*clutterStep + cellPos.x*clutterStep - (xx-xxBeg)*terrainGrid;
+        float zIn = zzz*clutterStep + cellPos.z*clutterStep - (zz-zzBeg)*terrainGrid;
         //float xIn = xxx*clutterStep - (xx-xxBeg)*terrainGrid;
         //float zIn = zzz*clutterStep - (zz-zzBeg)*terrainGrid;
         //Log("pos %.2f,%.2f, xxx=%d,zzz=%d, in %.2f,%.2f",pos.X(),pos.Z(),xxx,zzz,xIn,zIn);
@@ -2532,7 +2574,6 @@ bool GroundClutterCache::Calculate(
 
         // clutter presence pattern is defined by the position map
 //         int isHere = 0;
-        int isHere = posMap->IsHere(xxx,zzz);
         if (isHere<0) continue;
 
         const Clutter &clutter = land->_clutter[isHere];
@@ -4669,6 +4710,7 @@ void Landscape::BuildClutterMapping()
       // color of the detail texture needs to be stored in the custom data of the detail texture
       // detail texture also contains the SurfaceInfo
       maps->_maps[p] = ::BuildClutterPosMap(this,mat,p);
+      if (maps->_maps[p]) maps->_maps[p]->InitTexture();
 //       if (maps->_maps[p])
 //       {
 //         builtPasses++;
@@ -4939,14 +4981,9 @@ void Landscape::InitClutter(ParamEntryPar cls)
     ci._scaleMin = item >> "scaleMin";
     ci._scaleMax = item >> "scaleMax";
     // depending on size the clutter (20-100 cm) should disappearing farther from camera
-    // GFX PATCH: retail fades grass out at 20-50 m (short) / 100-400 m (tall).
-    // Scale both fade distances so grass/bushes are visible much farther away.
-    const float clutterDistScale = 3.0f;
-    ci._startDisappearDist = Interpolativ(shapeHeight,0.20f,1.00f,20.0f,100.0f) * clutterDistScale;
-    ci._endDisappearDist   = Interpolativ(shapeHeight,0.20f,1.00f,50.0f,400.0f) * clutterDistScale;
-
-    LogF("GFX-CLUTTER: shape=%.2f start=%.1f end=%.1f", shapeHeight, ci._startDisappearDist, ci._endDisappearDist);
-
+    ci._startDisappearDist = Interpolativ(shapeHeight,0.20f,1.00f,20.0f,100.0f);
+    ci._endDisappearDist   = Interpolativ(shapeHeight,0.20f,1.00f,50.0f,400.0f);
+    
     _endDisappearDistGMax = floatMax(ci._endDisappearDist, _endDisappearDistGMax);
     _startDisappearDistGMin = floatMin(ci._startDisappearDist, _startDisappearDistGMin);
 

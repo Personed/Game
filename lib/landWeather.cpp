@@ -1776,9 +1776,8 @@ void Landscape::ApplyWeatherMsg(ApplyWeatherMessage &msg)
   //set overall weather
   GWorld->SetNextWeatherChange(msg._nextWeatherChange);
 
-  // [F10] Sincroniza data/hora no cliente junto com o clima.
-  // Sem isto o cliente ignora o horario vindo do servidor e fica na data padrao (2008-10-11 09:20).
-  GWorld->SetDate(msg._year,msg._month,msg._day,msg._hour,msg._minute);
+  // Set the date to the new weather format
+  //GWorld->SetDate(msg._year,msg._month,msg._day,msg._hour,msg._minute);
 }
 
 // Updates all remote clients on request of weather settings
@@ -1958,7 +1957,7 @@ bool Landscape::GetLightingNew(LandLighting::LightingResult& result, float heigh
 
   if (_weather->_overrideNew.GetCosSun()>0)
   {
-    result.InitFrom(_weather->_overrideNew, cloud, cosSun);
+    result.InitFrom(_weather->_overrideNew, cloud);
     return true;
   }
   return _weather->_config.GetLightingNew(result, height, overcast, cosSun, cloud);

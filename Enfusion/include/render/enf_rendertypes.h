@@ -15,17 +15,6 @@
 #include "Render/enf_renderenums.h"
 
 //D3D types forward declaration
-#if defined(ENF_DX9)
-	struct IDirect3DQuery9;
-	struct IDirect3DIndexBuffer9;
-	struct IDirect3DVertexBuffer9;
-	struct IDirect3DSwapChain9;
-	struct IDirect3DSurface9;
-	struct IDirect3DTexture9;
-	struct IDirect3DCubeTexture9;
-	struct IDirect3DDevice9;
-	struct IDirect3DVertexDeclaration;
-#endif
 
 namespace enf
 {
@@ -43,12 +32,6 @@ class IndexBuffer;
 class VertexBuffer;
 typedef void* IVertexDeclaration;
 
-#if defined(ENF_DX9)
-	typedef IDirect3DSurface9	_D3DSurface;
-	typedef IDirect3DTexture9	_D3DTexture;
-	typedef IDirect3DCubeTexture9	_D3DCubeTexture;
-	typedef IDirect3DDevice9	_Direct3DDevice;
-#endif
 
 typedef uint SamplerFilterStateHandle;
 typedef uint SamplerAddressStateHandle;

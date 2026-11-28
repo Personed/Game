@@ -367,12 +367,6 @@
     <Filter Include="Essence\ReportStack">
       <UniqueIdentifier>{bc4c81ed-ce43-46ec-a2a8-bc30ad508df2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="D3D9">
-      <UniqueIdentifier>{583b481a-a6a6-4e43-b987-c8fac8e726b1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="D3D9\ShaderSources_3_0">
-      <UniqueIdentifier>{44cf8340-72c7-41fd-9a14-7a39a2d10a35}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Tools">
       <UniqueIdentifier>{7a6147e3-4fa1-4e59-8bdc-d2621c610726}</UniqueIdentifier>
       <SourceControlFiles>False</SourceControlFiles>
@@ -415,9 +409,6 @@
     </Filter>
     <Filter Include="Library\Landscape\SimulWeather">
       <UniqueIdentifier>{30df6d32-1f94-47b7-8b07-fe1c7abc7be7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="D3D9\ShaderSources_3_0\PPAA">
-      <UniqueIdentifier>{ec64b1ef-0933-4ccd-bd01-98d8c3e7530b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Library\Java">
       <UniqueIdentifier>{be04c603-d3a1-46f5-b474-21c0100ef0fb}</UniqueIdentifier>
@@ -2212,21 +2203,6 @@
     <ClInclude Include="..\Es\reportStack\reportStack.hpp">
       <Filter>Essence\ReportStack</Filter>
     </ClInclude>
-    <ClInclude Include="d3d9\d3d9Defs.hpp">
-      <Filter>D3D9</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\engdd9.hpp">
-      <Filter>D3D9</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\postProcess.hpp">
-      <Filter>D3D9</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\ShaderCompileCache.h">
-      <Filter>D3D9</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\txtd3d9.hpp">
-      <Filter>D3D9</Filter>
-    </ClInclude>
     <ClInclude Include="..\RV\KBBase\kbCenter.hpp">
       <Filter>RV\KBBase</Filter>
     </ClInclude>
@@ -2259,28 +2235,10 @@
     <ClInclude Include="SimulWeather\SimulWeatherIncludes.hpp">
       <Filter>Library\Landscape\SimulWeather</Filter>
     </ClInclude>
-    <ClInclude Include="SimulWeather\SimulWeatherDX9.hpp">
-      <Filter>Library\Landscape\SimulWeather</Filter>
-    </ClInclude>
     <ClInclude Include="SimulWeather\SimulWeatherBase.hpp">
       <Filter>Library\Landscape\SimulWeather</Filter>
     </ClInclude>
-    <ClInclude Include="SimulWeather\SimulSkyRendererDX9.hpp">
-      <Filter>Library\Landscape\SimulWeather</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\ShaderSources_3_0\Fxaa3_11.h">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\ShaderSources_3_0\FxaaShader.h">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </ClInclude>
     <ClInclude Include="SimulWeather\SimulSkyRendererBase.hpp">
-      <Filter>Library\Landscape\SimulWeather</Filter>
-    </ClInclude>
-    <ClInclude Include="SimulWeather\SimulCommonDX9.hpp">
-      <Filter>Library\Landscape\SimulWeather</Filter>
-    </ClInclude>
-    <ClInclude Include="SimulWeather\SimulCloudRendererDX9.hpp">
       <Filter>Library\Landscape\SimulWeather</Filter>
     </ClInclude>
     <ClInclude Include="SimulWeather\SimulCloudRendererBase.hpp">
@@ -2291,15 +2249,6 @@
     </ClInclude>
     <ClInclude Include="landLighting.hpp">
       <Filter>Library\Landscape</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\ShaderSources_3_0\PPAA\AreaTex.h">
-      <Filter>D3D9\ShaderSources_3_0\PPAA</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\ShaderSources_3_0\PPAA\SearchTex.h">
-      <Filter>D3D9\ShaderSources_3_0\PPAA</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\ShaderSources_3_0\PPAA\SMAA.h">
-      <Filter>D3D9\ShaderSources_3_0\PPAA</Filter>
     </ClInclude>
     <ClInclude Include="jvmUI.hpp">
       <Filter>Library\Java</Filter>
@@ -2931,9 +2880,6 @@
     </ClInclude>
     <ClInclude Include="..\Enfusion\include\resource\enf_imageloader.h">
       <Filter>Enfusion\Resource</Filter>
-    </ClInclude>
-    <ClInclude Include="d3d9\d3d9Buffers.hpp">
-      <Filter>D3D9</Filter>
     </ClInclude>
     <ClInclude Include="WorldRes\WorldSpawn.h">
       <Filter>Library\WorldRes</Filter>
@@ -4212,21 +4158,6 @@
     <ClCompile Include="..\Es\reportStack\reportStack.cpp">
       <Filter>Essence\ReportStack</Filter>
     </ClCompile>
-    <ClCompile Include="d3d9\engdd9.cpp">
-      <Filter>D3D9</Filter>
-    </ClCompile>
-    <ClCompile Include="d3d9\engdd9Video.cpp">
-      <Filter>D3D9</Filter>
-    </ClCompile>
-    <ClCompile Include="d3d9\postProcess.cpp">
-      <Filter>D3D9</Filter>
-    </ClCompile>
-    <ClCompile Include="d3d9\ShaderCompileCache.cpp">
-      <Filter>D3D9</Filter>
-    </ClCompile>
-    <ClCompile Include="d3d9\txtD3D9.cpp">
-      <Filter>D3D9</Filter>
-    </ClCompile>
     <ClCompile Include="..\RV\KBBase\kbCenter.cpp">
       <Filter>RV\KBBase</Filter>
     </ClCompile>
@@ -4256,22 +4187,10 @@
     <ClCompile Include="SimulWeather\SimulWeatherMemAlloc.cpp">
       <Filter>Library\Landscape\SimulWeather</Filter>
     </ClCompile>
-    <ClCompile Include="SimulWeather\SimulWeatherDX9.cpp">
-      <Filter>Library\Landscape\SimulWeather</Filter>
-    </ClCompile>
     <ClCompile Include="SimulWeather\SimulWeatherBase.cpp">
       <Filter>Library\Landscape\SimulWeather</Filter>
     </ClCompile>
-    <ClCompile Include="SimulWeather\SimulSkyRendererDX9.cpp">
-      <Filter>Library\Landscape\SimulWeather</Filter>
-    </ClCompile>
     <ClCompile Include="SimulWeather\SimulSkyRendererBase.cpp">
-      <Filter>Library\Landscape\SimulWeather</Filter>
-    </ClCompile>
-    <ClCompile Include="SimulWeather\SimulCommonDX9.cpp">
-      <Filter>Library\Landscape\SimulWeather</Filter>
-    </ClCompile>
-    <ClCompile Include="SimulWeather\SimulCloudRendererDX9.cpp">
       <Filter>Library\Landscape\SimulWeather</Filter>
     </ClCompile>
     <ClCompile Include="SimulWeather\SimulCloudRendererBase.cpp">
@@ -4808,9 +4727,6 @@
     <ClCompile Include="..\Enfusion\src\resource\enf_imageloader.cpp">
       <Filter>Enfusion\Resource</Filter>
     </ClCompile>
-    <ClCompile Include="d3d9\d3d9Buffers.cpp">
-      <Filter>D3D9</Filter>
-    </ClCompile>
     <ClCompile Include="WorldRes\WorldSpawn.cpp">
       <Filter>Library\WorldRes</Filter>
     </ClCompile>
@@ -4966,66 +4882,6 @@
     </CustomBuildStep>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\common.h">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\FPShaders.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\shadersources_3_0\PS.h">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\PS.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\shadersources_3_0\PSBasic.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\shadersources_3_0\PSBasicSSSM.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\shadersources_3_0\PSSR_Default.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\shadersources_3_0\PSSR_nVidia.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\shadersources_3_0\PSThermal.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\psvs.h">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VS.h">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VS.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSCalmWater.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\shadersources_3_0\VSPoint.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSShadowVolume.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSShore.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSSprite.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSTerrain.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSTerrainGrass.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
-    <CustomBuild Include="d3d9\ShaderSources_3_0\VSWater.hlsl">
-      <Filter>D3D9\ShaderSources_3_0</Filter>
-    </CustomBuild>
     <CustomBuild Include="version.txt">
       <Filter>Version</Filter>
     </CustomBuild>

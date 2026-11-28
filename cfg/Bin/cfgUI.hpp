@@ -2195,20 +2195,23 @@ class CfgDefaultKeysPresets
       stand[] = {DIK_C};
       crouch[] = {DIK_X};
       prone[] = {DIK_Z};
-      toggleWeapons[] = {DIK_F};
+      toggleWeapons[] = {DIK_T};
       fire[] = {{DIK_LCONTROL,INPUT_DEVICE_MOUSE}}; //note: key combinations cannot be mixed with mouse input, this one is impossible: {DIK_LCONTROL,INPUT_DEVICE_MOUSE}
       defaultAction[] = {INPUT_DEVICE_MOUSE};
       reloadMagazine[] = {DIK_R};
       lockTargets[] = {DIK_TAB};
       lockEmptyTargets[] = {{DIK_LCONTROL,DIK_TAB}};
-      lockTarget[] = {INPUT_DEVICE_MOUSE + 1};
+      // Zoom hold: middle mouse button (scroll wheel click). Right mouse
+      // button no longer drives the hold-to-zoom path in soldierOld.cpp.
+      lockTarget[] = {INPUT_DEVICE_MOUSE + 2};
       revealTarget[] = {INPUT_DEVICE_MOUSE + 1};
       tempRaiseWeapon[] = {};
       toggleRaiseWeapon[] = {{DIK_RCONTROL, DIK_R}, KEYBOARD_DOUBLE_TAP_OFFSET+DIK_LCONTROL};
 
       prevAction[] = {DIK_LBRACKET, INPUT_DEVICE_MOUSE_WHEEL_UP};
       nextAction[] = {DIK_RBRACKET, INPUT_DEVICE_MOUSE_WHEEL_DOWN};
-      action[] = {DIK_RETURN, INPUT_DEVICE_MOUSE + 2};
+      // Action confirmation only on F (the scroll-wheel click is now zoom).
+      action[] = {DIK_F};
       actionContext[] = {INPUT_DEVICE_MOUSE};
       actionFreeLook[] = {INPUT_DEVICE_MOUSE};
       headlights[] = {DIK_L};

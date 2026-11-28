@@ -17,10 +17,7 @@
 #include "common/enf_mathlib2D.h"
 #include "common/enf_color.h"
 
-#if defined(ENF_DX9)
-	#include <d3d9.h>
-	//#define ENF_HWCURSOR
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 	#include <GL/glew.h>
 	#ifdef WIN32
 		#include <GL/wglew.h>
@@ -31,7 +28,7 @@
 
 
 /*!
-under IDirect3DDevice9Ex device the managed resources are not allowed
+Legacy managed-resource restrictions are not used by the DX11 client.
 */
 #define ENF_DISABLE_MANAGED_RESOURCES
 
@@ -65,9 +62,6 @@ PUBLIC_API Renderer* CreateRenderer();
 #define ENF_RENDSTATIC
 
 
-#ifdef ENF_DX9
-	#define SetRenderState_Inline SetRenderState
-#endif
 
 const uint RENDER_ONE_INSTANCE_DATA = 1;
 
@@ -75,28 +69,13 @@ const uint RENDER_ONE_INSTANCE_DATA = 1;
 //-----------------------------------------------------------------------
 enum RenderQueryType
 {
-#if defined(ENF_DX9)
-	QUERYTYPE_OCCLUSION	= D3DQUERYTYPE_OCCLUSION,
-	QUERYTYPE_EVENT		= D3DQUERYTYPE_EVENT,
-#elif defined(ENF_OGL)
 	QUERYTYPE_OCCLUSION	= 1,
 	QUERYTYPE_EVENT		= 2,
-#endif
 };
 
 //-----------------------------------------------------------------------
 enum RenderCmpFunc
 {
-#if defined(ENF_DX9)
-	CMP_NEVER			= D3DCMP_NEVER,
-	CMP_LESS				= D3DCMP_LESS,
-	CMP_EQUAL			= D3DCMP_EQUAL,
-	CMP_LESSEQUAL		= D3DCMP_LESSEQUAL,
-	CMP_GREATER			= D3DCMP_GREATER,
-	CMP_NOTEQUAL		= D3DCMP_NOTEQUAL,
-	CMP_GREATEREQUAL	= D3DCMP_GREATEREQUAL,
-	CMP_ALWAYS			= D3DCMP_ALWAYS
-#elif defined(ENF_OGL)
 	CMP_NEVER			= 0,
 	CMP_LESS				= 1,
 	CMP_EQUAL			= 2,
@@ -105,22 +84,11 @@ enum RenderCmpFunc
 	CMP_NOTEQUAL		= 5,
 	CMP_GREATEREQUAL	= 6,
 	CMP_ALWAYS			= 7
-#endif
 };
 
 //-----------------------------------------------------------------------
 enum RenderStencilOp
 {
-#if defined(ENF_DX9)
-	STENCILOP_KEEP		= D3DSTENCILOP_KEEP,
-	STENCILOP_ZERO		= D3DSTENCILOP_ZERO,
-	STENCILOP_REPLACE	= D3DSTENCILOP_REPLACE,
-	STENCILOP_INCRSAT	= D3DSTENCILOP_INCRSAT,
-	STENCILOP_DECRSAT	= D3DSTENCILOP_DECRSAT,
-	STENCILOP_INVERT	= D3DSTENCILOP_INVERT,
-	STENCILOP_INCR		= D3DSTENCILOP_INCR,
-	STENCILOP_DECR		= D3DSTENCILOP_DECR,
-#elif defined(ENF_OGL)
 	STENCILOP_KEEP		= 0,
 	STENCILOP_ZERO		= 1,
 	STENCILOP_REPLACE	= 2,
@@ -129,7 +97,6 @@ enum RenderStencilOp
 	STENCILOP_INVERT	= 5,
 	STENCILOP_INCR		= 6,
 	STENCILOP_DECR		= 7,
-#endif
 };
 
 //-----------------------------------------------------------------------
@@ -215,31 +182,6 @@ Supported renderstates
 //-----------------------------------------------------------------------
 enum RenderState
 {
-#if defined(ENF_DX9)
-	RS_FILLMODE                   = D3DRS_FILLMODE,
-	RS_ALPHATESTENABLE            = D3DRS_ALPHATESTENABLE,
-	RS_CULLMODE                   = D3DRS_CULLMODE,
-	RS_ALPHAREF                   = D3DRS_ALPHAREF,
-	RS_ALPHAFUNC                  = D3DRS_ALPHAFUNC,
-	RS_CLIPPING                   = D3DRS_CLIPPING,
-	RS_SRGBWRITEENABLE            = D3DRS_SRGBWRITEENABLE,
-	RS_POINTSIZE                  = D3DRS_POINTSIZE,
-	RS_POINTSIZE_MIN              = D3DRS_POINTSIZE_MIN,
-	RS_POINTSPRITEENABLE          = D3DRS_POINTSPRITEENABLE,
-	RS_MULTISAMPLEANTIALIAS       = D3DRS_MULTISAMPLEANTIALIAS,
-	RS_MULTISAMPLEMASK            = D3DRS_MULTISAMPLEMASK,
-	RS_POINTSIZE_MAX              = D3DRS_POINTSIZE_MAX,
-	RS_COLORWRITEENABLE           = D3DRS_COLORWRITEENABLE,
-	RS_SCISSORTESTENABLE          = D3DRS_SCISSORTESTENABLE,
-	RS_SLOPESCALEDEPTHBIAS        = D3DRS_SLOPESCALEDEPTHBIAS,
-	RS_COLORWRITEENABLE1          = D3DRS_COLORWRITEENABLE1,
-	RS_COLORWRITEENABLE2          = D3DRS_COLORWRITEENABLE2,
-	RS_COLORWRITEENABLE3          = D3DRS_COLORWRITEENABLE3,
-	RS_BLENDFACTOR                = D3DRS_BLENDFACTOR,
-	RS_DEPTHBIAS                  = D3DRS_DEPTHBIAS,
-	//RS_CLIPPLANEENABLE				= D3DRS_CLIPPLANEENABLE,
-#elif defined(ENF_OGL) 
-
 	RS_FILLMODE = 1,
 	RS_ALPHATESTENABLE,
 	RS_CULLMODE,
@@ -259,51 +201,32 @@ enum RenderState
 	RS_COLORWRITEENABLE3,
 	RS_BLENDFACTOR,
 	RS_DEPTHBIAS,
-#endif
 	RS_BADVALUE = 0xffffffff
 };
 
 //-----------------------------------------------------------------------
 enum RenderFillMode
 {
-#if defined(ENF_DX9) 
-	FILL_POINT			= D3DFILL_POINT,
-	FILL_WIREFRAME	= D3DFILL_WIREFRAME,
-	FILL_SOLID			= D3DFILL_SOLID,
-#elif defined(ENF_OGL)
 	FILL_POINT			= 1,
 	FILL_WIREFRAME	= 2,
 	FILL_SOLID			= 3,
-#endif
 };
 
 //-----------------------------------------------------------------------
 enum RenderCullMode
 {
-#if defined(ENF_DX9)
-	CULL_NONE			= D3DCULL_NONE,
-	CULL_CW				= D3DCULL_CW,
-	CULL_CCW			= D3DCULL_CCW,
-#elif defined(ENF_OGL)
 	CULL_NONE			= 1,
 	CULL_CW				= 2,
 	CULL_CCW			= 3,
-#endif
 };
 
 //-----------------------------------------------------------------------
 enum RenderSamplerStateType
 {
-#if defined(ENF_DX9)
-	SAMP_MIPMAPLODBIAS  = D3DSAMP_MIPMAPLODBIAS,
-	SAMP_MAXMIPLEVEL    = D3DSAMP_MAXMIPLEVEL,
-	SAMP_MAXANISOTROPY  = D3DSAMP_MAXANISOTROPY,
-#elif defined(ENF_OGL)
 	SAMP_MIPMAPLODBIAS  = 8,
 	SAMP_MAXMIPLEVEL    = 9,
 	SAMP_MAXANISOTROPY  = 10,
 	SAMP_SRGBTEXTURE    = 11,
-#endif
 };
 
 //-----------------------------------------------------------------------
@@ -337,35 +260,20 @@ enum RenderBlendOperator
 //-----------------------------------------------------------------------
 enum RenderTextureFilterState
 {
-#if defined(ENF_DX9)
-	TEXF_NONE					= D3DTEXF_NONE,
-	TEXF_POINT				= D3DTEXF_POINT,
-	TEXF_LINEAR				= D3DTEXF_LINEAR,
-	TEXF_ANISOTROPIC	= D3DTEXF_ANISOTROPIC,
-#elif defined(ENF_OGL)
 	TEXF_NONE					= 0,
 	TEXF_POINT,
 	TEXF_LINEAR,
 	TEXF_ANISOTROPIC,
-#endif
 };
 
 //-----------------------------------------------------------------------
 enum RenderTextureAddress
 {
-#if defined(ENF_DX9)
-	TADDRESS_WRAP				= D3DTADDRESS_WRAP,
-	TADDRESS_MIRROR			= D3DTADDRESS_MIRROR,
-	TADDRESS_CLAMP			= D3DTADDRESS_CLAMP,
-	TADDRESS_BORDER			= D3DTADDRESS_BORDER,
-	TADDRESS_MIRRORONCE	= D3DTADDRESS_MIRRORONCE,
-#elif defined(ENF_OGL)
 	TADDRESS_WRAP				= 1,
 	TADDRESS_MIRROR			= 2,
 	TADDRESS_CLAMP			= 3,
 	TADDRESS_BORDER			= 4,
 	TADDRESS_MIRRORONCE	= 5,
-#endif
 };
 
 
@@ -706,9 +614,6 @@ class PUBLIC_API VertexDeclaration
 	VertexElement	Declaration[MAX_DECLARATION];
 
 	uint Stride[MAX_STREAMS];
-	#if defined(ENF_DX9)
-		IDirect3DVertexDeclaration9*	m_pDeclaration;
-	#endif
 
 	uint HashCode;
 	uint Hash();
@@ -762,10 +667,6 @@ a list of modes compatible with this device
 struct RenderDeviceInfo
 {
 	// Device data
-	#if defined(ENF_DX9)	
-		D3DDEVTYPE		m_DeviceType;      // Reference, HAL, etc.
-		D3DCAPS9			m_d3dCaps;         // Capabilities of this device
-	#endif
 	const char*			m_strDesc;         // Name of this device
 	// Current state
 	uint					m_iCurrentMode;
@@ -783,10 +684,6 @@ including a list of devices available on this adapter
 //-----------------------------------------------------------------------
 struct RenderAdapterInfo
 {
-	#if defined(ENF_DX9)
-		D3DADAPTER_IDENTIFIER9	m_d3dAdapterIdentifier;
-		D3DDISPLAYMODE					m_d3ddmDesktop;      // Desktop display mode for this adapter
-	#endif
 
 	uint m_iCurrentDevice;
 };
@@ -993,15 +890,9 @@ typedef float ShaderVec[4];
 //-----------------------------------------------------------------------
 enum StreamFreqOp
 {
-#ifdef ENF_DX9
-	SFO_NONE = 0,
-	SFO_DIVIDE = D3DSTREAMSOURCE_INSTANCEDATA,
-	SFO_MODULO = D3DSTREAMSOURCE_INDEXEDDATA
-#else
 	SFO_NONE,
 	SFO_DIVIDE,
 	SFO_MODULO
-#endif
 };
 
 
@@ -1026,11 +917,7 @@ protected:
 	//-----------------------------------------------------------------------
 	struct StreamState
 	{
-		#if defined(ENF_DX9) 
-			IDirect3DVertexBuffer9*	VB;
-		#elif defined(ENF_OGL)
-			GLint	VB; 
-		#endif
+		void* VB;
 
 		uint				Offset;
 		uint				Stride;
@@ -1055,9 +942,7 @@ protected:
 	IL_INT32			m_iLock;
 	IL_INT32			m_ThreadLock;
 
-	#if defined(ENF_DX9)
-		ENF_RENDSTATIC _Direct3DDevice*m_pd3dDevice;
-	#elif defined(ENF_OGL)
+	#if defined(ENF_OGL)
 		#ifdef WIN32
 			HGLRC		m_glContext;
 			HDC			m_HDC;
@@ -1079,15 +964,19 @@ protected:
 	static const uint MAX_PS_CONSTANTS = 256;
 	static const uint MAX_VS_CONSTANTS = 256;
 	
-	#if defined(ENF_DX9) || defined(ENF_OGL) 
+	ENF_RENDSTATIC uint m_iRenderStateValue[256] = {};
+	ENF_RENDSTATIC void _SetRenderState(RenderState state, uint value)
+	{
+		m_iRenderStateValue[(int)state] = value;
+	}
+
+	#if defined(ENF_OGL)
 		static ENF_ALIGN16(ShaderVec)	m_PSConstants[MAX_PS_CONSTANTS];
 		static uint m_iStartPSConstants;
 		static uint m_iNumPSConstants;
 		static ENF_ALIGN16(ShaderVec)	m_VSConstants[MAX_VS_CONSTANTS];
 		static uint m_iStartVSConstants;
 		static uint m_iNumVSConstants;
-		ENF_RENDSTATIC uint m_iRenderStateValue[256];
-		ENF_RENDSTATIC void _SetRenderState(RenderState state, uint value);
 	#endif
 
 	ENF_RENDSTATIC void _SetBlendState(uint rtindex, BlendState blendState);
@@ -1173,13 +1062,7 @@ protected:
 		}
 	#endif
 
-	#if defined(ENF_DX9)
-		ENF_RENDSTATIC LPDIRECT3DBASETEXTURE9		m_pTextures[MAX_TEXTURES];
-		ENF_RENDSTATIC LPDIRECT3DBASETEXTURE9		m_pVertexTextures[MAX_VERTEX_TEXTURES];
-		ENF_RENDSTATIC LPDIRECT3DVERTEXSHADER9	m_pVShader;
-		ENF_RENDSTATIC LPDIRECT3DPIXELSHADER9		m_pPShader;
-		ENF_RENDSTATIC IDirect3DIndexBuffer9*		m_pIndexBuffer;
-	#elif defined(ENF_OGL)
+	#if defined(ENF_OGL)
 		enum CommitMask
 		{
 			GLCM_BLEND							= BITF(0),
@@ -1270,11 +1153,6 @@ protected:
 	bool				m_bInScene;
 	bool				m_bDisablePrimaryRT;
 
-	#if defined(ENF_DX9)
-		void*					m_hWnd;
-		LPDIRECT3D9		m_pD3D;              // The main D3D object
-		D3DCAPS9			m_d3dCaps;           // Caps for the device
-	#endif
 
 	uint				m_iAdapter;
 	uint				m_uiAvailMem;
@@ -1406,21 +1284,13 @@ public:
 	/*!
 	Returns current device capabilities, 	TODO: replace with our non-native version!
 	*/
-	#if defined(ENF_DX9)
-		ENF_INLINE const D3DCAPS9& GetCaps() const
-		{
-			return m_d3dCaps;
-		}
-	#endif
 
 	/*!
 	return maximum size of point 
 	*/
 	float GetMaxPointSize() const
 	{
-		#if defined(ENF_DX9)
-			return (float) (m_d3dCaps.MaxPointSize);
-		#endif
+		return 1.0f;
 	}
 
 	//!Resets per-frame statistics
@@ -1604,14 +1474,6 @@ public:
 		return m_iTargetHeight;
 	}
 
-	#if defined(ENF_DX9) 
-		/*!
-		Returns current render target surface
-		\param rtindex	Index of rendertarget 0...3
-		\return					Pointer to D3DSurface, or NULL
-		*/
-		_D3DSurface* GetRenderTargetSurface(uint rtindex);
-	#endif
 
 	//!Returns description of current device
 	const char* GetDescription() const
@@ -1624,10 +1486,7 @@ public:
 	\param rendertarget	The rendertarget you want to make screenshot of. When NULL, it takes last used one
 	\param outstream		Output stream where is screenshot put
 	*/
-	#if defined(ENF_DX9)
-		void MakeScreenshot(IDirect3DSurface9* rendertarget, COutputStream* outstream);
-
-	#elif defined(ENF_OGL)
+	#if defined(ENF_OGL)
 		GLuint GetCurrentFrameBuffer() const { return m_iCurrentFB; }
 		GLuint GetCurrentRenderBuffer() const { return m_iCurrentRB; }
 		GLuint GetCurrentDepthBuffer() const { return m_iCurrentDB; }
@@ -1635,13 +1494,7 @@ public:
 		void MakeScreenshot(GLint rendertarget, COutputStream* outstream);
 	#endif
 
-	#if defined(ENF_DX9) 
-		//!Returns pointer to Direct3DDevice
-		ENF_RENDSTATIC ENF_INLINE _Direct3DDevice* GetDXDevice()
-		{
-			return m_pd3dDevice;
-		}
-	#elif defined(ENF_OGL)
+	#if defined(ENF_OGL)
 		CGcontext GetCGContext() const
 		{
 			return m_cgContext;
@@ -1733,12 +1586,7 @@ public:
 		m_iSamplerFilterStateValue[index] = stateHandle;
 
 		const SamplerFilterState& state = *(SamplerFilterState*)&stateHandle;
-		#if defined(ENF_DX9)
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_MINFILTER, state.MinFilter);
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_MAGFILTER, state.MagFilter);
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_MIPFILTER, state.MipFilter);
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_MAXANISOTROPY, state.MaxAniso + 1);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			DirtyMask(GLCM_SAMPLERFILTER);
 		#endif
 
@@ -1759,13 +1607,7 @@ public:
 		m_iSamplerFilterStateValue2[index] = stateHandle;
 
 		const SamplerFilterState& state = *(SamplerFilterState*)&stateHandle;
-		#if defined(ENF_DX9)
-			index += D3DVERTEXTEXTURESAMPLER0;
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_MINFILTER, state.MinFilter);
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_MAGFILTER, state.MagFilter);
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_MIPFILTER, state.MipFilter);
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_MAXANISOTROPY, state.MaxAniso + 1);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			DirtyMask(GLCM_SAMPLERFILTERV);
 		#endif
 
@@ -1787,16 +1629,7 @@ public:
 
 		const SamplerAddressState& state = m_SamplerAddressStates[stateHandle];
 
-		#if defined(ENF_DX9)
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_ADDRESSU, state.UAddress);
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_ADDRESSV, state.VAddress);
-
-			if(state.Flags & SamplerAddressState::SAS_FLAG_3D)
-				m_pd3dDevice->SetSamplerState(index, D3DSAMP_ADDRESSW, state.WAddress);
-
-			if(state.Flags & SamplerAddressState::SAS_FLAG_BORDER)
-				m_pd3dDevice->SetSamplerState(index, D3DSAMP_BORDERCOLOR, state.BorderColor);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			DirtyMask(GLCM_SAMPLERADDRESS);
 		#endif
 
@@ -1818,17 +1651,7 @@ public:
 
 		const SamplerAddressState& state = m_SamplerAddressStates[stateHandle];
 
-		#if defined(ENF_DX9)
-			index += D3DVERTEXTEXTURESAMPLER0;
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_ADDRESSU, state.UAddress);
-			m_pd3dDevice->SetSamplerState(index, D3DSAMP_ADDRESSV, state.VAddress);
-
-			if(state.Flags & SamplerAddressState::SAS_FLAG_3D)
-				m_pd3dDevice->SetSamplerState(index, D3DSAMP_ADDRESSW, state.WAddress);
-
-			if(state.Flags & SamplerAddressState::SAS_FLAG_BORDER)
-				m_pd3dDevice->SetSamplerState(index, D3DSAMP_BORDERCOLOR, state.BorderColor);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 				DirtyMask(GLCM_SAMPLERADDRESSV);
 		#endif
 
@@ -1878,19 +1701,7 @@ public:
 	//-----------------------------------------------------------------------
 	ENF_RENDSTATIC ENF_INLINE void SetClipPlane(uint planeIndex, const Vector4* plane)
 	{
-		#if defined(ENF_DX9)
-			if(plane)
-			{
-				m_pd3dDevice->SetClipPlane(planeIndex, plane->v);
-				uint clipMask = m_iRenderStateValue[D3DRS_CLIPPLANEENABLE] | (1 << planeIndex);
-				SetRenderState((RenderState)D3DRS_CLIPPLANEENABLE, clipMask);
-			}
-			else
-			{
-				uint clipMask = m_iRenderStateValue[D3DRS_CLIPPLANEENABLE] & ~(1 << planeIndex);
-				SetRenderState((RenderState)D3DRS_CLIPPLANEENABLE, clipMask);
-			}
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			//glClipPlanef 
 		#endif
 	}
@@ -1907,9 +1718,7 @@ public:
 
 		m_iBlendStates[rtindex].Value = 0xffffffff;
 
-		#if defined(ENF_DX9)
-			m_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			GLCALL(glDisable(GL_BLEND));
 		#endif
 
@@ -2004,9 +1813,6 @@ public:
 	*/
 	ENF_RENDSTATIC ENF_INLINE void SetVertexShaderConstantI(int index, const int* value, uint vec4size)
 	{
-		#if defined(ENF_DX9)
-			m_pd3dDevice->SetVertexShaderConstantI(index, value, vec4size);
-		#endif
 	}
 
 	/*!
@@ -2022,9 +1828,7 @@ public:
 				enf_assert2(!BadFloat(value[n]), "Trying to set NAN/INF to vertex shader constant");
 		#endif
 
-		#if defined(ENF_DX9) 
-			m_pd3dDevice->SetVertexShaderConstantF(index, value, vec4size);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			DirtyVSConst(index, vec4size);
 			memcpy(&m_VSConstants[index], value, vec4size * sizeof(ShaderVec));
 		#endif
@@ -2060,9 +1864,7 @@ public:
 	*/
 	ENF_RENDSTATIC ENF_INLINE void SetVertexShaderConstantB(int index, const int *value, uint size)
 	{
-		#if defined(ENF_DX9)
-			m_pd3dDevice->SetVertexShaderConstantB(index, value, size);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			uint mask = 0;
 			uint val = 0;
 			for(uint n = 0; n < size; n++)
@@ -2091,9 +1893,7 @@ public:
 	{
 		int ival = value ? 1 : 0;
 
-		#if defined(ENF_DX9) || defined(ENF_XENON)
-			m_pd3dDevice->SetVertexShaderConstantB(index, &ival, 1);
-		#elif defined(ENF_OGL) 
+		#if defined(ENF_OGL)
 			uint mask = 1 << index;
 			uint val = value ? mask : 0;
 			if((m_iVSConstantsB & mask) != val)
@@ -2131,9 +1931,7 @@ public:
 				enf_assert2(!BadFloat(value[n]), "Trying to set NAN/INF to pixel shader constant");
 		#endif
 
-		#if defined(ENF_DX9) || defined(ENF_XENON)
-			m_pd3dDevice->SetPixelShaderConstantF(index, value, vec4size);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			DirtyPSConst(index, vec4size);
 			memcpy(&m_PSConstants[index], value, vec4size * sizeof(ShaderVec));
 		#endif
@@ -2147,7 +1945,7 @@ public:
 	ENF_RENDSTATIC void SetPixelShaderConstant(int index, const Vector3& value)
 	{
 		Vector4 value4 = value;
-		m_pd3dDevice->SetPixelShaderConstantF(index, value4.v, 1);
+		SetPixelShaderConstantF(index, value4.v, 1);
 	}
 
 	/*!
@@ -2158,9 +1956,6 @@ public:
 	*/
 	ENF_RENDSTATIC ENF_INLINE void SetPixelShaderConstantI(int index, const int *value, uint vec4size)
 	{
-		#if defined(ENF_DX9)
-			m_pd3dDevice->SetPixelShaderConstantI(index, value, vec4size);
-		#endif
 	}
 
 	/*!
@@ -2171,9 +1966,7 @@ public:
 	*/
 	ENF_RENDSTATIC ENF_INLINE void SetPixelShaderConstantB(int index, const int *value, uint size)
 	{
-		#if defined(ENF_DX9) 
-			m_pd3dDevice->SetPixelShaderConstantB(index, value, size);
-		#elif defined(ENF_OGL) 
+		#if defined(ENF_OGL)
 			uint mask = 0;
 			uint val = 0;
 			for(uint n = 0; n < size; n++)
@@ -2191,42 +1984,7 @@ public:
 		#endif
 	}
 
-#if defined(ENF_DX9)
-	template<class T> T* BeginPixelShaderConstant(uint startRegister, uint count = 1)
-	{
-		enf_assert(m_iStartPSConstants == -1);
-		m_iStartPSConstants = startRegister;
-		uint countRegs = (count * sizeof(T)) / sizeof(ShaderVec);
-		enf_assert((startRegister + countRegs) < MAX_PS_CONSTANTS);
-		m_iNumPSConstants = countRegs;
-		return (T*)&m_PSConstants[startRegister];
-	}
-
-	void EndPixelShaderConstant()
-	{
-		enf_assert(m_iStartPSConstants != -1);
-		SetPixelShaderConstantF(m_iStartPSConstants, (const float*)&m_PSConstants[m_iStartPSConstants], m_iNumPSConstants);
-		m_iStartPSConstants = -1;
-	}
-
-	template<class T> T* BeginVertexShaderConstant(uint startRegister, uint count = 1)
-	{
-		enf_assert(m_iStartVSConstants == -1);
-		m_iStartVSConstants = startRegister;
-		uint countRegs = (count * sizeof(T)) / sizeof(ShaderVec);
-		enf_assert((startRegister + countRegs) < MAX_VS_CONSTANTS);
-		m_iNumVSConstants = countRegs;
-		return (T*)&m_VSConstants[startRegister];
-	}
-
-	void EndVertexShaderConstant()
-	{
-		enf_assert(m_iStartVSConstants != -1);
-		SetVertexShaderConstantF(m_iStartVSConstants, (const float*)&m_VSConstants[m_iStartVSConstants], m_iNumVSConstants);
-		m_iStartVSConstants = -1;
-	}
-
-#elif defined(ENF_OGL) 
+#if defined(ENF_OGL)
 
 	template<class T> T* BeginPixelShaderConstant(uint startRegister, uint count = 1)
 	{
@@ -2305,9 +2063,7 @@ public:
 			m_Stats.AddPrimitive(type, primitiveCount);
 		#endif
 
-		#if defined(ENF_DX9) 
-			m_pd3dDevice->DrawPrimitiveUP((D3DPRIMITIVETYPE) type, primitiveCount, primitiveData, stride);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			uint commitMask = m_iCommitMask;
 
 			if(commitMask)
@@ -2333,11 +2089,7 @@ public:
 	ENF_RENDSTATIC void SetStreamSource(uint stream, VertexBuffer *vertexbuffer, uint offset, uint stride);
 	
 	//-----------------------------------------------------------------------
-	#if defined(ENF_DX9)
-		ENF_RENDSTATIC ENF_INLINE void SetStreamSourceInternal(uint stream, IDirect3DVertexBuffer9* pvb, uint offset, uint stride)
-	#elif defined(ENF_OGL)
-		ENF_RENDSTATIC ENF_INLINE void SetStreamSourceInternal(uint stream, GLint pvb, uint offset, uint stride)
-	#endif
+	ENF_RENDSTATIC ENF_INLINE void SetStreamSourceInternal(uint stream, void* pvb, uint offset, uint stride)
 	{
 		if(m_Streams[stream].VB == pvb &&
 			m_Streams[stream].Offset == offset &&
@@ -2350,9 +2102,7 @@ public:
 		m_Streams[stream].Offset = offset;
 		m_Streams[stream].Stride = stride;
 
-		#if defined(ENF_DX9)
-			m_pd3dDevice->SetStreamSource(stream, pvb, offset, stride);
-		#elif defined(ENF_OGL) 
+		#if defined(ENF_OGL)
 			m_iCommitMask |= GLCM_STREAMS;
 		#endif
 
@@ -2368,9 +2118,7 @@ public:
 		if(m_Streams[stream].VB == 0)
 			return;
 
-		#if defined(ENF_DX9) 
-			m_pd3dDevice->SetStreamSource(stream, NULL, 0, 0);
-		#elif defined(ENF_OGL)
+		#if defined(ENF_OGL)
 			m_iCommitMask |= GLCM_STREAMS;
 		#endif
 
@@ -2405,17 +2153,6 @@ public:
 
 	uint GetBaseEDRAMOffset() const;
 
-	#ifdef ENF_DX9
-		virtual SwapChain* CreateSwapChain(void* window, uint width, uint height)=0;
-
-		/*!
-		Pushes new RenderTarget into device. If it's rtindex==0 it sets ViewPort
-		to the size of SwapChain
-		\param rtindex Index of rendertarget 0..MAX_RENDER_TARGETS-1
-		\param sw SwapChain
-		*/
-		virtual void PushRenderTarget(uint rtindex, const SwapChain* sw)=0;
-	#endif
 
 	virtual void SetRenderTarget(uint rtindex, RenderTarget *rt, uint face = 0, uint flags = 0)=0;
 

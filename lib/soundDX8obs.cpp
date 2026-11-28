@@ -22,7 +22,6 @@
 
 #ifdef _WIN32
 #if !defined _XBOX
-#include <dxerr9.h>
 #include <mmsystem.h>
 #pragma comment(lib,"OpenAL32.lib")
 #else

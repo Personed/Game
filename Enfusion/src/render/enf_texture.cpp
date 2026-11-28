@@ -17,9 +17,6 @@
 #include "common/enf_streams.h"
 #include "system/enf_vfilesystem.h"
 
-#ifdef ENF_DX9
-	#include <d3dx9.h>
-#endif
 
 #include "resource/enf_imageloader.h"
 #include "common/enf_color.h"
@@ -536,10 +533,6 @@ size_t GetSurfaceSize(uint width, uint heigth, TextureFormat fmt)
 	case TEXFMT_CTX1:
 	case TEXFMT_DXT1:
 		return GetDXTBlocks(width) * GetDXTBlocks(heigth) * 8;
-#ifdef ENF_DX9
-	case TEXFMT_DXT2:
-	case TEXFMT_DXT4:
-#endif
 	case TEXFMT_DXT3:
 	case TEXFMT_DXT5:
 		return GetDXTBlocks(width) * GetDXTBlocks(heigth) * 16;
@@ -686,28 +679,10 @@ TextureFormat texFormat;
 //-----------------------------------------------------------------------------
 uint Texture::GetNumLevels() const
 {
-#if defined(ENF_DX9) 
-	enf_assert(GetD3DTexture() != NULL);
-	return GetD3DTexture()->GetLevelCount();
-#elif defined(ENF_OGL)
 	return m_iMipLevels;
-#endif
 }
 
 //-----------------------------------------------------------------------------
-#if defined(ENF_DX9) 
-_D3DSurface* Texture::GetSurface(uint level)
-{
-	enf_rlsassert(GetDevice()->CheckThread());
-	enf_assert(GetD3DTexture() != NULL);
-
-	_D3DSurface* psurface;
-	if(GetD3DTexture()->GetSurfaceLevel(level, &psurface) == D3D_OK)
-		return psurface;
-
-	return NULL;
-}
-#endif
 //-----------------------------------------------------------------------------
 size_t Texture::Flush(uint level)
 {
@@ -791,12 +766,7 @@ bool Texture::Flush()
 //-----------------------------------------------------------------------------
 bool Texture::IsCube() const
 {
-	#if defined(ENF_DX9) 
-		enf_assert(GetD3DTexture() != NULL);
-		return (GetD3DTexture()->GetType() == D3DRTYPE_CUBETEXTURE);
-	#elif defined(ENF_OGL)
-		return (m_iFlags & TEXTR_CUBE) != 0;
-	#endif
+	return (m_iFlags & TEXTR_CUBE) != 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -806,71 +776,47 @@ bool Texture::IsCube() const
 Texture::Texture(IRenderer *dev, CStr name, uint dwWidth, uint dwHeight, uint dwFlags):
 	DeviceResource(dev),
 	ResourceRef(),
-	#ifdef ENF_DX9
-		m_pTexture(NULL),
-	#ifdef ENF_OGL
-		m_iTexture(0),
-		m_iLocked(-1),
-	#endif
+#if defined(ENF_OGL)
+	m_iTexture(0),
+	m_iLocked(-1),
+#endif
 	m_iWidth(dwWidth),
 	m_iHeight(dwHeight),
 	m_iMipLevels(0),
-	m_Usage(MAP_UNKNOWN)
+	m_Usage(MAP_UNKNOWN),
+	m_pStagingData(NULL)
 {
-	#ifdef ENF_DX9
-		if(dwFlags & TEXTR_DYNAMIC && !(dev->m_d3dCaps.Caps2 & D3DCAPS2_DYNAMICTEXTURES))
-			dwFlags &= ~(TEXTR_DYNAMIC);
-	#endif
-
 	m_iFlags = dwFlags;
 	m_Format = ComputeFormat(dwFlags, &m_iMipLevels);
 	if(name != NULL)
-	{
 		m_strName = g_pStatic->AddString(name.cstr());
-	}
 }
 
-//-----------------------------------------------------------------------------
 Texture::Texture(IRenderer *dev, CStr name):
-	DeviceResource(dev),
-	ResourceRef(),
-	#ifdef ENF_DX9
-		m_pTexture(NULL),
-	#endif
-	#ifdef ENF_OGL
-		m_iTexture(0),
-	#endif
-	m_iWidth(0),
-	m_iHeight(0),
-	m_iFlags(0),
-	m_iMipLevels(0)
+	DeviceResource(dev), ResourceRef(),
+#if defined(ENF_OGL)
+	m_iTexture(0),
+#endif
+	m_iWidth(0), m_iHeight(0), m_iFlags(0), m_iMipLevels(0),
+	m_Usage(MAP_UNKNOWN), m_Format(TEXFMT_UNKNOWN), m_pStagingData(NULL)
 {
 	if(name.IsEmpty())
-	{
 		m_strName = g_pStatic->AddString(name.cstr());
-	}
 }
 
-//-----------------------------------------------------------------------------
 Texture::Texture(IRenderer *dev):
-	DeviceResource(dev),
-	ResourceRef(),
-	#ifdef ENF_DX9
-		m_pTexture(NULL),
-	#endif
-	#ifdef ENF_OGL
-		m_iTexture(0),
-	#endif
-	m_iWidth(0),
-	m_iHeight(0),
-	m_iFlags(0),
-	m_iMipLevels(0)
+	DeviceResource(dev), ResourceRef(),
+#if defined(ENF_OGL)
+	m_iTexture(0),
+#endif
+	m_iWidth(0), m_iHeight(0), m_iFlags(0), m_iMipLevels(0),
+	m_Usage(MAP_UNKNOWN), m_Format(TEXFMT_UNKNOWN), m_pStagingData(NULL)
 {
 }
 
-//-----------------------------------------------------------------------------
 Texture::~Texture()
 {
+	Free();
 	if(m_pManager)
 	{
 		m_pManager->RemoveManagedResource(this);
@@ -878,1398 +824,158 @@ Texture::~Texture()
 	}
 }
 
-//-----------------------------------------------------------------------------
-void Texture::Free()
-{
-	#ifdef ENF_DX9
-		if(m_pTexture)
-		{
-			MemStats::m_iTextures -= GetMemorySize();
-			uint c = m_pTexture->Release();
-			if((m_iFlags & (TEXTR_CLONED|TEXTR_CLONE)) == 0)
-			{
-				enf_assert(c == 0);
-			}
-			m_pTexture = NULL;
-		}
-	#elif defined(ENF_OGL)
-		if(m_iTexture)
-		{
-			if(IsCube())
-				glBindTexture(GL_TEXTURE_3D, 0);
-			else
-				glBindTexture(GL_TEXTURE_2D, 0);
-			GLCALL(glDeleteTextures(1, &m_iTexture));
-			GetDevice()->DirtyMask(Renderer::GLCM_TEXTURES);
-			m_iTexture = 0;
-		}
-	#endif
-}
-
-//-----------------------------------------------------------------------------
-uint Texture::GetMaxMipmaps(uint width, uint height, uint depth)
-{
-	//TODO: maximum of GetHighestBit is easier
-	uint count = 1;
-	while(!(width == 1 && height == 1 && depth == 1))
-	{
-		width		= enf_max(1U, width >> 1);
-		height	= enf_max(1U, height >> 1);
-		depth		= enf_max(1U, depth >> 1);
-		count ++;
-	} 
-
-	return count;
-}
-
-//-----------------------------------------------------------------------------
-
-#if defined(ENF_OGL)
-GLint TexFormatToGLFormat(TextureFormat fmt, bool rt)
-{
-	switch(fmt)
-	{
-	case TEXFMT_A8R8G8B8:
-	case TEXFMT_X8R8G8B8:
-		return GL_RGBA8;
-
-	case TEXFMT_R32F:
-		return GL_LUMINANCE32F_ARB;
-
-	case TEXFMT_G16R16F:
-		return (rt) ? GL_RGBA16F_ARB : GL_LUMINANCE_ALPHA16F_ARB;
-
-	case TEXFMT_A2R10G10B10:
-	case TEXFMT_A2W10V10U10:
-		return GL_RGB10_A2;
-
-	case TEXFMT_D24X8:
-	case TEXFMT_D24S8:
-	case TEXFMT_D24FS8:
-		return GL_DEPTH_COMPONENT24;
-
-	case TEXFMT_X1R5G5B5:
-	case TEXFMT_A1R5G5B5:
-		return GL_RGB5_A1;
-
-	case TEXFMT_A4R4G4B4:
-	case TEXFMT_X4R4G4B4:
-		return GL_RGBA4;
-
-	case TEXFMT_A8L8:
-		return GL_LUMINANCE8_ALPHA8;
-
-	case TEXFMT_R16F:
-		return GL_ALPHA16F_ARB;
-
-	case TEXFMT_L16:
-		return GL_LUMINANCE16;
-
-	case TEXFMT_A8:
-		return GL_ALPHA8;
-	case TEXFMT_L8:
-		return GL_INTENSITY8;
-
-		//compressed formats
-	case TEXFMT_DXT1:
-		return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-
-	case TEXFMT_DXT3:
-		return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-
-	case TEXFMT_DXT5:
-		return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-
-	case TEXFMT_A16B16G16R16F:
-		return GL_RGBA16F_ARB;
-
-	case TEXFMT_G32R32F:
-		return GL_LUMINANCE_ALPHA32F_ARB;
-
-	case TEXFMT_A32B32G32R32F:
-		return GL_RGBA32F_ARB;
-
-	default:
-		enf_assert(!"unknown format");
-		return 0;
-	};
-}
-
-GLint TexFormatToGLFormatEx(TextureFormat fmt, GLenum& dataFormat, GLenum& dataType, bool rt)
-{
-	dataFormat = GL_RGBA;
-	dataType = GL_UNSIGNED_INT_8_8_8_8;
-	switch(fmt)
-	{
-	case TEXFMT_A8R8G8B8:
-	case TEXFMT_X8R8G8B8:
-		dataFormat = GL_BGRA;
-		dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
-		return GL_RGBA8;
-
-	case TEXFMT_R32F:
-		dataFormat = GL_LUMINANCE;
-		dataType = GL_FLOAT;
-		return GL_R32F;
-
-	case TEXFMT_G16R16F:
-		if(rt)
-		{
-			dataFormat = GL_RGBA;
-			dataType = GL_HALF_FLOAT_ARB;
-			return GL_RG16F;
-		}
-		else
-		{
-			dataFormat =  GL_RGBA;
-			dataType = GL_HALF_FLOAT_ARB;
-			return  GL_RG16F;
-		}
-
-	case TEXFMT_A2R10G10B10:
-	case TEXFMT_A2W10V10U10:
-		return GL_RGB10_A2;
-
-	case TEXFMT_D24X8:
-	case TEXFMT_D24S8:
-	case TEXFMT_D24FS8:
-		return GL_DEPTH_COMPONENT24;
-
-	case TEXFMT_X1R5G5B5:
-	case TEXFMT_A1R5G5B5:
-		return GL_RGB5_A1;
-
-	case TEXFMT_A4R4G4B4:
-	case TEXFMT_X4R4G4B4:
-		return GL_RGBA4;
-
-	case TEXFMT_A8L8:
-		dataFormat = GL_LUMINANCE_ALPHA;
-		dataType = GL_UNSIGNED_BYTE;
-		return GL_LUMINANCE8_ALPHA8;
-
-	case TEXFMT_R16F:
-		dataFormat = GL_ALPHA;
-		dataType = GL_HALF_FLOAT;
-		return GL_ALPHA16F_ARB;
-
-	case TEXFMT_L16:
-		dataFormat = GL_LUMINANCE;
-		dataType = GL_UNSIGNED_SHORT;
-		return GL_LUMINANCE16;
-
-	case TEXFMT_A8:
-		dataFormat = GL_ALPHA;
-		dataType = GL_UNSIGNED_BYTE;
-		return GL_ALPHA8;
-
-	case TEXFMT_L8:
-		dataFormat = GL_LUMINANCE;
-		dataType = GL_UNSIGNED_BYTE;
-		return GL_INTENSITY8;
-
-		//compressed formats
-	case TEXFMT_DXT1:
-		return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-
-	case TEXFMT_DXT3:
-		return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-
-	case TEXFMT_DXT5:
-		return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-
-	case TEXFMT_A16B16G16R16F:
-		dataFormat =  GL_RGBA;
-		dataType = GL_HALF_FLOAT_ARB;
-		return GL_RGBA16F_ARB;
-
-	case TEXFMT_G32R32F:
-		dataFormat =  GL_LUMINANCE_ALPHA;
-		dataType = GL_FLOAT;
-		return GL_LUMINANCE_ALPHA32F_ARB;
-
-	case TEXFMT_A32B32G32R32F:
-		return GL_RGBA32F_ARB;
-
-	default:
-		enf_assert(!"unknown format");
-		return 0;
-	};
-}
-#endif
-
-
-//-----------------------------------------------------------------------------
 ERESULT Texture::Allocate()
 {
-	enf_assert(m_iWidth != 0 && m_iHeight != 0);
-
-	ERESULT res = EE_ERROR;
-
-#ifdef ENF_DX9
-	D3DFORMAT fmt = static_cast<D3DFORMAT>(m_Format);
-
-	#ifdef ENF_DISABLE_MANAGED_RESOURCES
-		D3DPOOL pool = D3DPOOL_DEFAULT;
-		m_bManaged = false;
-	#else 
-		D3DPOOL pool = D3DPOOL_MANAGED;
-		m_bManaged = true;
-	#endif
-
-	uint usage = 0;
-
-	if(m_iFlags & TEXTR_DEFAULTPOOL)
-	{
-		pool = D3DPOOL_DEFAULT;
-		m_bManaged = false;
-	}
-
-	if(m_iFlags & TEXTR_AUTOMIPMAP)
-	{
-		if(GetDevice()->m_d3dCaps.Caps2 & D3DCAPS2_CANAUTOGENMIPMAP)
-			usage |= D3DUSAGE_AUTOGENMIPMAP;
-		else
-			m_iMipLevels = 1;
-	}
-
-	if(m_iFlags & TEXTR_DYNAMIC)
-	{
-		pool = D3DPOOL_DEFAULT;
-		usage |= RES_USAGE_DYNAMIC;
-		m_bManaged = false;
-	}
-
-	if(m_iFlags & TEXTR_SYSMEM)
-	{
-		pool = D3DPOOL_SYSTEMMEM;
-		usage = 0;
-	}
-
-	if(m_iFlags & TEXTR_RENDERTARGET)
-	{
-		pool = D3DPOOL_DEFAULT;
-		usage |= D3DUSAGE_RENDERTARGET;
-		usage &= ~RES_USAGE_DYNAMIC;
-		m_bManaged = false;
-	}
-
-	do
-	{
-		if(m_iFlags & TEXTR_CUBE)
-		{
-			if(GetDevice()->GetDXDevice()->CreateCubeTexture(
-						m_iWidth,
-						m_iMipLevels,
-						usage,
-						fmt,
-						pool,
-						(_D3DCubeTexture**)&m_pTexture,
-						NULL) == D3D_OK)
-			{
-				res = EE_OK;
-				break;
-			}
-		}
-		else
-		{
-			if(GetDevice()->GetDXDevice()->CreateTexture(
-						m_iWidth,
-						m_iHeight,
-						m_iMipLevels,
-						usage,
-						fmt,
-						pool,
-						&m_pTexture,
-						NULL) == D3D_OK)
-			{
-				res = EE_OK;
-				break;
-			}
-		}
-	} while(MemoryManager::OutOfMemory(__FILE__, __LINE__, MT_VIDEO, GetMemorySize()));
-	if(res == EE_OK)
-		MemStats::m_iTextures += GetMemorySize();
-
-#elif defined(ENF_OGL)
-
-	GLCALL(glGenTextures(1, &m_iTexture));
-
-	GLenum dataFormat, dataType;
-	GLint internalFormat = TexFormatToGLFormatEx(m_Format, dataFormat, dataType);
-
-	bool compressed = IsDXTFormat(m_Format);
-
-	static const GLenum targets[] = {
-		GL_TEXTURE_2D,
-		GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-		GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-		GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-		GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-		GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-		GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
-	};
-	uint targetIndex;
-	GLenum texTarget;
-	uint numFaces;
-	if(m_iFlags & TEXTR_CUBE)
-	{
-		targetIndex = 1;
-		texTarget = GL_TEXTURE_CUBE_MAP;
-		numFaces = 6;
-	}
-	else
-	{
-		targetIndex = 0;
-		texTarget = GL_TEXTURE_2D;
-		numFaces = 1;
-	}
-
-	uint width = m_iWidth;
-	uint height = m_iHeight;
-	uint maxMipMap;
-
-	if(m_iMipLevels == 0)
-	{
-		maxMipMap = GetMaxMipmaps(width, height, 1);
-		m_iMipLevels = maxMipMap;
-	}
-	else
-		maxMipMap = m_iMipLevels;
-
-	GLCALL(glBindTexture(texTarget, m_iTexture));
-
-	GLCALL(glTexParameteri(texTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-	GLCALL(glTexParameteri(texTarget, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-	GLCALL(glTexParameteri(texTarget, GL_TEXTURE_MAX_LEVEL, maxMipMap - 1));
-	GLCALL(glTexParameteri(texTarget, GL_TEXTURE_MAX_LOD, maxMipMap - 1));
-	if ( IsCube() )
-	{
-		GLCALL(glTexParameteri( texTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE ));
-		GLCALL(glTexParameteri( texTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE ));
-	}
-	else
-	{
-		GLCALL(glTexParameteri( texTarget, GL_TEXTURE_WRAP_S, GL_REPEAT ));
-		GLCALL(glTexParameteri( texTarget, GL_TEXTURE_WRAP_T, GL_REPEAT ));
-	}
-
-
-	for(uint n = 0; n < maxMipMap; n++)
-	{
-		for(uint f = 0; f < numFaces; f++)
-		{
-			GLenum target = targets[targetIndex + f];
-
-			if(compressed)
-			{
-				size_t size = GetSurfaceSize(width, height, m_Format);
-				GLCALL(glCompressedTexImage2D(target, n, internalFormat, width, height, 0, size, NULL));
-/*				GLint ssize;
-				GLCALL(glGetTexLevelParameteriv(texTarget,
-					n,
-					GL_TEXTURE_COMPRESSED_IMAGE_SIZE,
-					&ssize));
-				size=size;*/
-			}
-			else
-			{
-				GLCALL(glTexImage2D(target, n, internalFormat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
-			}
-		}
-
-		width = enf_max(1U, width >> 1);
-		height = enf_max(1U, height >> 1);
-	}
-
-	GetDevice()->DirtyMask(Renderer::GLCM_TEXTURES|Renderer::GLCM_SAMPLERFILTER|Renderer::GLCM_SAMPLERFILTER);
-	res = EE_OK;
-#endif
-
-	return res;
+	if(!m_iWidth || !m_iHeight || m_Format == TEXFMT_UNKNOWN)
+		return EE_INVALIDPARAM;
+	if(!m_iMipLevels)
+		m_iMipLevels = (m_iFlags & TEXTR_NOMIPMAP) ? 1 : GetMaxMipmaps(m_iWidth, m_iHeight, 1);
+	Free();
+	m_pStagingData = ENF_NEW MemoryImageData();
+	if(!m_pStagingData)
+		return EE_ERROR;
+	return m_pStagingData->Create(m_iWidth, m_iHeight, m_iMipLevels,
+		m_Format, m_iFlags, (TextureUsage)m_Usage);
 }
 
-//-----------------------------------------------------------------------------
-#if defined(ENF_OGL) 
-
-struct LockInfo
+void Texture::Free()
 {
-	ENF_DECLARE_SMALLOBJECT(LockInfo);
-	int	nextFreeLock;
-	void* pData;
-	RRect	rect;
-	int	level;
-	uint	width;
-	uint	height;
-	LockInfo(): nextFreeLock(-1), pData(NULL) {}
-};
-
-class LockContainer: public enf::FlushableObject
-{
-	Array<LockInfo*> m_LockInfos;
-	int m_iFirstLockInfo;
-	CMutex m_Mutex;
-
-public:
-	LockContainer(): m_iFirstLockInfo(-1) {}
-
-	void Flush (unsigned int level)
+	if(m_pStagingData)
 	{
-		if(level == ENF_CLEANUP_FLUSHLEVEL)
-		{
-			for(unsigned int n = 0; n < m_LockInfos.GetCardinality(); n++)
-			{
-				delete m_LockInfos[n];
-			}
-			m_LockInfos.Flush(level);
-		}
+		m_pStagingData->Free();
+		delete m_pStagingData;
+		m_pStagingData = NULL;
 	}
-
-	const LockInfo* GetLockInfo(int index)
-	{
-		return m_LockInfos[index];
-	}
-
-	int AllocLockInfo(LockInfo*& lockInfo)
-	{
-		CMutexLock lock(m_Mutex);
-
-		if(m_iFirstLockInfo >= 0)
-		{
-			int index = m_iFirstLockInfo;
-			int nextFree = m_LockInfos[index]->nextFreeLock;
-			m_iFirstLockInfo = nextFree;
-			lockInfo = m_LockInfos[index];
-			return index;
-		}
-
-		lockInfo = ENF_NEW LockInfo();
-		return m_LockInfos.Insert(lockInfo);
-	}
-
-	void FreeLockInfo(int index)
-	{
-		CMutexLock lock(m_Mutex);
-
-		m_LockInfos[index]->nextFreeLock = m_iFirstLockInfo;
-		m_iFirstLockInfo = index;
-	}
-};
-
-//-----------------------------------------------------------------------------
-LockContainer lockContainer;
-FlushableObjectAgent<LockContainer> lockInfoAgent(&lockContainer);
-
-
-int AllocLockInfo(LockInfo*& lockInfo)
-{
-	return lockContainer.AllocLockInfo(lockInfo);
 }
-#endif
 
-
-
-//-----------------------------------------------------------------------------
-bool Texture::LockCubeFace(CubeMapFaces face, uint level, const RRect *rect, LockedImageRect *lrect, SurfaceDesc *desc, bool readOnly)
+bool Texture::Lock(uint level, const RRect *rect, LockedImageRect *lrect,
+	SurfaceDesc *desc, bool readOnly)
 {
-	enf_rlsassert(GetDevice()->CheckThread());
-#if defined(ENF_DX9) 
-	_D3DCubeTexture* cube = (_D3DCubeTexture*)GetD3DTexture();
-
-	//Do not try to lock cube/volume textures!
-	if(cube->GetType() != D3DRTYPE_CUBETEXTURE)
+	if(!m_pStagingData || !lrect || level >= m_iMipLevels)
 		return false;
-
-	D3DLOCKED_RECT d3dlrect;
-	D3DSURFACE_DESC d3ddesc;
-
-	while(true)
-	{
-		HRESULT	ret;
-
-		if((ret = cube->LockRect((D3DCUBEMAP_FACES)face, level, &d3dlrect, (const RECT*)rect, readOnly ? D3DLOCK_READONLY : 0/*D3DLOCK_NO_DIRTY_UPDATE*/)) == D3D_OK) break;
-		
-		if(ret != D3DERR_NOTAVAILABLE)	//sth failed
-			return false;
-	}
-
-	lrect->Pitch = d3dlrect.Pitch;
-	lrect->pBits = d3dlrect.pBits;
-	if(desc)
-	{
-		if((cube->GetLevelDesc(0, &d3ddesc)) != D3D_OK)
-			return false;
-
-		desc->Format = (TextureFormat)d3ddesc.Format;
-		desc->Usage = d3ddesc.Usage;
-		desc->Pool = d3ddesc.Pool;
-		desc->Width = d3ddesc.Width;
-		desc->Height = d3ddesc.Height;
-	}
-#elif defined(ENF_OGL)
-	return false;
-#endif
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-void Texture::UnlockCubeFace(CubeMapFaces face, uint level)
-{
-	enf_rlsassert(GetDevice()->CheckThread());
-#if defined(ENF_DX9) 
-	_D3DCubeTexture* cube = (_D3DCubeTexture*)GetD3DTexture();
-
-	//Do not try to lock cube/volume textures!
-	if(cube->GetType() != D3DRTYPE_CUBETEXTURE)
-		return;
-	cube->UnlockRect((D3DCUBEMAP_FACES)face, level);
-#elif defined(ENF_OGL)
-#endif
-
-}
-
-//-----------------------------------------------------------------------------
-// Name: Lock()
-// Desc: Locks surface
-//-----------------------------------------------------------------------------
-bool Texture::Lock(uint level, const RRect *rect, LockedImageRect *lrect, SurfaceDesc *desc, bool readOnly)
-{
-	enf_rlsassert(GetDevice()->CheckThread());
-	enf_assert(lrect);
-
-#if defined(ENF_DX9) 
-	enf_assert(!IsCube());
-
-	//Do not try to lock cube/volume textures!
-	if(this->GetD3DTexture()->GetType() != D3DRTYPE_TEXTURE)
+	if(!m_pStagingData->Lock(0, level, *lrect))
 		return false;
-
-	D3DLOCKED_RECT d3dlrect;
-	D3DSURFACE_DESC d3ddesc;
-
-	_D3DTexture* tex = GetD3DTexture();
-	while(true)
-	{
-		HRESULT	ret;
-
-		if((ret = tex->LockRect(level, &d3dlrect, (const RECT*)rect, readOnly ? D3DLOCK_READONLY : 0/*D3DLOCK_NO_DIRTY_UPDATE*/)) == D3D_OK) break;
-		
-		if(ret != D3DERR_NOTAVAILABLE)	//sth failed
-			return false;
-	}
-
-	lrect->Pitch = d3dlrect.Pitch;
-	lrect->pBits = d3dlrect.pBits;
-	if(desc)
-	{
-		if((tex->GetLevelDesc(0, &d3ddesc)) != D3D_OK)
-			return false;
-
-		desc->Format = (TextureFormat)d3ddesc.Format;
-		desc->Usage = d3ddesc.Usage;
-		desc->Pool = d3ddesc.Pool;
-		desc->Width = d3ddesc.Width;
-		desc->Height = d3ddesc.Height;
-	}
-#elif defined(ENF_OGL)
-	enf_assert(!IsCube());
-	enf_assert(m_iLocked == -1);
-	enf_assert(level < m_iMipLevels);
-	RRect rr;
-	
-	uint width = enf_max((uint)(m_iWidth >> level), 1U);
-	uint height = enf_max((uint)(m_iHeight >> level), 1U);
-
-	if(rect == NULL)
-	{
-		rr.Left = 0;
-		rr.Top = 0;
-		rr.Right = width;
-		rr.Bottom = height;
-		rect = &rr;
-	}
-	else
-	{
-		enf_assert((rect->Right - rect->Left) <= width);
-		enf_assert((rect->Bottom - rect->Top) <= height);
-	}
-
+	uint width = enf_max(1U, (uint)m_iWidth >> level);
+	uint height = enf_max(1U, (uint)m_iHeight >> level);
 	if(desc)
 	{
 		desc->Format = m_Format;
+		desc->Usage = m_iFlags;
+		desc->Pool = 0;
 		desc->Width = width;
 		desc->Height = height;
-		desc->Pool = 0;
-		desc->Usage = 0;
 	}
-
-	size_t size = GetSurfaceSize(width, height, m_Format);
-
-	void* pdata = NULL;
-	pdata = MemoryManager::Alloc(size, __FILE__, __LINE__);
-	LockInfo* lockInfo;
-	int allocIndex = AllocLockInfo(lockInfo);
-	lockInfo->rect = *rect;
-	lockInfo->pData = pdata;
-	lockInfo->level = level;
-	lockInfo->width = width;
-	lockInfo->height = height;
-	m_iLocked = allocIndex;
-
-	lrect->pBits = pdata;
-	lrect->Pitch = GetSurfaceSize(width, 1, m_Format);
-	GetDevice()->DirtyMask(Renderer::GLCM_TEXTURES);
-	return true;
-#endif
-
+	if(rect)
+	{
+		size_t stride = GetFormatStride(m_Format);
+		if(!stride || rect->Right > width || rect->Bottom > height)
+		{
+			m_pStagingData->Unlock(0, level);
+			return false;
+		}
+		lrect->pBits = (ubyte*)lrect->pBits + rect->Top * lrect->Pitch + rect->Left * stride;
+	}
 	return true;
 }
 
-extern bool g_bGLReport;
-
-//-----------------------------------------------------------------------------
-// Name: Unlock()
-// Desc: Unlocks surface
-//-----------------------------------------------------------------------------
 void Texture::Unlock(uint level)
 {
-	enf_rlsassert(GetDevice()->CheckThread());
-	enf_assert(!IsCube());
-
-#if defined(ENF_DX9)
-	GetD3DTexture()->UnlockRect(level);
-#elif defined(ENF_OGL)
-	enf_assert(m_iLocked >= 0);
-	uint allocIndex = m_iLocked;
-	m_iLocked = -1;
-
-	GLCALL(glActiveTexture(GL_TEXTURE0));
-	GLCALL(glBindTexture(GL_TEXTURE_2D, GetGLTexture()));
-
-	GLenum dataFormat, dataType;
-	GLint glfmt = TexFormatToGLFormatEx(m_Format, dataFormat, dataType);
-
-	const LockInfo* info = lockContainer.GetLockInfo(allocIndex);
-
-	if(IsDXTFormat(m_Format))
-	{
-		size_t size = GetSurfaceSize(info->width, info->height, m_Format);
-		GLCALL(glCompressedTexImage2D(GL_TEXTURE_2D, info->level, glfmt, info->width, info->height, 0, size, info->pData));
-	}
-	else
-	{
-		if(info->rect.Right == info->width && info->rect.Bottom == info->height)
-		{
-			GLCALL(glTexImage2D(
-				GL_TEXTURE_2D,
-				info->level,
-				glfmt,
-				info->width,
-				info->height,
-				0,
-				dataFormat,
-				dataType,
-				info->pData));
-		}
-		else
-		{
-			GLCALL(glTexSubImage2D(
-				GL_TEXTURE_2D,
-				info->level,
-				info->rect.Left,
-				info->rect.Top,
-				info->rect.Right - info->rect.Left,
-				info->rect.Bottom - info->rect.Top,
-				dataFormat,
-				dataType,
-				info->pData));
-//			if(info->rect.Top == 35)
-//				g_bGLReport = true;
-		}
-	}
-
-	MemoryManager::Free(info->pData);
-	lockContainer.FreeLockInfo(allocIndex);
-	GetDevice()->DirtyMask(Renderer::GLCM_TEXTURES);
-#endif
+	if(m_pStagingData && level < m_iMipLevels)
+		m_pStagingData->Unlock(0, level);
 }
 
-//-----------------------------------------------------------------------------
-ERESULT Texture::CopyRGBAData(uint level, uint xpos, uint ypos, const FColor* ptr, uint w, uint h, const RRect& rect)
+ERESULT Texture::CopyData(ImageData& imageData, uint flags)
 {
-	enf_rlsassert(GetDevice()->CheckThread());
-	LockedImageRect lrect;
-	SurfaceDesc desc;
-	RRect srect;
-
-	srect.Left = xpos;
-	srect.Top = ypos;
-	srect.Right = xpos + w;
-	srect.Bottom = ypos + h;
-
-	uint width = m_iWidth / (1 << level);
-	uint height = m_iHeight / (1 << level);
-
-	if(width < (xpos + w))
-		return EE_ERROR;
-
-	if(height < (ypos + h))
-		return EE_ERROR;
-
-	if(!Lock(level, &srect, &lrect, &desc))
-		return EE_ERROR;
-
-	
-	bool res = TextureCodec::ConvertRect(lrect.pBits, width, height, (const float*)ptr, w, h, rect, m_Format);
-
-	Unlock(level);
-
-	return res ? EE_OK : EE_ERROR;
-}
-
-//-----------------------------------------------------------------------------
-ERESULT Texture::CopyData(uint level, const void* data, const RRect& dest)
-{
-	enf_rlsassert(GetDevice()->CheckThread());
-	uint twidth		= enf_max(1, m_iWidth >> level);
-	uint theight	= enf_max(1, m_iHeight >> level);
-
-	if(dest.Left >= twidth ||	dest.Top >= theight || dest.Right > twidth ||	dest.Bottom > theight)
-		return EE_ERROR;
-
-	LockedImageRect lrect;
-	uint tstride = enf::GetFormatStride(GetFormat());
-
-#if defined(ENF_OGL)
-	
-	if(IsDXTFormat(m_Format))
+	if(!m_pStagingData || imageData.GetFormat() != m_Format ||
+		imageData.GetWidth() != m_iWidth || imageData.GetHeight() != m_iHeight)
+		return EE_INVALIDPARAM;
+	uint faces = enf_min(imageData.GetNumFaces(), m_pStagingData->GetNumFaces());
+	uint levels = enf_min(imageData.GetNumLevels(), (uint)m_iMipLevels);
+	for(uint face = 0; face < faces; ++face)
 	{
-		int a = 0;
-	}
-	else
-	{
-		GLenum dataFormat, dataType;
-		GLint glfmt = TexFormatToGLFormatEx(m_Format, dataFormat, dataType);
-
-		GLCALL(glTexImage2D(
-			GL_TEXTURE_2D,
-			level,
-			glfmt,
-			m_iWidth,
-			m_iHeight,
-			0,
-			dataFormat,
-			dataType,
-			data));
-	}
-#else
-	if(Lock(level, &dest, &lrect, NULL))
-	{
-		uint height = dest.Bottom - dest.Top;
-		uint width = dest.Right - dest.Left;
-
-		for(uint h = 0; h < height; h++)
+		for(uint level = 0; level < levels; ++level)
 		{
-			memcpy((ubyte*)lrect.pBits + (h * lrect.Pitch), data, width * tstride);
-			data = ((ubyte*)data + width * tstride);
+			LockedImageRect src, dst;
+			if(!imageData.Lock(face, level, src))
+				return EE_ERROR;
+			if(!m_pStagingData->Lock(face, level, dst))
+			{
+				imageData.Unlock(face, level);
+				return EE_ERROR;
+			}
+			uint width = enf_max(1U, (uint)m_iWidth >> level);
+			uint height = enf_max(1U, (uint)m_iHeight >> level);
+			size_t bytes = GetSurfaceSize(width, height, m_Format);
+			memcpy(dst.pBits, src.pBits, bytes);
+			m_pStagingData->Unlock(face, level);
+			imageData.Unlock(face, level);
 		}
-		Unlock(level);
 	}
-#endif
 	return EE_OK;
 }
 
-//-----------------------------------------------------------------------------
 ERESULT Texture::FillColor(const FColor& color, uint sx, uint sy, uint w, uint h)
 {
-	enf_rlsassert(GetDevice()->CheckThread());
-	return FillColor((color * 255.0f).PackToInt(), sx, sy, w, h);
-}
-
-
-#if defined(ENF_DX9)
-void FillSurface(const D3DLOCKED_RECT& rect, const D3DSURFACE_DESC& d3dsd, uint w, uint h, uint color)
-{
-	D3DFORMAT fmt = d3dsd.Format;
-
-	//fastmodes as first
-	if(fmt == D3DFMT_X8R8G8B8 ||
-		fmt == D3DFMT_A8R8G8B8)
+	if(m_Format != TEXFMT_A8R8G8B8 && m_Format != TEXFMT_X8R8G8B8)
+		return EE_ERROR;
+	if(sx + w > m_iWidth || sy + h > m_iHeight)
+		return EE_INVALIDPARAM;
+	LockedImageRect locked;
+	if(!Lock(0, NULL, &locked, NULL))
+		return EE_ERROR;
+	uint packed = (color * 255.0f).PackToInt();
+	for(uint y = sy; y < sy + h; ++y)
 	{
-		uint xmod;
-		xmod = rect.Pitch - (w << 2);
-		for(uint y = 0; y < h; y++)
-		{
-			FillMemory32((char*)rect.pBits + rect.Pitch * y, w, color);
-		}
+		uint* row = (uint*)((ubyte*)locked.pBits + y * locked.Pitch);
+		for(uint x = sx; x < sx + w; ++x)
+			row[x] = packed;
 	}
-	else if(fmt == D3DFMT_L8 || fmt == D3DFMT_A8)
-	{
-		for(uint y = 0; y < h; y++)
-		{
-			memset((char*)rect.pBits + rect.Pitch * y, color, w);
-		}
-	}
-	else
-	{
-		for(uint y = 0; y < h; y++)
-		{
-			FillMemory32((char*)rect.pBits + rect.Pitch * y, w, color);
-		}
-	}
-}
-#endif
-
-//-----------------------------------------------------------------------------
-// Name: FillColor()
-// Desc: 
-//-----------------------------------------------------------------------------
-ERESULT Texture::FillColor(uint color, uint sx, uint sy, uint w, uint h)
-{
-	enf_rlsassert(GetDevice()->CheckThread());
-
-#if defined(ENF_DX9)
-	D3DLOCKED_RECT rect;
-	RECT rec;
-	D3DSURFACE_DESC d3dsd;
-
-	rec.left = sx;
-	rec.top = sy;
-	rec.right = sx + w;
-	rec.bottom = sy + h;
-	if(GetD3DTexture()->GetType() == D3DRTYPE_CUBETEXTURE)
-	{
-		_D3DCubeTexture* cubeTex = (_D3DCubeTexture*)GetD3DTexture();
-		if(cubeTex->GetLevelDesc( 0, &d3dsd) != D3D_OK)
-			return EE_ERROR;
-
-		static const D3DCUBEMAP_FACES faces[6] = { 
-			D3DCUBEMAP_FACE_POSITIVE_X, 
-			D3DCUBEMAP_FACE_NEGATIVE_X, 
-			D3DCUBEMAP_FACE_POSITIVE_Y, 
-			D3DCUBEMAP_FACE_NEGATIVE_Y, 
-			D3DCUBEMAP_FACE_POSITIVE_Z, 
-			D3DCUBEMAP_FACE_NEGATIVE_Z 
-		}; 
- 
-		for (uint i = 0; i < 6; i++) 
-		{ 
-			if(cubeTex->LockRect(faces[i], 0, &rect, &rec, 0) == D3D_OK) 
-			{ 
-				FillSurface(rect, d3dsd, w, h, color);
-				cubeTex->UnlockRect(faces[i], 0); 
-			} 
-		}
-	}
-	else
-	{
-		if(GetD3DTexture()->GetLevelDesc( 0, &d3dsd) != D3D_OK)
-			return EE_ERROR;
-
-
-		if(HasType(RenderTargetTypeID) || (!m_bManaged && m_iFlags & TEXTR_RENDERTARGET))
-		{
-			IDirect3DSurface9 *pSurface;
-			HRESULT hr = GetD3DTexture()->GetSurfaceLevel(0, &pSurface);
-			if(hr == D3D_OK)
-			{
-				hr = GetDevice()->GetDXDevice()->ColorFill(pSurface, &rec, (D3DCOLOR)color);
-				pSurface->Release();
-			}
-			return (hr == D3D_OK) ? EE_OK : EE_ERROR;
-		}
-
-		if (m_bManaged)
-		{
-			if(GetD3DTexture()->LockRect( 0, &rect, &rec, 0) == D3D_OK)
-			{
-				FillSurface(rect, d3dsd, w, h, color);
-				Unlock(0);
-			}
-		}
-		else
-		{
-			LogF(LL_ERROR, "Enfusion error: Unmanaged textures cannot be updated for now");
-		}
-	}
-#elif defined(ENF_OGL)
-	if(!IsCube())
-	{
-		GLCALL(glBindTexture(GL_TEXTURE_2D, m_iTexture));
-		uint size = m_iWidth * m_iHeight;
-		uint* ptr = (size <= 65536) ? ALLOCA(uint, m_iWidth * m_iHeight) : (uint*)MemoryManager::Alloc(size * sizeof(uint), __FILE__, __LINE__);
-		for(uint s = 0; s < size; s++)
-			ptr[s] = color;
-
-		GLint internalFormat = TexFormatToGLFormat(m_Format);
-		GLCALL(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, m_iWidth, m_iHeight, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, ptr));
-		GetDevice()->DirtyMask(Renderer::GLCM_TEXTURES|Renderer::GLCM_SAMPLERFILTER|Renderer::GLCM_SAMPLERFILTERV);
-		GLCALL(glBindTexture(GL_TEXTURE_2D, 0));
-		if(size > 65536) 
-			MemoryManager::Free(ptr);
-	}
-
-#endif
+	Unlock(0);
 	return EE_OK;
 }
 
-//-----------------------------------------------------------------------
-ERESULT Texture::FilterMipMaps(uint level, uint _flags)
+uint Texture::GetMaxMipmaps(uint width, uint height, uint depth)
 {
-#ifndef ENF_DUMMYRENDER
-
-	enf_rlsassert(GetDevice()->CheckThread());
-#if defined(ENF_DX9)
-	DWORD flags = D3DX_FILTER_NONE;
-
-	switch(_flags & 0x7f)
+	uint count = 1;
+	while(width != 1 || height != 1 || depth != 1)
 	{
-	case TFF_NONE:
-		flags = D3DX_FILTER_NONE;
-		break;
-	case TFF_POINT:
-		flags = D3DX_FILTER_POINT;
-		break;
-	case TFF_LINEAR:
-		flags = D3DX_FILTER_LINEAR;
-		break;
-	case TFF_BOX:
-		flags = D3DX_FILTER_BOX;
-		break;
+		width = enf_max(1U, width >> 1);
+		height = enf_max(1U, height >> 1);
+		depth = enf_max(1U, depth >> 1);
+		++count;
 	}
-
-	if(_flags & TFF_MIRROR)
-		flags |= D3DX_FILTER_MIRROR;
-
-#if defined(_WIN64)
-	// This Enfusion helper operates on IDirect3DTexture9.  In the x64 client,
-	// ask the texture to generate mip levels when it was created for autogen.
-	GetD3DTexture()->GenerateMipSubLevels();
-	return EE_OK;
-#else
-	return D3DXFilterTexture(GetD3DTexture(), NULL, level, flags);
-#endif
-#elif defined(ENF_OGL)
-	return EE_OK;
-#endif
-
-#endif
-	return EE_OK;
+	return count;
 }
 
-
-//-----------------------------------------------------------------------
-Texture* IRenderer::CreateTexture(CStr strName, uint dwWidth, uint dwHeight, uint dwFlags)
-{
-	enf_rlsassert(CheckThread());
-	Texture* tc = ENF_NEW Texture(this, strName.cstr(), dwWidth, dwHeight, dwFlags);
-
-	if(tc == NULL)
-		return NULL;
-
-	if(tc->Allocate() != EE_OK)
-	{
-		//FIXME: is it legal?
-		delete tc;
-		return NULL;
-	}
-
-	AddResource(tc);
-
-	return tc;
-}
-
-//-----------------------------------------------------------------------
-Texture* IRenderer::CreateTexture(CStr strName, Texture* clone, uint dwFlags)
-{
-	Texture* tc = ENF_NEW Texture(this, strName.cstr(), clone->GetWidth(), clone->GetHeight(), dwFlags|TEXTR_CLONE);
-
-	if(tc == NULL)
-		return NULL;
-	clone->m_iFlags |= TEXTR_CLONED;
-
-#ifdef ENF_DX9
-	clone->GetD3DTexture()->AddRef();
-	tc->m_pTexture = clone->GetD3DTexture();
-
-#elif defined(ENF_OGL)
-	tc->m_iTexture = clone->GetGLTexture();
-#endif
-
-	AddResource(tc);
-
-	return tc;
-}
-
-//-----------------------------------------------------------------------
-Texture* IRenderer::CreateTextureWithFormat(CStr strName, uint dwWidth, uint dwHeight, TextureFormat format, uint dwFlags, TextureUsage usage)
-{
-	//it's legal to create textures outside main thread
-	enf_rlsassert(CheckThread()); 
-	enf_assert(dwWidth <= MAX_TEXTURE_SIZE && dwHeight <= MAX_TEXTURE_SIZE);
-
-	Texture* tc = ENF_NEW Texture(this, strName.cstr(), dwWidth, dwHeight, dwFlags);
-
-	if(tc == NULL)
-		return NULL;
-
-	tc->m_Format = format;
-
-	if(tc->Allocate() != EE_OK)
-	{
-		//FIXME: is it legal?
-		delete tc;
-		return NULL;
-	}
-
-	AddResource(tc);
-
-	return tc;
-}
-
-//-----------------------------------------------------------------------
 int Texture::Release()
 {
 	if(Unref() == 0)
 	{
 		MemStats::m_iDisposedTextures += GetMemorySize();
-		//don't keep non-managed or unnamed textures
-		//They won't be touched again anyway
-		if(m_strName.IsEmpty() || m_pManager == NULL || m_iFlags & TEXTR_NOCACHE)
+		if(m_strName.IsEmpty() || m_pManager == NULL || (m_iFlags & TEXTR_NOCACHE))
 		{
 			Flush();
 			return 0;
 		}
-		//TODO: tell to resource manager that texture is disposable
-		if(m_pManager)
-		{
-
-//			m_pManager->DisposeTexture(this);
-		}
 	}
-
 	return RefCount();
 }
 
-//-----------------------------------------------------------------------
 size_t Texture::GetMemorySize() const
 {
-#ifdef ENF_DX9
-	_D3DTexture* tex = GetD3DTexture();
-	if(tex == NULL)
+	if(!m_pStagingData)
 		return 0;
-
 	size_t size = 0;
-	bool cube = IsCube();
-
-	for(uint mip = 0; mip < tex->GetLevelCount(); mip++)
+	uint width = enf_max(1U, (uint)m_iWidth);
+	uint height = enf_max(1U, (uint)m_iHeight);
+	for(uint mip = 0; mip < m_iMipLevels; ++mip)
 	{
-		D3DSURFACE_DESC desc;
-		if(tex->GetLevelDesc(mip, &desc) == D3D_OK)
-		{
-			size += GetSurfaceSize(desc.Width, desc.Height, m_Format) * (cube ? 6 : 1);
-		}
+		size += GetSurfaceSize(width, height, m_Format);
+		width = enf_max(1U, width >> 1);
+		height = enf_max(1U, height >> 1);
 	}
-	return size;
-
-#elif defined(ENF_OGL)
-	return 0;
-#endif
+	return size * (IsCube() ? 6 : 1);
 }
-//-----------------------------------------------------------------------
-void CopySurface(LockedImageRect& srect, LockedImageRect& trect, int width, int height, TextureFormat fmt, int level, uint tileflags)
-{
-	switch(fmt)
-	{
-	case TEXFMT_CTX1:
-	case TEXFMT_DXT1:
-		{
-			int lheight = GetDXTBlocks(height);
-			int lwidth = GetDXTBlocks(width);
-
-			for(int v = 0; v < lheight; v++)
-			{
-				memcpy((ubyte*)trect.pBits + v * trect.Pitch, (ubyte*)srect.pBits + v * srect.Pitch, lwidth * 8);
-			}
-		}
-		break;
-
-	case TEXFMT_DXT2:
-	case TEXFMT_DXT4:
-	case TEXFMT_DXT3:
-	case TEXFMT_DXT5:
-		{
-			int lheight = GetDXTBlocks(height);
-			int lwidth = GetDXTBlocks(width);
-
-			for(int v = 0; v < lheight; v++)
-			{
-				memcpy((ubyte*)trect.pBits + v * trect.Pitch, (ubyte*)srect.pBits + v * srect.Pitch, lwidth * 16);
-			}
-		}
-		break;
-
-	case TEXFMT_A8:
-	case TEXFMT_L8:
-		for(int v = 0; v < height; v++)
-		{
-			memcpy((unsigned char*)trect.pBits + trect.Pitch * v, (unsigned char*)srect.pBits + srect.Pitch * v, width);
-		}
-		break;
-
-	case TEXFMT_A8R8G8B8:
-	case TEXFMT_X8R8G8B8:
-		{
-			for(int v = 0; v < height; v++)
-			{
-				memcpy((unsigned char*)trect.pBits + trect.Pitch * v, (unsigned char*)srect.pBits + srect.Pitch * v, width * 4);
-			}
-		}
-		break;
-
-	case TEXFMT_A32B32G32R32F:
-		for(int v = 0; v < height; v++)
-		{
-			memcpy((unsigned char*)trect.pBits + trect.Pitch * v, (unsigned char*)srect.pBits + srect.Pitch * v, width * 16);
-		}
-		break;
-
-	case TEXFMT_A4R4G4B4:
-	case TEXFMT_A8L8:
-		for(int v = 0; v < height; v++)
-		{
-			memcpy((unsigned char*)trect.pBits + trect.Pitch * v, (unsigned char*)srect.pBits + srect.Pitch * v, width * 2);
-		}
-		break;
-
-	default:
-		enf_assert(!"Unsupported format");
-		break;
-	}
-}
-
-
-//-----------------------------------------------------------------------
-ENF_INLINEFUNC void ConvertIntoR32(float *destdata, uchar *srcdata, uint width, uint height, TextureFormat format, uint srcpitch)
-{
-	const float INV_256 = 1.0f/256.0f;
-
-	uint next  = format == TEXFMT_A8L8 ? 2 : 1;
-	bool A8    = format == TEXFMT_A8;
-
-	uchar  alpha = 0, lum = 0;
-	uchar& ch = A8 ? alpha : lum;
-
-	for (uint y = 0; y < height; y++)
-	{
-		uchar* locsrc    = srcdata;
-		float* destfloat = destdata;
-
-		for (uint x = 0; x < width; x++)
-		{
-			if (next == 2)
-			{
-				#if ENF_INTEGER_BIG_ENDIAN
-					alpha	= locsrc[0];
-					lum	= locsrc[1];
-				#else
-					lum	= locsrc[0];
-					alpha	= locsrc[1];
-				#endif
-			}
-			else
-			{
-				ch = *locsrc;
-			}
-
-			destfloat[x] = ((float) lum + ((float) alpha)*INV_256);
-
-			locsrc += next;
-		}
-
-		destdata += width;
-		srcdata  += srcpitch;
-	}
-
-}
-
-
-//-----------------------------------------------------------------------
-/*!
-swizzling is usefull on PS3, don't know now if it's on PS4 too, so let it
-be now alive
-*/
-//-----------------------------------------------------------------------
-template<class T> ENF_INLINEFUNC void SwizzleDataInternal(register uchar*& dst, register const uchar*& src, register uint srcPitch, register uint xpos, register uint ypos, register uint width, register uint height, register uint level)
-{
-	if (level == 1)
-	{
-		if(xpos < width && ypos < height)
-			*((T*&) dst) = *((T*)(src + ypos*srcPitch + xpos*sizeof(T)));
-
-		dst += sizeof(T);
-
-		return;
-	}
-
-	SwizzleDataInternal<T> (dst, src, srcPitch, xpos, ypos, width, height, level - 1);
-	SwizzleDataInternal<T> (dst, src, srcPitch, xpos + (1 << (level - 2)), ypos, width, height, level - 1);
-	SwizzleDataInternal<T> (dst, src, srcPitch, xpos, ypos + (1 << (level - 2)), width, height, level - 1);
-	SwizzleDataInternal<T> (dst, src, srcPitch, xpos + (1 << (level - 2)),ypos + (1U << (level - 2)), width, height, level - 1);
-}
-
-
-//-----------------------------------------------------------------------
-ENF_INLINEFUNC void SwizzleData2(uchar* dst, const uchar* src, const uint srcPitch, const uint width, const uint height,	const uint depth)
-{
-	enf_assert2(depth == 1 || depth == 2 || depth == 4, "unsupported format");
-	uint logW = enf_log2(width);
-
-	if (width == height)
-	{
-		switch (depth)
-		{
-			case 1 : SwizzleDataInternal<uchar> (dst, src, srcPitch, 0, 0, width, height, logW + 1);  break;
-			case 2 : SwizzleDataInternal<ushort> (dst, src, srcPitch, 0, 0, width, height, logW + 1); break;
-			case 4 : SwizzleDataInternal<uint> (dst, src, srcPitch, 0, 0, width, height, logW + 1); break;
-		}
-	}
-	else
-	{
-		uint logH = enf_log2(height);
-
-		if (width > height)
-		{
-			uint baseLevel	= logW - (logW - logH);
-			uint maxL = 1 << (logW - logH);
-
-			for (uint i = 0; i < maxL; i++)
-				switch (depth)
-				{
-					case 1 : SwizzleDataInternal<uchar> (dst, src, srcPitch, (1 << baseLevel)*i, 0, width, height, baseLevel + 1); break;
-					case 2 : SwizzleDataInternal<ushort> (dst, src, srcPitch, (1 << baseLevel)*i, 0, width, height, baseLevel + 1); break;
-					case 4 : SwizzleDataInternal<uint> (dst, src, srcPitch,(1 << baseLevel)*i, 0, width, height, baseLevel + 1); break;
-				}
-		}
-		else
-		{
-			uint baseLevel	= logH - (logH - logW);
-			uint maxL = 1 << (logH - logW);
-
-			for (uint i = 0; i < maxL; i++)
-				switch (depth)
-				{
-					case 1 : SwizzleDataInternal<uchar> (dst, src, srcPitch, 0, (1 << baseLevel)*i, width, height, baseLevel + 1); break;
-					case 2 : SwizzleDataInternal<ushort> (dst, src, srcPitch, 0, (1 << baseLevel)*i, width, height, baseLevel + 1); break;
-					case 4 : SwizzleDataInternal<uint> (dst, src, srcPitch, 0, (1 << baseLevel)*i, width, height, baseLevel + 1); break;
-				}
-		}
-	}
-}
-
-
-//-----------------------------------------------------------------------
-ERESULT Texture::CopyData(ImageData& imageData, uint flags)
-{
-	enf_rlsassert(GetDevice()->CheckThread());
-	uint twidth = imageData.GetWidth();
-	uint theight = imageData.GetHeight();
-	TextureFormat fmt = imageData.GetFormat();
-
-	bool convert = false;
-
-	if(GetWidth() != twidth ||
-		GetHeight() != theight ||
-		(GetFormat() != fmt && !convert))
-		return EE_ERROR;
-
-	bool compressed = IsDXTFormat(m_Format);
-	uint tileFlags = 0;
-
-	uint numLevels = enf_min(GetNumLevels(), imageData.GetNumLevels());
-	uint numFaces = IsCube() ? 6 : 1;
-
-	#if defined(ENF_OGL)
-		if(numFaces == 6)
-		{
-			numFaces = numFaces;
-		}
-		GLenum dataFormat, dataType;
-		GLint glfmt = TexFormatToGLFormatEx(m_Format, dataFormat, dataType);
-		GLCALL(glBindTexture(numFaces == 6 ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D, m_iTexture));
-		static const GLenum texTargets[] = {
-			GL_TEXTURE_2D,
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-			GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-			GL_TEXTURE_CUBE_MAP_POSITIVE_Z, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
-		};
-	#endif
-
-	for(uint face = 0; face < numFaces; face++)
-	{
-		uint width = twidth;
-		uint height = theight;
-
-		for(uint level = 0; level < numLevels; level++)
-		{
-			LockedImageRect srect;
-			if(!imageData.Lock(face, level, srect))
-				continue;
-
-			#ifdef ENF_OGL
-				if(compressed)
-				{
-					size_t size = GetSurfaceSize(width, height, m_Format);
-					GLCALL(glCompressedTexImage2D(texTargets[face + ((numFaces == 6) ? 1 : 0)], level, glfmt, width, height, 0, size, srect.pBits));
-				}
-				else
-				{
-					GLCALL(glTexImage2D(texTargets[face + ((numFaces == 6) ? 1 : 0)], level, glfmt, width, height, 0, dataFormat, dataType, srect.pBits));
-				}
-
-			#elif defined(ENF_DX9)
-				LockedImageRect trect;
-				bool res = false;
-
-				if(IsCube())
-					res = LockCubeFace((CubeMapFaces)face, level, NULL, &trect, NULL);
-				else
-					res = Lock(level, NULL, &trect, NULL);
-
-				if(res)
-				{
-					CopySurface(srect, trect, width, height, fmt, level, tileFlags);
-					if(IsCube())
-						UnlockCubeFace((CubeMapFaces)face, level);
-					else
-						Unlock(level);
-				}
-			#endif
-
-			imageData.Unlock(face, level);
-			width = enf_max<uint>(width >> 1, 1U);
-			height = enf_max<uint>(height >> 1, 1U);
-		}
-	}
-	GetDevice()->InvalidateGPUCache(this);
-
-	//we can process only uncompressed textures! (+ R32 format for PS3 and its VS has not to have mipmaps)
-	if(!compressed && !convert)
-	{
-		if(GetNumLevels() > numLevels)
-		{
-			FilterMipMaps(numLevels - 1, TFF_BOX);
-		}
-	}
-
-	#ifdef ENF_OGL
-		GLCALL(glBindTexture(GL_TEXTURE_2D, 0));
-		GetDevice()->DirtyMask(Renderer::GLCM_TEXTURES|Renderer::GLCM_SAMPLERFILTER|Renderer::GLCM_SAMPLERFILTERV);
-	#endif
-
-	return EE_OK;
-}
-#endif
 
 //-----------------------------------------------------------------------
 bool Texture::Swap(Texture* other)
@@ -2277,10 +983,9 @@ bool Texture::Swap(Texture* other)
 	enf_rlsassert(GetDevice()->CheckThread());
 	enf_assert(other);
 	DeviceResource::Swap(other);
+	enf_swap(m_pStagingData, other->m_pStagingData);
 
-#ifdef ENF_DX9
-	enf_swap(m_pTexture, other->m_pTexture);
-#elif defined(ENF_OGL)
+#if defined(ENF_OGL)
 	enf_swap(m_iTexture, other->m_iTexture);
 #endif
 
@@ -2288,8 +993,73 @@ bool Texture::Swap(Texture* other)
 	enf_swap(m_iHeight, other->m_iHeight);
 	enf_swap(m_iMipLevels, other->m_iMipLevels);
 	enf_swap(m_iFlags, other->m_iFlags);
+	enf_swap(m_Usage, other->m_Usage);
 	enf_swap(m_Format, other->m_Format);
 	return true;
+}
+
+Texture* IRenderer::CreateTexture(CStr name, uint width, uint height, uint flags)
+{
+	enf_rlsassert(CheckThread());
+	Texture* texture = ENF_NEW Texture(this, name, width, height, flags);
+	if(!texture)
+		return NULL;
+	if(texture->Allocate() != EE_OK)
+	{
+		delete texture;
+		return NULL;
+	}
+	AddResource(texture);
+	return texture;
+}
+
+Texture* IRenderer::CreateTexture(CStr name, Texture* clone, uint flags)
+{
+	if(!clone)
+		return NULL;
+	Texture* texture = CreateTextureWithFormat(name, clone->GetWidth(),
+		clone->GetHeight(), clone->GetFormat(), flags | TEXTR_CLONE |
+		(clone->GetFlags() & (TEXTR_CUBE | TEXTR_NOMIPMAP)),
+		clone->GetUsage());
+	if(!texture || !clone->m_pStagingData)
+		return texture;
+	for(uint face = 0; face < clone->m_pStagingData->GetNumFaces(); ++face)
+	{
+		for(uint level = 0; level < enf_min(clone->GetNumLevels(), texture->GetNumLevels()); ++level)
+		{
+			LockedImageRect src, dst;
+			if(clone->m_pStagingData->Lock(face, level, src) &&
+				texture->m_pStagingData->Lock(face, level, dst))
+			{
+				uint width = enf_max(1U, clone->GetWidth() >> level);
+				uint height = enf_max(1U, clone->GetHeight() >> level);
+				memcpy(dst.pBits, src.pBits, GetSurfaceSize(width, height, clone->GetFormat()));
+				texture->m_pStagingData->Unlock(face, level);
+				clone->m_pStagingData->Unlock(face, level);
+			}
+		}
+	}
+	return texture;
+}
+
+Texture* IRenderer::CreateTextureWithFormat(CStr name, uint width, uint height,
+	TextureFormat format, uint flags, TextureUsage usage)
+{
+	enf_rlsassert(CheckThread());
+	if(!width || !height || width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE)
+		return NULL;
+	Texture* texture = ENF_NEW Texture(this, name, width, height, flags);
+	if(!texture)
+		return NULL;
+	texture->m_Format = format;
+	texture->m_Usage = usage;
+	if(texture->Allocate() != EE_OK)
+	{
+		delete texture;
+		return NULL;
+	}
+	AddResource(texture);
+	return texture;
 }
 
 //-----------------------------------------------------------------------
@@ -2301,10 +1071,6 @@ size_t GetSourceSurfaceSize(TextureFormat fmt, uint srcDepth, uint width, uint h
 	case TEXFMT_DXT1:
 		return GetDXTBlocks(width) * GetDXTBlocks(height) * 8;
 
-#ifdef ENF_DX9
-	case TEXFMT_DXT2:
-	case TEXFMT_DXT4:
-#endif
 	case TEXFMT_DXT3:
 	case TEXFMT_DXT5:
 		return GetDXTBlocks(width) * GetDXTBlocks(height) * 16;
